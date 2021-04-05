@@ -38,6 +38,13 @@
     "trailingComma": "es5"
   },
   "jest": {
+    "globals": {
+      "ts-jest": {
+        "tsconfig": {
+          "target": "es2015"
+        }
+      }
+    },
     "testPathIgnorePatterns": [
       "<rootDir>/cypress/"
     ]
@@ -55,6 +62,8 @@
   ],
   "devDependencies": {
     "@size-limit/preset-small-lib": "^4.10.2",
+    "@typescript-eslint/eslint-plugin": "^4.20.0",
+    "@typescript-eslint/parser": "^4.20.0",
     "cypress": "^6.8.0",
     "husky": "^6.0.0",
     "quickjs-emscripten": "^0.11.0",
@@ -62,5 +71,10 @@
     "tsdx": "^0.14.1",
     "tslib": "^2.1.0",
     "typescript": "^4.2.3"
+  },
+  "resolutions": {
+    "**/@typescript-eslint/eslint-plugin": "^4.20.0",
+    "**/@typescript-eslint/parser": "^4.20.0",
+    "**/typescript": "^4.2.3"
   }
 }
