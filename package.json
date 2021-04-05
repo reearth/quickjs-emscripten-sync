@@ -37,6 +37,11 @@
     "singleQuote": false,
     "trailingComma": "es5"
   },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "<rootDir>/cypress/"
+    ]
+  },
   "module": "dist/quickjs-emscripten-sync.esm.js",
   "size-limit": [
     {
