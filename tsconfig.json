@@ -4,6 +4,9 @@
     "src",
     "types"
   ],
+  "exclude": [
+    "dist"
+  ],
   "compilerOptions": {
     "module": "esnext",
     "lib": [
@@ -16,7 +19,7 @@
     // output .js.map sourcemap files for consumers
     "sourceMap": true,
     // match output dir to input dir. e.g. dist/index instead of dist/src/index
-    "rootDir": "./src",
+    "rootDir": "src",
     // stricter type-checking for stronger correctness. Recommended by TS
     "strict": true,
     // linter checks for common issues
@@ -37,7 +40,7 @@
     "forceConsistentCasingInFileNames": true,
     // `tsdx build` ignores this option, but it is commonly used when type-checking separately with `tsc`
     "noEmit": true,
-    // suppress warning in Cypress
-    "baseUrl": "./src"
+    "target": "es2015",
+    "downlevelIteration": true
   }
 }

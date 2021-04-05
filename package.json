@@ -19,9 +19,7 @@
     "lint": "tsdx lint",
     "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why",
-    "e2e:build": "yarn --cwd e2e run build",
-    "e2e:test": "cypress run"
+    "analyze": "size-limit --why"
   },
   "peerDependencies": {
     "quickjs-emscripten": "*"
@@ -36,18 +34,6 @@
     "semi": true,
     "singleQuote": false,
     "trailingComma": "es5"
-  },
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "tsconfig": {
-          "target": "es2015"
-        }
-      }
-    },
-    "testPathIgnorePatterns": [
-      "<rootDir>/cypress/"
-    ]
   },
   "module": "dist/quickjs-emscripten-sync.esm.js",
   "size-limit": [
@@ -64,7 +50,6 @@
     "@size-limit/preset-small-lib": "^4.10.2",
     "@typescript-eslint/eslint-plugin": "^4.20.0",
     "@typescript-eslint/parser": "^4.20.0",
-    "cypress": "^6.8.0",
     "husky": "^6.0.0",
     "quickjs-emscripten": "^0.11.0",
     "size-limit": "^4.10.2",
