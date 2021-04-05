@@ -19,9 +19,13 @@
     "lint": "tsdx lint",
     "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why"
+    "analyze": "size-limit --why",
+    "e2e:build": "yarn --cwd e2e run build",
+    "e2e:test": "cypress run"
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    "quickjs-emscripten": "*"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "tsdx lint"
@@ -46,7 +50,9 @@
   ],
   "devDependencies": {
     "@size-limit/preset-small-lib": "^4.10.2",
+    "cypress": "^6.8.0",
     "husky": "^6.0.0",
+    "quickjs-emscripten": "^0.11.0",
     "size-limit": "^4.10.2",
     "tsdx": "^0.14.1",
     "tslib": "^2.1.0",

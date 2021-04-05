@@ -1,0 +1,8 @@
+{
+  "name": "qes-e2e",
+  "author": "rot1024",
+  "private": true,
+  "scripts": {
+    "build": "tsdx build --entry index.ts --format umd"
+  }
+}
