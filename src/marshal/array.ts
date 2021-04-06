@@ -2,7 +2,7 @@ import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 
 export default function marshalArray(
   vm: QuickJSVm,
-  target: any,
+  target: unknown,
   marshaler: (target: any) => QuickJSHandle
 ): QuickJSHandle | undefined {
   if (!Array.isArray(target)) return;
