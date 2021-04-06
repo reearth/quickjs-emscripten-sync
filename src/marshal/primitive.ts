@@ -2,7 +2,7 @@ import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 
 export default function marshalPrimitive(
   vm: QuickJSVm,
-  target: any
+  target: unknown
 ): QuickJSHandle | undefined {
   switch (typeof target) {
     case "undefined":

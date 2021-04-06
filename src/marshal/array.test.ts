@@ -8,10 +8,10 @@ it("works", async () => {
     !!vm.dump(
       vm.unwrapResult(vm.callFunction(eqh, vm.undefined, a ?? vm.undefined, b))
     );
+
   const marshaler = jest.fn(v =>
     v === true ? vm.true : v === "a" ? vm.newString(v) : vm.null
   );
-
   const handle = marshalArray(vm, ["a", null, true], marshaler);
   if (!handle) throw new Error("handle is undefined");
 
