@@ -20,7 +20,7 @@ export default function marshalFunction(
       // Class constructors cannot be invoked without new expression, and new.target is not changed
       const result = new target(...args);
       Object.entries(result).forEach(([key, value]) => {
-        (that as any)[key] = value;
+        marshal(value).consume(h => vm.setProp(this, key, h));
       });
       return this;
     }
@@ -34,6 +34,7 @@ export default function marshalFunction(
     vm.evalCode(`(Cls, proxyTarget) => {
       const fn = function(...args) { return Cls.apply(this, args); };
       fn.name = Cls.name;
+      fn.length = Cls.length;
       if (typeof proxyTarget === "symbol") {
         fn[proxyTarget] = Cls;
       }

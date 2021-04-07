@@ -94,8 +94,7 @@ it("class", async () => {
     }
     return vm.null;
   };
-  const unmarshal = (v: QuickJSHandle) =>
-    vm.typeof(v) === "object" ? emptyObj : vm.dump(v);
+  const unmarshal = (v: QuickJSHandle) => vm.dump(v);
 
   class A {
     a: number;
@@ -104,7 +103,6 @@ it("class", async () => {
       this.a = a;
     }
   }
-  const emptyObj = {};
 
   const handle = marshalFunction(vm, A, marshal, unmarshal, () => {});
   if (!handle) throw new Error("handle is undefined");
@@ -121,7 +119,7 @@ it("class", async () => {
       )
     )
   ).toBe(true);
-  expect(emptyObj).toEqual({ a: 100 });
+  expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
 
   disposables.forEach(d => d.dispose());
   instance.dispose();
