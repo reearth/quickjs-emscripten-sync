@@ -8,13 +8,17 @@ it("empty object", async () => {
   );
 
   const obj = {};
-  const marshaler = jest.fn();
+  const marshal = jest.fn();
+  const preMarshal = jest.fn();
 
-  const handle = marshalObject(vm, obj, marshaler);
+  const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
   expect(vm.typeof(handle)).toBe("object");
-  expect(marshaler).toBeCalledTimes(0);
+  expect(marshal).toBeCalledTimes(0);
+  expect(preMarshal).toBeCalledTimes(1);
+  expect(preMarshal.mock.calls[0][0]).toBe(obj);
+  expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
   expect(
     vm.dump(
       vm.unwrapResult(vm.callFunction(prototypeCheck, vm.undefined, handle))
@@ -34,21 +38,25 @@ it("normal object", async () => {
   const entries = vm.unwrapResult(vm.evalCode(`Object.entries`));
 
   const obj = { a: 100, b: "hoge" };
-  const marshaler = jest.fn(v =>
+  const marshal = jest.fn(v =>
     typeof v === "number"
       ? vm.newNumber(v)
       : typeof v === "string"
       ? vm.newString(v)
       : vm.null
   );
+  const preMarshal = jest.fn();
 
-  const handle = marshalObject(vm, obj, marshaler);
+  const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
   expect(vm.typeof(handle)).toBe("object");
   expect(vm.getNumber(vm.getProp(handle, "a"))).toBe(100);
   expect(vm.getString(vm.getProp(handle, "b"))).toBe("hoge");
-  expect(marshaler.mock.calls).toEqual([[100], ["hoge"]]);
+  expect(marshal.mock.calls).toEqual([[100], ["hoge"]]);
+  expect(preMarshal).toBeCalledTimes(1);
+  expect(preMarshal.mock.calls[0][0]).toBe(obj);
+  expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
   expect(
     vm.dump(
       vm.unwrapResult(vm.callFunction(prototypeCheck, vm.undefined, handle))
@@ -76,14 +84,28 @@ it("prototype", async () => {
   const proto = { a: 100 };
   const protoHandle = vm.newObject();
   vm.setProp(protoHandle, "a", vm.newNumber(100));
+  const preMarshal = jest.fn();
 
   const obj = Object.create(proto);
   obj.b = "hoge";
-  const handle = marshalObject(vm, obj, v =>
-    v === proto ? protoHandle : vm.newString(v)
+  const handle = marshalObject(
+    vm,
+    obj,
+    v =>
+      v === proto
+        ? protoHandle
+        : typeof v === "string"
+        ? vm.newString(v)
+        : vm.null,
+    preMarshal
   );
   if (!handle) throw new Error("handle is undefined");
 
+  expect(preMarshal).toBeCalledTimes(2);
+  expect(preMarshal.mock.calls[0][0]).toBe(obj);
+  expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
+  expect(preMarshal.mock.calls[1][0]).toBe(proto);
+  expect(preMarshal.mock.calls[1][1] === protoHandle).toBe(true); // avoid freeze
   expect(vm.typeof(handle)).toBe("object");
   expect(vm.getNumber(vm.getProp(handle, "a"))).toBe(100);
   expect(vm.getString(vm.getProp(handle, "b"))).toBe("hoge");

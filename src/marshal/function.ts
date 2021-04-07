@@ -1,31 +1,32 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
-import { isES2015Class } from "../util";
+import { isES2015Class, isObject } from "../util";
 import marshalProperties from "./properties";
 
 export default function marshalFunction(
   vm: QuickJSVm,
   target: unknown,
-  marshaler: (target: any) => QuickJSHandle,
-  unmarshaler: (handle: QuickJSHandle) => any,
+  marshal: (target: unknown) => QuickJSHandle,
+  unmarshal: (handle: QuickJSHandle) => unknown,
+  preMarshal: (target: unknown, handle: QuickJSHandle) => void,
   proxyTarget?: QuickJSHandle
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
   const handle2 = vm.newFunction(target.name, function(...argHandles) {
-    const that = unmarshaler(this);
-    const args = argHandles.map(a => unmarshaler(a));
+    const that = unmarshal(this);
+    const args = argHandles.map(a => unmarshal(a));
 
-    if (isES2015Class(target)) {
+    if (isES2015Class(target) && isObject(that)) {
       // Class constructors cannot be invoked without new expression, and new.target is not changed
       const result = new target(...args);
       Object.entries(result).forEach(([key, value]) => {
-        that[key] = value;
+        (that as any)[key] = value;
       });
       return this;
     }
 
     const result = target.apply(that, args);
-    return marshaler(result);
+    return marshal(result);
   });
 
   // fucntions created by vm.newFunction are not callable as a class constrcutor
@@ -50,7 +51,8 @@ export default function marshalFunction(
   createClass.dispose();
   handle2.dispose();
 
-  marshalProperties(vm, target, handle, marshaler);
+  preMarshal(target, handle);
+  marshalProperties(vm, target, handle, marshal);
 
   return handle;
 }

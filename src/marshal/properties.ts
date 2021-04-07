@@ -4,18 +4,18 @@ export default function marshalProperties(
   vm: QuickJSVm,
   target: object | Function,
   handle: QuickJSHandle,
-  marshaler: (target: any) => QuickJSHandle
+  marshal: (target: unknown) => QuickJSHandle
 ): void {
   const descs = vm.newObject();
 
   Object.entries(Object.getOwnPropertyDescriptors(target)).forEach(
     ([key, desc]) => {
       const valueHandle =
-        typeof desc.value === "undefined" ? undefined : marshaler(desc.value);
+        typeof desc.value === "undefined" ? undefined : marshal(desc.value);
       const getHandle =
-        typeof desc.get === "undefined" ? undefined : marshaler(desc.get);
+        typeof desc.get === "undefined" ? undefined : marshal(desc.get);
       const setHandle =
-        typeof desc.set === "undefined" ? undefined : marshaler(desc.set);
+        typeof desc.set === "undefined" ? undefined : marshal(desc.set);
 
       vm.newObject().consume(descObj => {
         Object.entries(desc).forEach(([k, v]) => {

@@ -9,17 +9,20 @@ it("works", async () => {
       vm.unwrapResult(vm.callFunction(eqh, vm.undefined, a ?? vm.undefined, b))
     );
 
-  const marshaler = jest.fn(v =>
+  const marshal = jest.fn(v =>
     v === true ? vm.true : v === "a" ? vm.newString(v) : vm.null
   );
-  const handle = marshalArray(vm, ["a", null, true], marshaler);
+  const preMarshal = jest.fn();
+  const target = ["a", null, true];
+  const handle = marshalArray(vm, target, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
   expect(vm.getNumber(vm.getProp(handle, "length"))).toBe(3);
   expect(eq(vm.getProp(handle, 0), vm.newString("a"))).toBe(true);
   expect(eq(vm.getProp(handle, 1), vm.null)).toBe(true);
   expect(eq(vm.getProp(handle, 2), vm.true)).toBe(true);
-  expect(marshaler.mock.calls).toEqual([["a"], [null], [true]]);
+  expect(marshal.mock.calls).toEqual([["a"], [null], [true]]);
+  expect(preMarshal.mock.calls).toEqual([[target, handle]]);
 
   handle.dispose();
   eqh.dispose();
@@ -28,16 +31,17 @@ it("works", async () => {
 
 it("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshaler = jest.fn();
+  const marshal = jest.fn();
+  const preMarshal = jest.fn();
 
-  expect(marshalArray(vm, undefined, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, null, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, false, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, true, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, 1, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, () => {}, marshaler)).toBe(undefined);
-  expect(marshalArray(vm, { a: 1 }, marshaler)).toBe(undefined);
-  expect(marshaler).toBeCalledTimes(0);
+  expect(marshalArray(vm, undefined, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, null, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, false, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, true, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, 1, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, () => {}, marshal, preMarshal)).toBe(undefined);
+  expect(marshalArray(vm, { a: 1 }, marshal, preMarshal)).toBe(undefined);
+  expect(marshal).toBeCalledTimes(0);
 
   vm.dispose();
 });

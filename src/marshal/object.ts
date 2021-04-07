@@ -4,19 +4,22 @@ import marshalProperties from "./properties";
 export default function marshalObject(
   vm: QuickJSVm,
   target: unknown,
-  marshaler: (target: any) => QuickJSHandle
+  marshal: (target: unknown) => QuickJSHandle,
+  preMarshal: (target: unknown, handle: QuickJSHandle) => void
 ): QuickJSHandle | undefined {
   if (typeof target !== "object" || target === null) return;
 
   const handle = vm.newObject();
+  preMarshal(target, handle);
 
   // prototype
   const prototype = Object.getPrototypeOf(target);
   const prototypeHandle =
     prototype && prototype !== Object.prototype
-      ? marshaler(prototype)
+      ? marshal(prototype)
       : undefined;
   if (prototypeHandle) {
+    preMarshal(prototype, prototypeHandle);
     vm.unwrapResult(vm.evalCode("Object.setPrototypeOf")).consume(
       setPrototypeOf => {
         vm.unwrapResult(
@@ -26,7 +29,7 @@ export default function marshalObject(
     );
   }
 
-  marshalProperties(vm, target, handle, marshaler);
+  marshalProperties(vm, target, handle, marshal);
 
   return handle;
 }

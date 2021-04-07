@@ -19,7 +19,7 @@ it("works", async () => {
   );
 
   const disposables: QuickJSHandle[] = [];
-  const marshaler = jest.fn(() => {
+  const marshal = jest.fn(() => {
     const fn = vm.newFunction("", () => {});
     disposables.push(fn);
     return fn;
@@ -45,8 +45,8 @@ it("works", async () => {
     },
   });
 
-  marshalProperties(vm, obj, handle, marshaler);
-  expect(marshaler.mock.calls).toEqual([[bar], [fooGet], [fooSet]]);
+  marshalProperties(vm, obj, handle, marshal);
+  expect(marshal.mock.calls).toEqual([[bar], [fooGet], [fooSet]]);
 
   const expected = vm.unwrapResult(
     vm.evalCode(`({
@@ -65,12 +65,12 @@ it("works", async () => {
 
 it("empty", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshaler = jest.fn();
+  const marshal = jest.fn();
   const handle = vm.newObject();
   const obj = {};
 
-  marshalProperties(vm, obj, handle, marshaler);
-  expect(marshaler).toHaveBeenCalledTimes(0);
+  marshalProperties(vm, obj, handle, marshal);
+  expect(marshal).toHaveBeenCalledTimes(0);
 
   handle.dispose();
   vm.dispose();
