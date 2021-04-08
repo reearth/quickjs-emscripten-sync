@@ -17,11 +17,12 @@ export default function unmarshalFunction(
     if (new.target) {
       return vm
         .unwrapResult(vm.evalCode(`(Cls, ...args) => new Cls(...args)`))
-        .consume(n =>
-          vm.unwrapResult(vm.callFunction(n, thisHandle, handle, ...argHandles))
-        )
-        .consume(v => {
-          const instance = unmarshal(v);
+        .consume(n => {
+          const instance = unmarshal(
+            vm.unwrapResult(
+              vm.callFunction(n, thisHandle, handle, ...argHandles)
+            )
+          );
           Object.defineProperties(
             this,
             Object.getOwnPropertyDescriptors(instance)
@@ -30,9 +31,9 @@ export default function unmarshalFunction(
         });
     }
 
-    return vm
-      .unwrapResult(vm.callFunction(handle, thisHandle, ...argHandles))
-      .consume(v => unmarshal(v));
+    return unmarshal(
+      vm.unwrapResult(vm.callFunction(handle, thisHandle, ...argHandles))
+    );
   };
 
   preUnmarshal(func, handle);

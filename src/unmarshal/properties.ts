@@ -10,21 +10,18 @@ export default function unmarshalProperties(
     const keyName = vm.typeof(key) === "string" ? vm.getString(key) : undefined;
     if (!keyName) return; // symbol not supported
 
-    const v = vm
-      .getProp(value, "value")
-      .consume(h => (vm.typeof(h) === "undefined" ? undefined : unmarshal(h)));
-    const get = vm
-      .getProp(value, "get")
-      .consume(h =>
-        vm.typeof(h) === "undefined" ? undefined : (unmarshal(h) as () => any)
-      );
-    const set = vm
-      .getProp(value, "set")
-      .consume(h =>
-        vm.typeof(h) === "undefined"
-          ? undefined
-          : (unmarshal(h) as (v: any) => void)
-      );
+    const vh = vm.getProp(value, "value");
+    const v = vm.typeof(vh) === "undefined" ? undefined : unmarshal(vh);
+    const geth = vm.getProp(value, "get");
+    const get =
+      vm.typeof(geth) === "undefined"
+        ? undefined
+        : (unmarshal(geth) as () => any);
+    const seth = vm.getProp(value, "set");
+    const set =
+      vm.typeof(seth) === "undefined"
+        ? undefined
+        : (unmarshal(seth) as () => any);
     const configurable = vm.dump(vm.getProp(value, "configurable")) as
       | boolean
       | undefined;
@@ -54,7 +51,7 @@ export default function unmarshalProperties(
     ).consume(getOwnPropertyDescriptors => {
       vm.unwrapResult(
         vm.callFunction(getOwnPropertyDescriptors, vm.undefined, handle, fn)
-      );
+      ).dispose();
     });
   });
 }

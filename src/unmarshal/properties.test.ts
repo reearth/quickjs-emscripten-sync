@@ -1,11 +1,13 @@
-import { getQuickJS } from "quickjs-emscripten";
+import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalProperties from "./properties";
 
 it("works", async () => {
   const vm = (await getQuickJS()).createVm();
-  const unmarshal = jest.fn(v =>
-    vm.typeof(v) === "function" ? () => {} : vm.dump(v)
-  );
+  const disposables: QuickJSHandle[] = [];
+  const unmarshal = jest.fn(v => {
+    disposables.push(v);
+    return vm.typeof(v) === "function" ? () => {} : vm.dump(v);
+  });
   const obj = {};
 
   const handle = vm.unwrapResult(
@@ -40,6 +42,7 @@ it("works", async () => {
   expect(unmarshal).toReturnWith(2);
   expect(unmarshal).toReturnWith(expect.any(Function));
 
+  disposables.forEach(d => d.dispose());
   handle.dispose();
   vm.dispose();
 });

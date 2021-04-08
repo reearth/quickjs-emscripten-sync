@@ -4,7 +4,7 @@ import unmarshalFunction from "./function";
 it("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(v => vm.newNumber(v));
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const unmarshal = jest.fn((v: QuickJSHandle) => vm.dump(v));
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(vm.evalCode(`(a, b) => a + b`));
@@ -18,6 +18,8 @@ it("arrow function", async () => {
   expect(marshal).toBeCalledWith(2);
   expect(unmarshal.mock.calls.length).toBe(3); // a + b, func.name, func.length
   expect(unmarshal).toReturnWith(3); // a + b
+  expect(unmarshal).toReturnWith(func.name);
+  expect(unmarshal).toReturnWith(func.length);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
@@ -32,7 +34,12 @@ it("function", async () => {
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
   const marshal = jest.fn(v => (v === that ? thatHandle : vm.newNumber(v)));
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const disposables: QuickJSHandle[] = [];
+  const unmarshal = jest.fn((v: QuickJSHandle) => {
+    const ty = vm.typeof(v);
+    if (ty === "object" || ty === "function") disposables.push(v);
+    return vm.dump(v);
+  });
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(
@@ -48,10 +55,13 @@ it("function", async () => {
   expect(marshal).toBeCalledWith(2);
   expect(unmarshal.mock.calls.length).toBe(4); // this.a + b, func.prototype, func.name, func.length
   expect(unmarshal).toReturnWith(3); // this.a + b
-  expect(unmarshal).toReturnWith(func.prototype); // prototype
+  expect(unmarshal).toReturnWith(func.prototype);
+  expect(unmarshal).toReturnWith(func.name);
+  expect(unmarshal).toReturnWith(func.length);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
+  disposables.forEach(d => d.dispose());
   thatHandle.dispose();
   handle.dispose();
   vm.dispose();
@@ -60,10 +70,12 @@ it("function", async () => {
 it("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn(v => vm.newNumber(v));
+  const marshal = jest.fn((v: unknown) =>
+    typeof v === "number" ? vm.newNumber(v) : vm.null
+  );
   const unmarshal = jest.fn((v: QuickJSHandle) => {
     const ty = vm.typeof(v);
-    if (ty === "oject" || ty === "function") disposables.push(v);
+    if (ty === "object" || ty === "function") disposables.push(v);
     return vm.dump(v);
   });
   const preUnmarshal = jest.fn();
@@ -84,12 +96,14 @@ it("constructor", async () => {
   const instance = new Cls(100);
   expect(instance instanceof Cls).toBe(true);
   expect(instance.a).toBe(102);
-  expect(marshal).toBeCalledTimes(2); // this, 2
+  expect(marshal).toBeCalledTimes(2); // this, 100
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(100);
   expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
   expect(unmarshal).toReturnWith(instance);
   expect(unmarshal).toReturnWith(Cls.prototype);
+  expect(unmarshal).toReturnWith(Cls.name);
+  expect(unmarshal).toReturnWith(Cls.length);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
@@ -98,11 +112,17 @@ it("constructor", async () => {
   vm.dispose();
 });
 
-it.skip("class", async () => {
+it("class", async () => {
   const vm = (await getQuickJS()).createVm();
-
-  const marshal = jest.fn(v => vm.newNumber(v));
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const marshal = jest.fn((v: unknown) =>
+    typeof v === "number" ? vm.newNumber(v) : vm.null
+  );
+  const disposables: QuickJSHandle[] = [];
+  const unmarshal = jest.fn((v: QuickJSHandle) => {
+    const ty = vm.typeof(v);
+    if (ty === "object" || ty === "function") disposables.push(v);
+    return vm.dump(v);
+  });
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(
@@ -127,9 +147,12 @@ it.skip("class", async () => {
   expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
   expect(unmarshal).toReturnWith(instance);
   expect(unmarshal).toReturnWith(Cls.prototype);
+  expect(unmarshal).toReturnWith(Cls.name);
+  expect(unmarshal).toReturnWith(Cls.length);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
+  disposables.forEach(d => d.dispose());
   handle.dispose();
   vm.dispose();
 });
