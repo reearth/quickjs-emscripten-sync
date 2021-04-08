@@ -1,4 +1,4 @@
-import { getQuickJS } from "quickjs-emscripten";
+import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalFunction from "./function";
 
 it("arrow function", async () => {
@@ -29,7 +29,6 @@ it("arrow function", async () => {
 
 it("function", async () => {
   const vm = (await getQuickJS()).createVm();
-
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
   const marshal = jest.fn(v => (v === that ? thatHandle : vm.newNumber(v)));
@@ -60,13 +59,17 @@ it("function", async () => {
 
 it("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
-
+  const disposables: QuickJSHandle[] = [];
   const marshal = jest.fn(v => vm.newNumber(v));
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const unmarshal = jest.fn((v: QuickJSHandle) => {
+    const ty = vm.typeof(v);
+    if (ty === "oject" || ty === "function") disposables.push(v);
+    return vm.dump(v);
+  });
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(
-    vm.evalCode(`(function (a) { this.a = a + 1; })`)
+    vm.evalCode(`(function (b) { this.a = b + 2; })`)
   );
 
   const Cls = unmarshalFunction(
@@ -76,18 +79,54 @@ it("constructor", async () => {
     unmarshal,
     preUnmarshal
   ) as any;
-  if (!Cls) throw new Error("func is undefined");
+  if (!Cls) throw new Error("Cls is undefined");
+
+  const instance = new Cls(100);
+  expect(instance instanceof Cls).toBe(true);
+  expect(instance.a).toBe(102);
+  expect(marshal).toBeCalledTimes(2); // this, 2
+  expect(marshal).toBeCalledWith(instance);
+  expect(marshal).toBeCalledWith(100);
+  expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
+  expect(unmarshal).toReturnWith(instance);
+  expect(unmarshal).toReturnWith(Cls.prototype);
+  expect(preUnmarshal).toBeCalledTimes(1);
+  expect(preUnmarshal).toBeCalledWith(Cls, handle);
+
+  disposables.forEach(d => d.dispose());
+  handle.dispose();
+  vm.dispose();
+});
+
+it.skip("class", async () => {
+  const vm = (await getQuickJS()).createVm();
+
+  const marshal = jest.fn(v => vm.newNumber(v));
+  const unmarshal = jest.fn(v => vm.dump(v));
+  const preUnmarshal = jest.fn();
+
+  const handle = vm.unwrapResult(
+    vm.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`)
+  );
+
+  const Cls = unmarshalFunction(
+    vm,
+    handle,
+    marshal,
+    unmarshal,
+    preUnmarshal
+  ) as any;
+  if (!Cls) throw new Error("Cls is undefined");
 
   const instance = new Cls(2);
   expect(instance instanceof Cls).toBe(true);
-  // marshal doesn't proxy obj so a is not set correctly.
-  expect(instance.a).toBe(undefined);
+  expect(instance.a).toBe(3);
   expect(marshal).toBeCalledTimes(2); // this, 2
-  expect(marshal).toBeCalledWith(instance); // this
-  expect(marshal).toBeCalledWith(2); // this
-  expect(unmarshal.mock.calls.length).toBe(4); // return value of constructor, Cls.prototype, Cls.name, Cls.length
-  expect(unmarshal).toReturnWith(undefined); // return value
-  expect(unmarshal).toReturnWith(Cls.prototype); // prototype
+  expect(marshal).toBeCalledWith(instance);
+  expect(marshal).toBeCalledWith(2);
+  expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
+  expect(unmarshal).toReturnWith(instance);
+  expect(unmarshal).toReturnWith(Cls.prototype);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
