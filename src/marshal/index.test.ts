@@ -175,7 +175,24 @@ it("vm not match", async () => {
   vm2.dispose();
 });
 
-const setup = async () => {
+it("marshalable", async () => {
+  const marshalable = jest.fn((a: any) => a !== globalThis);
+  const { vm, marshal, dispose } = await setup({
+    marshalable,
+  });
+
+  const map = new VMMap(vm);
+  const handle = marshal({ a: globalThis, b: 1 }, map);
+
+  expect(vm.dump(handle)).toEqual({ a: undefined, b: 1 });
+  expect(marshalable).toBeCalledWith(globalThis);
+  expect(marshalable).toReturnWith(false);
+
+  map.dispose();
+  dispose();
+});
+
+const setup = async (options?: { marshalable?: (target: any) => boolean }) => {
   const vm = (await getQuickJS()).createVm();
   const unmarshaler = (v: QuickJSHandle) => vm.dump(v);
   const sym = vm.unwrapResult(vm.evalCode("Symbol()"));
@@ -183,7 +200,13 @@ const setup = async () => {
   return {
     vm,
     marshal: (v: any, map: VMMap) =>
-      marshal(v, { vm, map, unmarshaler, proxyKeySymbol: sym }),
+      marshal(v, {
+        vm,
+        map,
+        unmarshaler,
+        proxyKeySymbol: sym,
+        marshalable: options?.marshalable,
+      }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
     dispose: () => {

@@ -16,6 +16,10 @@ export {
   isObject,
 };
 
+export type Options = {
+  isMarshalable?: (target: any) => boolean;
+};
+
 export default class Arena {
   vm: QuickJSVm;
   _map: VMMap;
@@ -24,9 +28,11 @@ export default class Arena {
   _symbol2 = Symbol();
   _setterHandle: QuickJSHandle;
   _syncHandle: QuickJSHandle;
+  _options?: Options;
 
-  constructor(vm: QuickJSVm) {
+  constructor(vm: QuickJSVm, options?: Options) {
     this.vm = vm;
+    this._options = options;
     this._symbol = vm.unwrapResult(vm.evalCode(`Symbol()`));
     this._map = new VMMap(vm, this._symbol);
     this._sync = new VMSet(vm, this._symbol);
@@ -135,6 +141,7 @@ export default class Arena {
       map,
       unmarshaler: v => this._unmarshal(v, true),
       proxyKeySymbol: this._symbol,
+      marshalable: this._options?.isMarshalable,
     });
     this._map.merge(map);
     if (sync && isObject(target)) {
