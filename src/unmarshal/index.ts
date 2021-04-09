@@ -11,32 +11,43 @@ export function unmarshal(
   map: VMMap,
   marshal: (target: unknown) => QuickJSHandle
 ): any {
+  const [result] = unmarshalInner(vm, handle, map, marshal);
+  return result;
+}
+
+function unmarshalInner(
+  vm: QuickJSVm,
+  handle: QuickJSHandle,
+  map: VMMap,
+  marshal: (target: unknown) => QuickJSHandle
+): [any, boolean] {
   if (vm !== map.vm) {
     throw new Error("vm and map.vm do not match");
   }
 
   {
     const [target, ok] = unmarshalPrimitive(vm, handle);
-    if (ok) return target;
+    if (ok) return [target, false];
   }
 
   {
     const target = map.getByHandle(handle);
     if (target) {
-      return target;
+      return [target, true];
     }
   }
 
-  const unmarshal2 = (h: QuickJSHandle) => unmarshal(vm, h, map, marshal);
+  const unmarshal2 = (h: QuickJSHandle) => unmarshalInner(vm, h, map, marshal);
   const preUnmarshal = (target: unknown, h: QuickJSHandle) => {
     map.set(target, h);
   };
 
-  return (
+  return [
     unmarshalArray(vm, handle, unmarshal2, preUnmarshal) ??
-    unmarshalFunction(vm, handle, marshal, unmarshal2, preUnmarshal) ??
-    unmarshalObject(vm, handle, unmarshal2, preUnmarshal)
-  );
+      unmarshalFunction(vm, handle, marshal, unmarshal2, preUnmarshal) ??
+      unmarshalObject(vm, handle, unmarshal2, preUnmarshal),
+    false,
+  ];
 }
 
 export default unmarshal;

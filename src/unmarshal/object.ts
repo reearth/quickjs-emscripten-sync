@@ -4,7 +4,7 @@ import unmarshalProperties from "./properties";
 export default function unmarshalObject(
   vm: QuickJSVm,
   handle: QuickJSHandle,
-  unmarshal: (handle: QuickJSHandle) => unknown,
+  unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
   preUnmarshal: (target: unknown, handle: QuickJSHandle) => void
 ): object | undefined {
   if (
@@ -31,9 +31,11 @@ export default function unmarshalObject(
     .consume(getPrototypeOf =>
       vm.unwrapResult(vm.callFunction(getPrototypeOf, vm.undefined, handle))
     )
-    .consume(prototype =>
-      vm.typeof(prototype) === "undefined" ? undefined : unmarshal(prototype)
-    );
+    .consume(prototype => {
+      if (vm.typeof(prototype) === "undefined") return;
+      const [proto] = unmarshal(prototype);
+      return proto;
+    });
   if (typeof prototype === "object") {
     Object.setPrototypeOf(obj, prototype);
   }

@@ -1,17 +1,20 @@
-import { getQuickJS } from "quickjs-emscripten";
+import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalArray from "./array";
 
 it("works", async () => {
   const vm = (await getQuickJS()).createVm();
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+    vm.dump(v),
+    false,
+  ]);
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(vm.evalCode(`[1, true, {}]`));
   const array = unmarshalArray(vm, handle, unmarshal, preUnmarshal);
   expect(array).toEqual([1, true, {}]);
-  expect(unmarshal.mock.results[0].value).toBe(1);
-  expect(unmarshal.mock.results[1].value).toBe(true);
-  expect(unmarshal.mock.results[2].value).toEqual({});
+  expect(unmarshal.mock.results[0].value).toEqual([1, false]);
+  expect(unmarshal.mock.results[1].value).toEqual([true, false]);
+  expect(unmarshal.mock.results[2].value).toEqual([{}, false]);
   expect(preUnmarshal).toBeCalledWith(array, handle);
 
   handle.dispose();

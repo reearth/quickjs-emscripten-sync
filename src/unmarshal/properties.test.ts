@@ -4,9 +4,9 @@ import unmarshalProperties from "./properties";
 it("works", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn(v => {
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     disposables.push(v);
-    return vm.typeof(v) === "function" ? () => {} : vm.dump(v);
+    return [vm.typeof(v) === "function" ? () => {} : vm.dump(v), false];
   });
   const obj = {};
 
@@ -38,9 +38,9 @@ it("works", async () => {
     },
   });
   expect(unmarshal).toBeCalledTimes(4); // a.value, b.value, c.get, c.set
-  expect(unmarshal).toReturnWith(1);
-  expect(unmarshal).toReturnWith(2);
-  expect(unmarshal).toReturnWith(expect.any(Function));
+  expect(unmarshal).toReturnWith([1, false]);
+  expect(unmarshal).toReturnWith([2, false]);
+  expect(unmarshal).toReturnWith([expect.any(Function), false]);
 
   disposables.forEach(d => d.dispose());
   handle.dispose();

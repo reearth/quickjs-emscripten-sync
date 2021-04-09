@@ -3,7 +3,7 @@ import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 export default function unmarshalArray(
   vm: QuickJSVm,
   handle: QuickJSHandle,
-  unmarshal: (handle: QuickJSHandle) => unknown,
+  unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
   preUnmarshal: (target: unknown, handle: QuickJSHandle) => void
 ): any[] | undefined {
   const isArrayFunc = vm.unwrapResult(vm.evalCode(`Array.isArray`));
@@ -19,7 +19,7 @@ export default function unmarshalArray(
 
   vm.newFunction("", (value, index) => {
     const i = vm.getNumber(index);
-    const v = unmarshal(value);
+    const [v] = unmarshal(value);
 
     if (v) {
       array[i] = v;

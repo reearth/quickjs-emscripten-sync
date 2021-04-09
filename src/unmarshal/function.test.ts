@@ -4,7 +4,10 @@ import unmarshalFunction from "./function";
 it("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(v => vm.newNumber(v));
-  const unmarshal = jest.fn((v: QuickJSHandle) => vm.dump(v));
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+    vm.dump(v),
+    false,
+  ]);
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(vm.evalCode(`(a, b) => a + b`));
@@ -17,9 +20,9 @@ it("arrow function", async () => {
   expect(marshal).toBeCalledWith(1);
   expect(marshal).toBeCalledWith(2);
   expect(unmarshal.mock.calls.length).toBe(3); // a + b, func.name, func.length
-  expect(unmarshal).toReturnWith(3); // a + b
-  expect(unmarshal).toReturnWith(func.name);
-  expect(unmarshal).toReturnWith(func.length);
+  expect(unmarshal).toReturnWith([3, false]); // a + b
+  expect(unmarshal).toReturnWith([func.name, false]);
+  expect(unmarshal).toReturnWith([func.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
@@ -35,10 +38,10 @@ it("function", async () => {
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
   const marshal = jest.fn(v => (v === that ? thatHandle : vm.newNumber(v)));
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle) => {
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
-    return vm.dump(v);
+    return [vm.dump(v), false];
   });
   const preUnmarshal = jest.fn();
 
@@ -54,10 +57,10 @@ it("function", async () => {
   expect(marshal).toBeCalledWith(that);
   expect(marshal).toBeCalledWith(2);
   expect(unmarshal.mock.calls.length).toBe(4); // this.a + b, func.prototype, func.name, func.length
-  expect(unmarshal).toReturnWith(3); // this.a + b
-  expect(unmarshal).toReturnWith(func.prototype);
-  expect(unmarshal).toReturnWith(func.name);
-  expect(unmarshal).toReturnWith(func.length);
+  expect(unmarshal).toReturnWith([3, false]); // this.a + b
+  expect(unmarshal).toReturnWith([func.prototype, false]);
+  expect(unmarshal).toReturnWith([func.name, false]);
+  expect(unmarshal).toReturnWith([func.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
@@ -73,10 +76,10 @@ it("constructor", async () => {
   const marshal = jest.fn((v: unknown) =>
     typeof v === "number" ? vm.newNumber(v) : vm.null
   );
-  const unmarshal = jest.fn((v: QuickJSHandle) => {
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
-    return vm.dump(v);
+    return [vm.dump(v), false];
   });
   const preUnmarshal = jest.fn();
 
@@ -100,10 +103,10 @@ it("constructor", async () => {
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(100);
   expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
-  expect(unmarshal).toReturnWith(instance);
-  expect(unmarshal).toReturnWith(Cls.prototype);
-  expect(unmarshal).toReturnWith(Cls.name);
-  expect(unmarshal).toReturnWith(Cls.length);
+  expect(unmarshal).toReturnWith([instance, false]);
+  expect(unmarshal).toReturnWith([Cls.prototype, false]);
+  expect(unmarshal).toReturnWith([Cls.name, false]);
+  expect(unmarshal).toReturnWith([Cls.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
@@ -118,10 +121,10 @@ it("class", async () => {
     typeof v === "number" ? vm.newNumber(v) : vm.null
   );
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle) => {
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
-    return vm.dump(v);
+    return [vm.dump(v), false];
   });
   const preUnmarshal = jest.fn();
 
@@ -145,10 +148,10 @@ it("class", async () => {
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(2);
   expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
-  expect(unmarshal).toReturnWith(instance);
-  expect(unmarshal).toReturnWith(Cls.prototype);
-  expect(unmarshal).toReturnWith(Cls.name);
-  expect(unmarshal).toReturnWith(Cls.length);
+  expect(unmarshal).toReturnWith([instance, false]);
+  expect(unmarshal).toReturnWith([Cls.prototype, false]);
+  expect(unmarshal).toReturnWith([Cls.name, false]);
+  expect(unmarshal).toReturnWith([Cls.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 

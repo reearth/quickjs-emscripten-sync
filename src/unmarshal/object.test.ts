@@ -3,7 +3,10 @@ import unmarshalObject from "./object";
 
 it("normal", async () => {
   const vm = (await getQuickJS()).createVm();
-  const unmarshal = jest.fn(v => vm.dump(v));
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+    vm.dump(v),
+    false,
+  ]);
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1, b: true })`));
@@ -11,8 +14,8 @@ it("normal", async () => {
   if (!obj) throw new Error("obj is undefined");
   expect(obj).toEqual({ a: 1, b: true });
   expect(unmarshal.mock.calls.length).toBe(2);
-  expect(unmarshal).toReturnWith(1);
-  expect(unmarshal).toReturnWith(true);
+  expect(unmarshal).toReturnWith([1, false]);
+  expect(unmarshal).toReturnWith([true, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
 
@@ -23,9 +26,9 @@ it("normal", async () => {
 it("properties", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle) => {
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     disposables.push(v);
-    return vm.typeof(v) === "function" ? () => {} : vm.dump(v);
+    return [vm.typeof(v) === "function" ? () => {} : vm.dump(v), false];
   });
   const preUnmarshal = jest.fn();
 
@@ -56,9 +59,9 @@ it("properties", async () => {
     },
   });
   expect(unmarshal).toBeCalledTimes(4); // a.value, b.value, c.get, c.set
-  expect(unmarshal).toReturnWith(1);
-  expect(unmarshal).toReturnWith(2);
-  expect(unmarshal).toReturnWith(expect.any(Function));
+  expect(unmarshal).toReturnWith([1, false]);
+  expect(unmarshal).toReturnWith([2, false]);
+  expect(unmarshal).toReturnWith([expect.any(Function), false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
 
@@ -69,9 +72,10 @@ it("properties", async () => {
 
 it("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
-  const unmarshal = jest.fn(v =>
-    vm.typeof(v) === "object" ? { a: () => 1 } : vm.dump(v)
-  );
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+    vm.typeof(v) === "object" ? { a: () => 1 } : vm.dump(v),
+    false,
+  ]);
   const preUnmarshal = jest.fn();
 
   const handle = vm.unwrapResult(vm.evalCode(`Object.create({ a: () => 1 })`));
@@ -80,7 +84,7 @@ it("prototype", async () => {
   expect(Object.getPrototypeOf(obj)).toEqual({ a: expect.any(Function) });
   expect(obj.a()).toBe(1);
   expect(unmarshal.mock.calls.length).toBe(1);
-  expect(unmarshal).toReturnWith(Object.getPrototypeOf(obj));
+  expect(unmarshal).toReturnWith([Object.getPrototypeOf(obj), false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
 

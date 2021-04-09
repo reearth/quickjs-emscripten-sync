@@ -87,8 +87,7 @@ it("func", async () => {
   map.dispose();
   disposables.forEach(d => d.dispose());
   jsonParse.dispose();
-  // TODO: fix error
-  expect(() => vm.dispose()).toThrow();
+  vm.dispose();
 });
 
 it("class", async () => {
@@ -132,8 +131,7 @@ it("class", async () => {
   map.dispose();
   disposables.forEach(d => d.dispose());
   jsonParse.dispose();
-  // TODO: fix error
-  expect(() => vm.dispose()).toThrow();
+  vm.dispose();
 });
 
 it("vm not match", async () => {

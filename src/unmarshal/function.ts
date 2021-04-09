@@ -5,7 +5,7 @@ export default function unmarshalFunction(
   vm: QuickJSVm,
   handle: QuickJSHandle,
   marshal: (value: unknown) => QuickJSHandle,
-  unmarshal: (handle: QuickJSHandle) => unknown,
+  unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
   preUnmarshal: (target: unknown, handle: QuickJSHandle) => void
 ): Function | undefined {
   if (vm.typeof(handle) !== "function") return;
@@ -18,7 +18,7 @@ export default function unmarshalFunction(
       return vm
         .unwrapResult(vm.evalCode(`(Cls, ...args) => new Cls(...args)`))
         .consume(n => {
-          const instance = unmarshal(
+          const [instance] = unmarshal(
             vm.unwrapResult(
               vm.callFunction(n, thisHandle, handle, ...argHandles)
             )
@@ -31,9 +31,10 @@ export default function unmarshalFunction(
         });
     }
 
-    return unmarshal(
+    const [result] = unmarshal(
       vm.unwrapResult(vm.callFunction(handle, thisHandle, ...argHandles))
     );
+    return result;
   };
 
   preUnmarshal(func, handle);
