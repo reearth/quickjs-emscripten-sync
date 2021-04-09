@@ -109,6 +109,29 @@ it("clear", async () => {
   vm.dispose(); // test whether no exception occurs
 });
 
+it("merge", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const handle = vm.newObject();
+
+  const map = new VMMap(vm);
+  const map2 = new VMMap(vm);
+  map.set(target, handle);
+  expect(map.size).toBe(1);
+  expect(map.get(target)).toBe(handle);
+  expect(map2.size).toBe(0);
+  map2.merge(map);
+  expect(map2.size).toBe(1);
+  expect(map2.get(target)).toBe(handle);
+
+  map.clear();
+  map.dispose();
+  map2.dispose();
+  vm.dispose(); // test whether no exception occurs
+});
+
 it("entries", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
@@ -174,5 +197,35 @@ it("symbol", async () => {
   sym.dispose();
   wrapper.dispose();
   objectis.dispose();
+  vm.dispose(); // test whether no exception occurs
+});
+
+it("iterator", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const handle = vm.newObject();
+
+  const map = new VMMap(vm);
+  map.set(target, handle);
+
+  const iter = map[Symbol.iterator]();
+  const first = iter.next();
+  expect(first.value[0]).toBe(target);
+  expect(first.value[1] === handle).toBe(true);
+  expect(first.done).toBe(false);
+  const second = iter.next();
+  expect(second.done).toBe(true);
+
+  let i = 0;
+  for (const [k, v] of map) {
+    expect(k).toBe(target);
+    expect(v === handle).toBe(true);
+    i++;
+  }
+  expect(i).toBe(1);
+
+  map.dispose();
   vm.dispose(); // test whether no exception occurs
 });

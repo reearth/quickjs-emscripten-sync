@@ -51,6 +51,8 @@ export default class VMMap {
   }
 
   set(key: any, value: QuickJSHandle) {
+    if (!value.alive) return;
+
     const counter = this._counter++;
     this._map.set(key, value);
     this._counterMap.set(counter, key);
@@ -149,16 +151,17 @@ export default class VMMap {
     this.clear();
   }
 
-  [Symbol.iterator](): Iterator<
-    [any, QuickJSHandle | undefined],
-    [any, QuickJSHandle | undefined]
-  > {
+  [Symbol.iterator](): Iterator<[any, QuickJSHandle]> {
     const keys = this._map.keys();
     return {
       next: () => {
-        const k = keys.next();
-        const v = this.get(k);
-        return { value: [k.value, v], done: !!k.done };
+        while (true) {
+          const k = keys.next();
+          if (k.done) return { value: undefined, done: true };
+          const v = this.get(k.value);
+          if (!v) continue;
+          return { value: [k.value, v], done: false };
+        }
       },
     };
   }
