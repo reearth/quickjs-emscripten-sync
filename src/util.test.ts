@@ -1,4 +1,4 @@
-import { isES2015Class, mergeMap, isObject, complexity } from "./util";
+import { isES2015Class, isObject, complexity } from "./util";
 
 it("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);
@@ -9,24 +9,6 @@ it("isES2015Class", () => {
   expect(isES2015Class({})).toBe(false);
   expect(isES2015Class(1)).toBe(false);
   expect(isES2015Class(true)).toBe(false);
-});
-
-it("mergeMap", () => {
-  const map1 = new Map([["a", "A"]]);
-  const map2 = new Map([
-    ["b", "B"],
-    ["c", "C"],
-  ]);
-  const map3 = new Map([["d", "D"]]);
-
-  mergeMap(map1, map2, map3);
-
-  expect(Array.from(map1.entries())).toEqual([
-    ["a", "A"],
-    ["b", "B"],
-    ["c", "C"],
-    ["d", "D"],
-  ]);
 });
 
 it("isObject", () => {
