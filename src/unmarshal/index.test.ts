@@ -133,3 +133,16 @@ it("class", async () => {
   jsonParse.dispose();
   vm.dispose();
 });
+
+it("vm not match", async () => {
+  const quickjs = await getQuickJS();
+  const vm1 = quickjs.createVm();
+  const vm2 = quickjs.createVm();
+  const map = new VMMap(vm2);
+  expect(() => unmarshal(vm1, vm1.null, map, () => vm1.null)).toThrow(
+    "vm and map.vm do not match"
+  );
+  map.dispose();
+  vm1.dispose();
+  vm2.dispose();
+});

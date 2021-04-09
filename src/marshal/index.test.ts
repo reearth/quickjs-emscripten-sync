@@ -1,5 +1,6 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import { Marshaler } from ".";
+import { marshal, Marshaler } from ".";
+import VMMap from "../vmmap";
 
 it("primitive, array, object", async () => {
   const { vm, marshaler, dispose } = await setup();
@@ -10,8 +11,8 @@ it("primitive, array, object", async () => {
     aaa: [1, true, {}],
     nested: { aa: null, hoge: undefined },
   };
-  const [handle, disposables, map] = marshaler.marshal(target);
-  if (!map) throw new Error("map is undefined");
+  const map = new VMMap(vm);
+  const handle = marshaler.marshal(target, map);
 
   expect(vm.dump(handle)).toEqual(target);
   expect(map.size).toBe(4);
@@ -20,7 +21,7 @@ it("primitive, array, object", async () => {
   expect(map.has(target.nested)).toBe(true);
   expect(map.has(target.aaa[2])).toBe(true);
 
-  disposables.forEach(d => d.dispose());
+  map.dispose();
   dispose();
 });
 
@@ -29,8 +30,8 @@ it("arrow function", async () => {
 
   const hoge = () => "foo";
   hoge.foo = { bar: 1 };
-  const [handle, disposables, map] = marshaler.marshal(hoge);
-  if (!map) throw new Error("map is undefined");
+  const map = new VMMap(vm);
+  const handle = marshaler.marshal(hoge, map);
 
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(0);
@@ -45,7 +46,7 @@ it("arrow function", async () => {
   expect(map.has(hoge.foo)).toBe(true);
 
   foo.dispose();
-  disposables.forEach(d => d.dispose());
+  map.dispose();
   dispose();
 });
 
@@ -55,8 +56,8 @@ it("function", async () => {
   const bar = function(a: number, b: { hoge: number }) {
     return a + b.hoge;
   };
-  const [handle, disposables, map] = marshaler.marshal(bar);
-  if (!map) throw new Error("map is undefined");
+  const map = new VMMap(vm);
+  const handle = marshaler.marshal(bar, map);
 
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(2);
@@ -73,7 +74,7 @@ it("function", async () => {
   ).toBe(3);
 
   b.dispose();
-  disposables.forEach(d => d.dispose());
+  map.dispose();
   dispose();
 });
 
@@ -104,7 +105,8 @@ it("class", async () => {
     }
   }
 
-  const [handle, disposables, map] = marshaler.marshal(A);
+  const map = new VMMap(vm);
+  const handle = marshaler.marshal(A, map);
   if (!map) throw new Error("map is undefined");
 
   expect(map.size).toBe(6);
@@ -123,19 +125,16 @@ it("class", async () => {
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(1);
   expect(vm.dump(vm.getProp(handle, "name"))).toBe("A");
   const staticA = vm.getProp(handle, "a");
-  disposables.push(staticA);
   expect(instanceOf(staticA, handle)).toBe(true);
   expect(vm.dump(vm.getProp(staticA, "a"))).toBe(100);
   expect(vm.dump(vm.getProp(staticA, "b"))).toBe("a!");
 
   const newA = vm.unwrapResult(vm.evalCode(`A => new A("foo")`));
   const instance = vm.unwrapResult(vm.callFunction(newA, vm.undefined, handle));
-  disposables.push(newA, instance);
   expect(instanceOf(instance, handle)).toBe(true);
   expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
   expect(vm.dump(vm.getProp(instance, "b"))).toBe("foo!");
   const methodHoge = vm.getProp(instance, "hoge");
-  disposables.push(methodHoge);
   expect(vm.dump(vm.unwrapResult(vm.callFunction(methodHoge, instance)))).toBe(
     101
   );
@@ -144,7 +143,6 @@ it("class", async () => {
 
   const getter = vm.unwrapResult(vm.evalCode(`a => a.foo`));
   const setter = vm.unwrapResult(vm.evalCode(`(a, b) => a.foo = b`));
-  disposables.push(getter, setter);
   expect(
     vm.dump(vm.unwrapResult(vm.callFunction(getter, vm.undefined, instance)))
   ).toBe("foo!");
@@ -154,8 +152,27 @@ it("class", async () => {
   // setter does not work because it is called in the host side and this arg is not proxied.
   expect(vm.dump(vm.getProp(instance, "b"))).toBe("foo!");
 
-  disposables.forEach(d => d.dispose());
+  staticA.dispose();
+  newA.dispose();
+  instance.dispose();
+  methodHoge.dispose();
+  getter.dispose();
+  setter.dispose();
+  map.dispose();
   dispose();
+});
+
+it("vm not match", async () => {
+  const quickjs = await getQuickJS();
+  const vm1 = quickjs.createVm();
+  const vm2 = quickjs.createVm();
+  const map = new VMMap(vm2);
+  expect(() =>
+    marshal(vm1.null, { vm: vm1, map, unmarshaler: v => vm1.dump(v) })
+  ).toThrow("options.vm and map.vm do not match");
+  map.dispose();
+  vm1.dispose();
+  vm2.dispose();
 });
 
 const setup = async () => {
@@ -165,7 +182,7 @@ const setup = async () => {
   const instanceOf = vm.unwrapResult(vm.evalCode(`(a, b) => a instanceof b`));
   return {
     vm,
-    marshaler: new Marshaler(vm, unmarshaler, sym),
+    marshaler: new Marshaler({ vm, unmarshaler, proxyKeySymbol: sym }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
     dispose: () => {

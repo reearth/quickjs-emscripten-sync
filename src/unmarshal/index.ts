@@ -11,6 +11,10 @@ export function unmarshal(
   map: VMMap,
   marshal: (target: unknown) => QuickJSHandle
 ): any {
+  if (vm !== map.vm) {
+    throw new Error("vm and map.vm do not match");
+  }
+
   {
     const [target, ok] = unmarshalPrimitive(vm, handle);
     if (ok) return target;

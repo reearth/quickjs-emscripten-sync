@@ -1,107 +1,67 @@
 import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
-import { mergeMap } from "../util";
 import marshalArray from "./array";
 import marshalFunction from "./function";
 import marshalObject from "./object";
 import marshalPrimitive from "./primitive";
+import VMMap from "../vmmap";
 
 export type Options = {
-  blacklist?: Set<any>;
-  blacklistClass?: any[];
+  vm: QuickJSVm;
+  map: VMMap;
+  marshalable?: (target: any) => boolean;
+  unmarshaler: (handle: QuickJSHandle) => unknown;
+  proxyKeySymbol?: QuickJSHandle;
 };
 
 export class Marshaler {
-  vm: QuickJSVm;
-  unmarshaler: (handle: QuickJSHandle) => unknown;
-  proxyKeySymbol?: QuickJSHandle;
-  options: Options | undefined;
+  options: Omit<Options, "map">;
 
-  constructor(
-    vm: QuickJSVm,
-    unmarshaler: (handle: QuickJSHandle) => unknown,
-    proxyKeySymbol: QuickJSHandle,
-    options?: Options
-  ) {
-    this.vm = vm;
-    this.unmarshaler = unmarshaler;
-    this.proxyKeySymbol = proxyKeySymbol;
+  constructor(options: Omit<Options, "map">) {
     this.options = options;
   }
 
-  marshal(target: unknown, map?: Iterable<readonly [unknown, QuickJSHandle]>) {
-    return marshal(
-      this.vm,
-      target,
-      map ? new Map(map) : undefined,
-      this.unmarshaler,
-      this.proxyKeySymbol,
-      this.options
-    );
+  marshal(target: unknown, map: VMMap) {
+    return marshal(target, { ...this.options, map });
   }
 }
 
-export function marshal(
-  vm: QuickJSVm,
-  target: unknown,
-  map: Map<unknown, QuickJSHandle> = new Map(),
-  unmarshaler: (handle: QuickJSHandle) => unknown,
-  proxyKeySymbol?: QuickJSHandle,
-  options?: Options
-): [QuickJSHandle, QuickJSHandle[], Map<unknown, QuickJSHandle> | undefined] {
+export function marshal(target: unknown, options: Options): QuickJSHandle {
+  if (options.vm !== options.map.vm) {
+    throw new Error("options.vm and map.vm do not match");
+  }
+
   {
-    const primitive = marshalPrimitive(vm, target);
+    const primitive = marshalPrimitive(options.vm, target);
     if (primitive) {
-      return [primitive, [], undefined];
+      return primitive;
     }
   }
 
   {
-    const handle = map.get(target);
-    if (handle) return [handle, [], undefined];
+    const handle = options.map.get(target);
+    if (handle) return handle;
   }
 
-  if (options?.blacklist?.has(target)) {
-    return [vm.undefined, [], undefined];
+  if (options?.marshalable?.(target) === false) {
+    return options.vm.undefined;
   }
 
-  if (options?.blacklistClass?.some(c => target instanceof c)) {
-    return [vm.undefined, [], undefined];
-  }
-
-  const disposables: QuickJSHandle[] = [];
-  const marshaler = (target: unknown) => {
-    const [handle, disposables2, map2] = marshal(
-      vm,
-      target,
-      map,
-      unmarshaler,
-      proxyKeySymbol,
-      options
-    );
-    disposables.push(...disposables2);
-    mergeMap(map, map2);
-    return handle;
-  };
-  const preMarshaler = (t: unknown, h: QuickJSHandle) => {
-    map.set(t, h);
+  const marshal2 = (t: unknown) => marshal(t, options);
+  const preMarshal = (t: unknown, h: QuickJSHandle) => {
+    options.map.set(t, h);
   };
 
-  const handle =
-    marshalArray(vm, target, marshaler, preMarshaler) ??
+  return (
+    marshalArray(options.vm, target, marshal2, preMarshal) ??
     marshalFunction(
-      vm,
+      options.vm,
       target,
-      marshaler,
-      unmarshaler,
-      preMarshaler,
-      proxyKeySymbol
+      marshal2,
+      options.unmarshaler,
+      preMarshal,
+      options.proxyKeySymbol
     ) ??
-    marshalObject(vm, target, marshaler, preMarshaler);
-  if (handle) {
-    map.set(target, handle);
-    disposables.push(handle);
-    return [handle, disposables, map];
-  }
-
-  return [vm.undefined, [], undefined];
+    marshalObject(options.vm, target, marshal2, preMarshal) ??
+    options.vm.undefined
+  );
 }
