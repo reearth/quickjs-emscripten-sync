@@ -1,4 +1,4 @@
-import { isES2015Class, mergeMap, isObject } from "./util";
+import { isES2015Class, mergeMap, isObject, complexity } from "./util";
 
 it("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);
@@ -40,4 +40,21 @@ it("isObject", () => {
   expect(isObject(null)).toBe(false);
   expect(isObject(1)).toBe(false);
   expect(isObject(true)).toBe(false);
+});
+
+it("complexity", () => {
+  expect(complexity(0)).toBe(0);
+  expect(complexity(NaN)).toBe(0);
+  expect(complexity(true)).toBe(0);
+  expect(complexity(false)).toBe(0);
+  expect(complexity(null)).toBe(0);
+  expect(complexity(undefined)).toBe(0);
+  expect(complexity([])).toBe(1);
+  expect(complexity({})).toBe(1);
+  expect(complexity({ a: 1 })).toBe(1);
+  expect(complexity(() => {})).toBe(1);
+  expect(complexity([{}])).toBe(2);
+  expect(complexity(function() {})).toBe(2);
+  expect(complexity(class {})).toBe(2);
+  expect(complexity({ a: {} })).toBe(2);
 });
