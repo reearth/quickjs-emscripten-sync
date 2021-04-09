@@ -6,7 +6,7 @@ import unmarshalPrimitive from "./primitive";
 import VMMap from "../vmmap";
 import { isObject } from "../util";
 
-export type SyncMode = "both" | "vm" | "host";
+export type SyncMode = "both" | "vm";
 
 export function unmarshal(
   vm: QuickJSVm,
@@ -85,15 +85,17 @@ function wrap<T extends object = any>(
       return key === proxyKeySymbol ? obj : Reflect.get(obj, key);
     },
     set(obj, key, value) {
+      const v = isObject(value)
+        ? (value as any)[proxyKeySymbol] ?? value
+        : value;
+
       if (sync === "vm") {
-        vm.setProp(handle, key as string, marshal(value));
+        vm.setProp(handle, key as string, marshal(v));
         return true;
-      } else if (sync === "host") {
-        return Reflect.set(obj, key, value);
       }
 
-      if (Reflect.set(obj, key, value)) {
-        vm.setProp(handle, key as string, marshal(value));
+      if (Reflect.set(obj, key, v)) {
+        vm.setProp(handle, key as string, marshal(v));
         return true;
       }
       return false;

@@ -198,29 +198,6 @@ it("sync both", async () => {
   dispose();
 });
 
-it("sync vm", async () => {
-  const { vm, marshal, dispose } = await setup();
-
-  const obj = {
-    a: 1,
-  };
-
-  const map = new VMMap(vm);
-  const handle = marshal(obj, map, "vm");
-  if (!map) throw new Error("map is undefined");
-
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
-  expect(obj.a).toBe(1);
-  vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
-    vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
-  );
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // affected
-  expect(obj.a).toBe(1); // not affected
-
-  map.dispose();
-  dispose();
-});
-
 it("sync host", async () => {
   const { vm, marshal, dispose } = await setup();
 

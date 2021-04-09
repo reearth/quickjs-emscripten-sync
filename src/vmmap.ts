@@ -121,6 +121,13 @@ export default class VMMap {
     }
   }
 
+  deleteByHandle(handle: QuickJSHandle) {
+    const key = this.getByHandle(handle);
+    if (typeof key !== "undefined") {
+      this.delete(key);
+    }
+  }
+
   get size() {
     return this._map.size;
   }

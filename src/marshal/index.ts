@@ -6,7 +6,7 @@ import marshalPrimitive from "./primitive";
 import VMMap from "../vmmap";
 import { isObject } from "..";
 
-export type SyncMode = "both" | "host" | "vm";
+export type SyncMode = "both" | "host";
 
 export type Options = {
   vm: QuickJSVm;
@@ -85,15 +85,17 @@ function wrap(
           return key === sym ? obj : Reflect.get(obj, key)
         },
         set(obj, key, value) {
-          if (sync === "vm") {
-            return Reflect.set(obj, key, value);
-          } else if (sync === "host") {
-            setter(key, value);
+          const v = typeof value === "object" && value !== null || typeof value === "function"
+            ? value[sym] ?? value
+            : value;
+
+          if (sync === "host") {
+            setter(key, v);
             return true;
           }
 
-          if (Reflect.set(obj, key, value)) {
-            setter(key, value);
+          if (Reflect.set(obj, key, v)) {
+            setter(key, v);
             return true;
           }
           return false;
