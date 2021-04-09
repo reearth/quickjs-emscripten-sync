@@ -130,6 +130,10 @@ export default class VMMap {
     return this._map.entries();
   }
 
+  values() {
+    return this._map.values();
+  }
+
   dispose() {
     for (const v of this._disposables.values()) {
       if (v.alive) {
