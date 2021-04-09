@@ -8,6 +8,7 @@ export default class VMMap {
   _mapGet: QuickJSHandle;
   _mapSet: QuickJSHandle;
   _mapDelete: QuickJSHandle;
+  _mapClear: QuickJSHandle;
   _proxyTarget: QuickJSHandle;
   _counter = 0;
 
@@ -16,7 +17,7 @@ export default class VMMap {
 
     const fn = vm.unwrapResult(
       vm.evalCode(`(proxyTarget) => {
-        const map = new WeakMap();
+        let map = new WeakMap();
         const unwrap = (obj) => {
           return typeof proxyTarget === "symbol" && (typeof obj === "object" && obj !== null || typeof obj === "function") ? (obj?.[proxyTarget] ?? obj) : obj;
         };
@@ -24,6 +25,7 @@ export default class VMMap {
           get: key => map.get(unwrap(key)) ?? -1,
           set: (key, value) => { if (typeof key === "object" && key !== null || typeof key === "function") map.set(unwrap(key), value); },
           delete: key => map.delete(unwrap(key)),
+          clear: () => { map = new WeakMap(); },
           proxyTarget
         };
       }`)
@@ -33,12 +35,14 @@ export default class VMMap {
     this._mapGet = vm.getProp(result, "get");
     this._mapSet = vm.getProp(result, "set");
     this._mapDelete = vm.getProp(result, "delete");
+    this._mapClear = vm.getProp(result, "clear");
     this._proxyTarget = vm.getProp(result, "proxyTarget");
     fn.dispose();
     result.dispose();
     this._disposables.add(this._mapGet);
     this._disposables.add(this._mapSet);
     this._disposables.add(this._mapDelete);
+    this._disposables.add(this._mapClear);
     this._disposables.add(this._proxyTarget);
   }
 
@@ -83,6 +87,10 @@ export default class VMMap {
     );
   }
 
+  has(key: any) {
+    return !!this._map.get(key);
+  }
+
   delete(key: any) {
     const handle = this._map.get(key);
     if (handle?.alive) {
@@ -102,11 +110,6 @@ export default class VMMap {
   }
 
   cleanup() {
-    for (const v of this._disposables) {
-      if (!v.alive) {
-        this._disposables.delete(v);
-      }
-    }
     for (const [k, v] of this._map) {
       if (!v.alive) {
         this._map.delete(k);
@@ -117,6 +120,10 @@ export default class VMMap {
   clear() {
     this._map.clear();
     this._counterMap.clear();
+    if (this._mapClear.alive) {
+      this._call(this._mapClear, undefined);
+    }
+    this._counter = 0;
   }
 
   entries() {
