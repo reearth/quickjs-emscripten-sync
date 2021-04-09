@@ -134,6 +134,93 @@ it("class", async () => {
   vm.dispose();
 });
 
+it("sync both", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const marshal = jest.fn((v: unknown) =>
+    typeof v === "number" ? vm.newNumber(v) : vm.undefined
+  );
+  const map = new VMMap(vm);
+
+  const sym = Symbol();
+  const handle = vm.unwrapResult(
+    vm.evalCode(`{
+      globalThis.AAA = { a: 1 };
+      AAA
+    }`)
+  );
+  const target = unmarshal(vm, handle, map, marshal, sym, "both");
+
+  expect(target).toEqual({
+    a: 1,
+  });
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1);
+  target.a = 2;
+  expect(target.a).toBe(2); // affected
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(2); // affected
+
+  handle.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it("sync vm", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const marshal = jest.fn((v: unknown) =>
+    typeof v === "number" ? vm.newNumber(v) : vm.undefined
+  );
+  const map = new VMMap(vm);
+
+  const sym = Symbol();
+  const handle = vm.unwrapResult(
+    vm.evalCode(`{
+      globalThis.AAA = { a: 1 };
+      AAA
+    }`)
+  );
+  const target = unmarshal(vm, handle, map, marshal, sym, "vm");
+
+  expect(target).toEqual({
+    a: 1,
+  });
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1);
+  target.a = 2;
+  expect(target.a).toBe(1); // not affected
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(2); // affected
+
+  handle.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it("sync host", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const marshal = jest.fn((v: unknown) =>
+    typeof v === "number" ? vm.newNumber(v) : vm.undefined
+  );
+  const map = new VMMap(vm);
+
+  const sym = Symbol();
+  const handle = vm.unwrapResult(
+    vm.evalCode(`{
+      globalThis.AAA = { a: 1 };
+      AAA
+    }`)
+  );
+  const target = unmarshal(vm, handle, map, marshal, sym, "host");
+
+  expect(target).toEqual({
+    a: 1,
+  });
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1);
+  target.a = 2;
+  expect(target.a).toBe(2); // affected
+  expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1); // not affected
+
+  handle.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
 it("vm not match", async () => {
   const quickjs = await getQuickJS();
   const vm1 = quickjs.createVm();

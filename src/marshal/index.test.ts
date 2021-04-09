@@ -1,5 +1,5 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import marshal from ".";
+import marshal, { SyncMode } from ".";
 import VMMap from "../vmmap";
 
 it("primitive, array, object", async () => {
@@ -175,6 +175,88 @@ it("vm not match", async () => {
   vm2.dispose();
 });
 
+it("sync both", async () => {
+  const { vm, marshal, dispose } = await setup();
+
+  const obj = {
+    a: 1,
+  };
+
+  const map = new VMMap(vm);
+  const handle = marshal(obj, map, "both");
+  if (!map) throw new Error("map is undefined");
+
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
+  expect(obj.a).toBe(1);
+  vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
+    vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
+  );
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // affected
+  expect(obj.a).toBe(2); // affected
+
+  map.dispose();
+  dispose();
+});
+
+it("sync vm", async () => {
+  const { vm, marshal, dispose } = await setup();
+
+  const obj = {
+    a: 1,
+  };
+
+  const map = new VMMap(vm);
+  const handle = marshal(obj, map, "vm");
+  if (!map) throw new Error("map is undefined");
+
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
+  expect(obj.a).toBe(1);
+  vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
+    vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
+  );
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // affected
+  expect(obj.a).toBe(1); // not affected
+
+  map.dispose();
+  dispose();
+});
+
+it("sync host", async () => {
+  const { vm, marshal, dispose } = await setup();
+
+  const obj = {
+    a: 1,
+  };
+
+  const map = new VMMap(vm);
+  const handle = marshal(obj, map, "host");
+  if (!map) throw new Error("map is undefined");
+
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
+  expect(obj.a).toBe(1);
+  vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
+    vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
+  );
+  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not affected
+  expect(obj.a).toBe(2); // affected
+
+  map.dispose();
+  dispose();
+});
+
+it("vm not match", async () => {
+  const quickjs = await getQuickJS();
+  const vm1 = quickjs.createVm();
+  const vm2 = quickjs.createVm();
+  const map = new VMMap(vm2);
+  expect(() =>
+    marshal(vm1.null, { vm: vm1, map, unmarshal: v => vm1.dump(v) })
+  ).toThrow("options.vm and map.vm do not match");
+  map.dispose();
+  vm1.dispose();
+  vm2.dispose();
+});
+
 it("marshalable", async () => {
   const marshalable = jest.fn((a: any) => a !== globalThis);
   const { vm, marshal, dispose } = await setup({
@@ -199,13 +281,14 @@ const setup = async (options?: { marshalable?: (target: any) => boolean }) => {
   const instanceOf = vm.unwrapResult(vm.evalCode(`(a, b) => a instanceof b`));
   return {
     vm,
-    marshal: (v: any, map: VMMap) =>
+    marshal: (v: any, map: VMMap, sync?: SyncMode) =>
       marshal(v, {
         vm,
         map,
         unmarshal: unmarshaler,
         proxyKeySymbol: sym,
         isMarshalable: options?.marshalable,
+        sync,
       }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
