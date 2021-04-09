@@ -99,10 +99,7 @@ export default class Arena {
         this.vm.setProp(this.vm.global, key, handle);
       }
 
-      return [
-        key,
-        isSyncable ? new Proxy(value, this._proxyHandler) : value,
-      ] as const;
+      return [key, new Proxy(value, this._proxyHandler(!isSyncable))] as const;
     });
 
     return Object.fromEntries(newobject) as T;
@@ -112,16 +109,28 @@ export default class Arena {
     return isObject(value) ? (value as any)[this._symbol2] ?? value : value;
   }
 
-  _proxyHandler: ProxyHandler<any> = {
+  _proxyHandler = (vmOnly: boolean): ProxyHandler<any> => ({
     get: (o, key) => {
       if (key === this._symbol2) {
         return o;
       }
       const v = Reflect.get(o, key);
-      return isObject(v) ? new Proxy(v, this._proxyHandler) : v;
+      return isObject(v) ? new Proxy(v, this._proxyHandler(vmOnly)) : v;
     },
     set: (o, key, value) => {
       const v = this._unwrap(value);
+
+      if (vmOnly) {
+        const o2 = this._map.get(o);
+        if (o2) {
+          this.vm.setProp(o2, key as any, this._marshal(v));
+          // delete item to avoid gap of the value between host and vm
+          this._map.delete(o);
+          o2.dispose();
+        }
+        return true;
+      }
+
       if (Reflect.set(o, key, v)) {
         const o2 = this._map.get(o);
         if (o2) {
@@ -131,7 +140,7 @@ export default class Arena {
       }
       return false;
     },
-  };
+  });
 
   _marshal(target: any, sync?: boolean): QuickJSHandle {
     const map = new VMMap(this.vm);
@@ -139,7 +148,7 @@ export default class Arena {
     const d = marshal(target, {
       vm: this.vm,
       map,
-      unmarshal: v => this._unmarshal(v, true),
+      unmarshal: v => this._unmarshal(v, true, !sync),
       isMarshalable: this._options?.isMarshalable,
       proxyKeySymbol: this._symbol,
     });
@@ -152,13 +161,13 @@ export default class Arena {
     return d;
   }
 
-  _unmarshal(handle: QuickJSHandle, sync?: boolean): any {
+  _unmarshal(handle: QuickJSHandle, sync?: boolean, vmOnly?: boolean): any {
     const result = unmarshal(this.vm, handle, this._map, v =>
       this._marshal(v, sync)
     );
 
     if ((sync && isObject(result)) || this._sync.has(result)) {
-      return new Proxy(result, this._proxyHandler);
+      return new Proxy(result, this._proxyHandler(!!vmOnly));
     }
 
     return result;
