@@ -8,8 +8,8 @@ import VMMap from "../vmmap";
 export type Options = {
   vm: QuickJSVm;
   map: VMMap;
-  marshalable?: (target: any) => boolean;
-  unmarshaler: (handle: QuickJSHandle) => unknown;
+  isMarshalable?: (target: any) => boolean;
+  unmarshal: (handle: QuickJSHandle) => unknown;
   proxyKeySymbol?: QuickJSHandle;
 };
 
@@ -30,7 +30,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
     if (handle) return handle;
   }
 
-  if (options?.marshalable?.(target) === false) {
+  if (options?.isMarshalable?.(target) === false) {
     return options.vm.undefined;
   }
 
@@ -45,7 +45,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
       options.vm,
       target,
       marshal2,
-      options.unmarshaler,
+      options.unmarshal,
       preMarshal,
       options.proxyKeySymbol
     ) ??

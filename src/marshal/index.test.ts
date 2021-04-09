@@ -168,7 +168,7 @@ it("vm not match", async () => {
   const vm2 = quickjs.createVm();
   const map = new VMMap(vm2);
   expect(() =>
-    marshal(vm1.null, { vm: vm1, map, unmarshaler: v => vm1.dump(v) })
+    marshal(vm1.null, { vm: vm1, map, unmarshal: v => vm1.dump(v) })
   ).toThrow("options.vm and map.vm do not match");
   map.dispose();
   vm1.dispose();
@@ -203,9 +203,9 @@ const setup = async (options?: { marshalable?: (target: any) => boolean }) => {
       marshal(v, {
         vm,
         map,
-        unmarshaler,
+        unmarshal: unmarshaler,
         proxyKeySymbol: sym,
-        marshalable: options?.marshalable,
+        isMarshalable: options?.marshalable,
       }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),

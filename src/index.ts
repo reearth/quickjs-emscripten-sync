@@ -68,7 +68,7 @@ export default class Arena {
     );
   }
 
-  evalCode(code: string) {
+  evalCode(code: string): any {
     const result = this.vm.evalCode(code);
     if (!result) return undefined;
     if ("value" in result) {
@@ -133,15 +133,15 @@ export default class Arena {
     },
   };
 
-  _marshal(target: any, sync?: boolean) {
+  _marshal(target: any, sync?: boolean): QuickJSHandle {
     const map = new VMMap(this.vm);
     map.merge(this._map);
     const d = marshal(target, {
       vm: this.vm,
       map,
-      unmarshaler: v => this._unmarshal(v, true),
+      unmarshal: v => this._unmarshal(v, true),
+      isMarshalable: this._options?.isMarshalable,
       proxyKeySymbol: this._symbol,
-      marshalable: this._options?.isMarshalable,
     });
     this._map.merge(map);
     if (sync && isObject(target)) {
@@ -152,7 +152,7 @@ export default class Arena {
     return d;
   }
 
-  _unmarshal(handle: QuickJSHandle, sync?: boolean) {
+  _unmarshal(handle: QuickJSHandle, sync?: boolean): any {
     const result = unmarshal(this.vm, handle, this._map, v =>
       this._marshal(v, sync)
     );
