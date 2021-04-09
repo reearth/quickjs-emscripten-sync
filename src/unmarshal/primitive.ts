@@ -13,12 +13,12 @@ export default function unmarshalPrimitive(
   ) {
     return [vm.dump(handle), true];
   } else if (ty === "object") {
-    const isNull = vm.unwrapResult(vm.evalCode("a => a === null"));
-    const result = vm.dump(
-      vm.unwrapResult(vm.callFunction(isNull, vm.undefined, handle))
-    );
-    isNull.dispose();
-    if (result) {
+    const isNull = vm
+      .unwrapResult(vm.evalCode("a => a === null"))
+      .consume(n =>
+        vm.dump(vm.unwrapResult(vm.callFunction(n, vm.undefined, handle)))
+      );
+    if (isNull) {
       return [null, true];
     }
   }
