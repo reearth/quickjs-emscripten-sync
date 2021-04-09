@@ -1,6 +1,6 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import VMMap from "../vmmap";
-import { unmarshal } from ".";
+import unmarshal from ".";
 
 it("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();

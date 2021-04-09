@@ -38,3 +38,5 @@ export function unmarshal(
     unmarshalObject(vm, handle, unmarshal2, preUnmarshal)
   );
 }
+
+export default unmarshal;

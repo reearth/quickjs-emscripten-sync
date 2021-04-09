@@ -1,9 +1,9 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import { marshal, Marshaler } from ".";
+import marshal from ".";
 import VMMap from "../vmmap";
 
 it("primitive, array, object", async () => {
-  const { vm, marshaler, dispose } = await setup();
+  const { vm, marshal, dispose } = await setup();
 
   const target = {
     hoge: "foo",
@@ -12,7 +12,7 @@ it("primitive, array, object", async () => {
     nested: { aa: null, hoge: undefined },
   };
   const map = new VMMap(vm);
-  const handle = marshaler.marshal(target, map);
+  const handle = marshal(target, map);
 
   expect(vm.dump(handle)).toEqual(target);
   expect(map.size).toBe(4);
@@ -26,12 +26,12 @@ it("primitive, array, object", async () => {
 });
 
 it("arrow function", async () => {
-  const { vm, marshaler, dispose } = await setup();
+  const { vm, marshal, dispose } = await setup();
 
   const hoge = () => "foo";
   hoge.foo = { bar: 1 };
   const map = new VMMap(vm);
-  const handle = marshaler.marshal(hoge, map);
+  const handle = marshal(hoge, map);
 
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(0);
@@ -51,13 +51,13 @@ it("arrow function", async () => {
 });
 
 it("function", async () => {
-  const { vm, marshaler, dispose } = await setup();
+  const { vm, marshal, dispose } = await setup();
 
   const bar = function(a: number, b: { hoge: number }) {
     return a + b.hoge;
   };
   const map = new VMMap(vm);
-  const handle = marshaler.marshal(bar, map);
+  const handle = marshal(bar, map);
 
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(2);
@@ -79,7 +79,7 @@ it("function", async () => {
 });
 
 it("class", async () => {
-  const { vm, marshaler, instanceOf, dispose } = await setup();
+  const { vm, marshal, instanceOf, dispose } = await setup();
 
   class A {
     a: number;
@@ -106,7 +106,7 @@ it("class", async () => {
   }
 
   const map = new VMMap(vm);
-  const handle = marshaler.marshal(A, map);
+  const handle = marshal(A, map);
   if (!map) throw new Error("map is undefined");
 
   expect(map.size).toBe(6);
@@ -182,7 +182,8 @@ const setup = async () => {
   const instanceOf = vm.unwrapResult(vm.evalCode(`(a, b) => a instanceof b`));
   return {
     vm,
-    marshaler: new Marshaler({ vm, unmarshaler, proxyKeySymbol: sym }),
+    marshal: (v: any, map: VMMap) =>
+      marshal(v, { vm, map, unmarshaler, proxyKeySymbol: sym }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
     dispose: () => {

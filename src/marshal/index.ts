@@ -13,18 +13,6 @@ export type Options = {
   proxyKeySymbol?: QuickJSHandle;
 };
 
-export class Marshaler {
-  options: Omit<Options, "map">;
-
-  constructor(options: Omit<Options, "map">) {
-    this.options = options;
-  }
-
-  marshal(target: unknown, map: VMMap) {
-    return marshal(target, { ...this.options, map });
-  }
-}
-
 export function marshal(target: unknown, options: Options): QuickJSHandle {
   if (options.vm !== options.map.vm) {
     throw new Error("options.vm and map.vm do not match");
@@ -65,3 +53,5 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
     options.vm.undefined
   );
 }
+
+export default marshal;
