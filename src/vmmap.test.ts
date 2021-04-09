@@ -21,6 +21,15 @@ it("get and set", async () => {
   expect(map.get(target)).toBe(undefined);
   map.set(target, handle);
   expect(map.get(target)).toBe(handle);
+  // a new handle that points to the same value
+  const handle2 = vm
+    .unwrapResult(vm.evalCode(`a => a`))
+    .consume(a => vm.unwrapResult(vm.callFunction(a, vm.undefined, handle)));
+  expect(() => map.set(target, handle2)).toThrow(
+    "handle already exists that points to the same value"
+  );
+
+  handle2.dispose();
   handle.dispose();
   expect(map.get(target)).toBe(undefined);
 

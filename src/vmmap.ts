@@ -51,7 +51,19 @@ export default class VMMap {
   }
 
   set(key: any, value: QuickJSHandle) {
-    if (!value.alive) return;
+    if (this.setUnsafe(key, value)) {
+      // Needed to avoid dangling handles
+      throw new Error("handle already exists that points to the same value");
+    }
+  }
+
+  setUnsafe(key: any, value: QuickJSHandle) {
+    if (!value.alive) return false;
+
+    const v = this.get(key);
+    if (v) {
+      return v !== value;
+    }
 
     const counter = this._counter++;
     this._map.set(key, value);
@@ -59,6 +71,8 @@ export default class VMMap {
     this.vm.newNumber(counter).consume(c => {
       this._call(this._mapSet, undefined, value, c);
     });
+
+    return false;
   }
 
   merge(map: Iterable<[any, QuickJSHandle | undefined]> | undefined) {
