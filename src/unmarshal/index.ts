@@ -6,7 +6,7 @@ import unmarshalPrimitive from "./primitive";
 import VMMap from "../vmmap";
 import { isObject } from "../util";
 
-export type SyncMode = "both" | "vm";
+export type SyncMode = "both" | "vm" | "host";
 
 export function unmarshal(
   vm: QuickJSVm,
@@ -53,21 +53,19 @@ function unmarshalInner(
 
   const unmarshal2 = (h: QuickJSHandle) =>
     unmarshalInner(vm, h, map, marshal, proxyKeySymbol, sync);
-  const preUnmarshal = (target: unknown, h: QuickJSHandle) => {
-    map.set(target, h);
+  const preUnmarshal = (target: any, h: QuickJSHandle): any => {
+    const key =
+      sync && isObject(target) && proxyKeySymbol
+        ? wrap(sync, vm, target, marshal, proxyKeySymbol)
+        : target;
+    map.set(key, h);
+    return key;
   };
 
   const result =
     unmarshalArray(vm, handle, unmarshal2, preUnmarshal) ??
     unmarshalFunction(vm, handle, marshal, unmarshal2, preUnmarshal) ??
     unmarshalObject(vm, handle, unmarshal2, preUnmarshal);
-
-  if (sync && isObject(result) && proxyKeySymbol) {
-    const target = wrap(sync, vm, result, handle, marshal, proxyKeySymbol);
-    map.deleteByHandle(handle);
-    map.set(target, handle);
-    return [target, false];
-  }
 
   return [result, false];
 }
@@ -76,7 +74,6 @@ function wrap<T extends object = any>(
   sync: SyncMode,
   vm: QuickJSVm,
   target: T,
-  handle: QuickJSHandle,
   marshal: (target: any) => QuickJSHandle,
   proxyKeySymbol: symbol
 ): T {
@@ -84,18 +81,13 @@ function wrap<T extends object = any>(
     get(obj, key) {
       return key === proxyKeySymbol ? obj : Reflect.get(obj, key);
     },
-    set(obj, key, value) {
+    set(obj, key, value, receiver) {
       const v = isObject(value)
         ? (value as any)[proxyKeySymbol] ?? value
         : value;
-
-      if (sync === "vm") {
-        vm.setProp(handle, key as string, marshal(v));
-        return true;
-      }
-
-      if (Reflect.set(obj, key, v)) {
-        vm.setProp(handle, key as string, marshal(v));
+      if (sync === "vm" || Reflect.set(obj, key, v, receiver)) {
+        if (sync === "host") return true;
+        vm.setProp(marshal(receiver), key as string, marshal(v));
         return true;
       }
       return false;

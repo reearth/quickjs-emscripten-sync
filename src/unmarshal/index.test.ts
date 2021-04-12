@@ -136,17 +136,18 @@ it("class", async () => {
 
 it("sync both", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v: unknown) =>
-    typeof v === "number" ? vm.newNumber(v) : vm.undefined
-  );
   const map = new VMMap(vm);
+  const marshal = jest.fn(
+    (v: unknown) =>
+      map.get(v) ?? (typeof v === "number" ? vm.newNumber(v) : vm.undefined)
+  );
 
   const sym = Symbol();
   const handle = vm.unwrapResult(
-    vm.evalCode(`{
+    vm.evalCode(`
       globalThis.AAA = { a: 1 };
       AAA
-    }`)
+    `)
   );
   const target = unmarshal(vm, handle, map, marshal, sym, "both");
 
@@ -165,10 +166,11 @@ it("sync both", async () => {
 
 it("sync vm", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v: unknown) =>
-    typeof v === "number" ? vm.newNumber(v) : vm.undefined
-  );
   const map = new VMMap(vm);
+  const marshal = jest.fn(
+    (v: unknown) =>
+      map.get(v) ?? (typeof v === "number" ? vm.newNumber(v) : vm.undefined)
+  );
 
   const sym = Symbol();
   const handle = vm.unwrapResult(
