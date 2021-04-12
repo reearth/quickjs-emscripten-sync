@@ -12,8 +12,8 @@ export function wrap<T = any>(
   proxyKeySymbolHandle: QuickJSHandle,
   marshal: (target: any) => QuickJSHandle,
   syncMode?: (target: T) => SyncMode | undefined
-): Wrapped<T> {
-  if (isWrapped(target, proxyKeySymbol)) return target;
+): Wrapped<T> | undefined {
+  if (!isObject(target) || isWrapped(target, proxyKeySymbol)) return undefined;
 
   return new Proxy(target as any, {
     get(obj, key) {
@@ -48,10 +48,8 @@ export function wrapHandle(
   proxyKeySymbolHandle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => any,
   syncMode?: (target: QuickJSHandle) => SyncMode | undefined
-): Wrapped<QuickJSHandle> {
-  if (isHandleWrapped(vm, handle, proxyKeySymbolHandle)) {
-    return handle;
-  }
+): Wrapped<QuickJSHandle> | undefined {
+  if (isHandleWrapped(vm, handle, proxyKeySymbolHandle)) return;
 
   return consumeAll(
     [

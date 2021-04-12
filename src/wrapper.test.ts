@@ -29,20 +29,15 @@ it("wrap, unwrap, isWrapped", async () => {
     marshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(wrapped).toEqual(target);
   expect(isWrapped(wrapped, proxyKeySymbol)).toBe(true);
   expect(unwrap(wrapped, proxyKeySymbol)).toBe(target);
 
-  const wrapped2 = wrap(
-    vm,
-    wrapped,
-    proxyKeySymbol,
-    proxyKeySymbolHandle,
-    marshal,
-    syncMode
-  );
-  expect(wrapped2).toBe(wrapped);
+  expect(
+    wrap(vm, wrapped, proxyKeySymbol, proxyKeySymbolHandle, marshal, syncMode)
+  ).toBe(undefined);
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
@@ -66,6 +61,7 @@ it("wrap without sync", async () => {
     marshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(marshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -107,6 +103,7 @@ it("wrap with both sync", async () => {
     marshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(marshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -149,6 +146,7 @@ it("wrap with vm sync", async () => {
     marshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(marshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -193,6 +191,7 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
     unmarshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(vm.dump(wrapped)).toEqual(target); // vm.dump does not support proxies
   expect(vm.dump(vm.getProp(wrapped, "a"))).toBe(1);
@@ -204,15 +203,16 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
     expect(eq(handle, h)).toBe(true);
   });
 
-  const wrapped2 = wrapHandle(
-    vm,
-    wrapped,
-    proxyKeySymbol,
-    proxyKeySymbolHandle,
-    unmarshal,
-    syncMode
-  );
-  expect(wrapped2).toBe(wrapped);
+  expect(
+    wrapHandle(
+      vm,
+      wrapped,
+      proxyKeySymbol,
+      proxyKeySymbolHandle,
+      unmarshal,
+      syncMode
+    )
+  ).toBe(undefined);
 
   wrapped.dispose();
   handle.dispose();
@@ -232,7 +232,7 @@ it("wrapHandle without sync", async () => {
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const unmarshal = jest.fn();
   const syncMode = jest.fn(handle => {
-    expect(eq(handle, wrapped)).toBe(true);
+    if (wrapped) expect(eq(handle, wrapped)).toBe(true);
     return undefined;
   });
 
@@ -244,6 +244,7 @@ it("wrapHandle without sync", async () => {
     unmarshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -274,11 +275,11 @@ it("wrapHandle with both sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
-    eq(handle, wrapped) ? target : vm.dump(handle)
+    wrapped && eq(handle, wrapped) ? target : vm.dump(handle)
   );
   const syncMode = jest.fn(
     (handle: QuickJSHandle): SyncMode => {
-      expect(eq(handle, wrapped)).toBe(true);
+      if (wrapped) expect(eq(handle, wrapped)).toBe(true);
       return "both";
     }
   );
@@ -291,6 +292,7 @@ it("wrapHandle with both sync", async () => {
     unmarshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -323,11 +325,11 @@ it("wrapHandle with host sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
-    eq(handle, wrapped) ? target : vm.dump(handle)
+    wrapped && eq(handle, wrapped) ? target : vm.dump(handle)
   );
   const syncMode = jest.fn(
     (handle: QuickJSHandle): SyncMode => {
-      expect(eq(handle, wrapped)).toBe(true);
+      if (wrapped) expect(eq(handle, wrapped)).toBe(true);
       return "host";
     }
   );
@@ -340,6 +342,7 @@ it("wrapHandle with host sync", async () => {
     unmarshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
 
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
@@ -373,14 +376,14 @@ it("wrap and wrapHandle", async () => {
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
     (t: any): QuickJSHandle =>
-      t === wrapped
+      wrappedHandle && t === wrapped
         ? wrappedHandle
         : typeof t === "number"
         ? vm.newNumber(t)
         : vm.undefined
   );
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
-    eq(handle, wrappedHandle) ? wrapped : vm.dump(handle)
+    wrappedHandle && eq(handle, wrappedHandle) ? wrapped : vm.dump(handle)
   );
   const syncMode = jest.fn((): SyncMode => "both");
 
@@ -392,6 +395,7 @@ it("wrap and wrapHandle", async () => {
     marshal,
     syncMode
   );
+  if (!wrapped) throw new Error("wrapped is undefined");
   const wrappedHandle = wrapHandle(
     vm,
     handle,
@@ -400,6 +404,7 @@ it("wrap and wrapHandle", async () => {
     unmarshal,
     syncMode
   );
+  if (!wrappedHandle) throw new Error("wrappedHandle is undefined");
 
   vm.unwrapResult(vm.evalCode(`a => a.a = 2`)).consume(f =>
     vm.unwrapResult(vm.callFunction(f, vm.undefined, wrappedHandle))
