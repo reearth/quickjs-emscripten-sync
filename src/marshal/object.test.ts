@@ -101,11 +101,9 @@ it("prototype", async () => {
   );
   if (!handle) throw new Error("handle is undefined");
 
-  expect(preMarshal).toBeCalledTimes(2);
+  expect(preMarshal).toBeCalledTimes(1);
   expect(preMarshal.mock.calls[0][0]).toBe(obj);
   expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
-  expect(preMarshal.mock.calls[1][0]).toBe(proto);
-  expect(preMarshal.mock.calls[1][1] === protoHandle).toBe(true); // avoid freeze
   expect(vm.typeof(handle)).toBe("object");
   expect(vm.getNumber(vm.getProp(handle, "a"))).toBe(100);
   expect(vm.getString(vm.getProp(handle, "b"))).toBe("hoge");

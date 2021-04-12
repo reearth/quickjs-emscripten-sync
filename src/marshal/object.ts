@@ -18,7 +18,6 @@ export default function marshalObject(
       ? marshal(prototype)
       : undefined;
   if (prototypeHandle) {
-    preMarshal(prototype, prototypeHandle);
     vm.unwrapResult(vm.evalCode("Object.setPrototypeOf")).consume(
       setPrototypeOf => {
         vm.unwrapResult(
