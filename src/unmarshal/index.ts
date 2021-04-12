@@ -8,33 +8,25 @@ import { isObject } from "../util";
 
 export type SyncMode = "both" | "vm" | "host";
 
-export function unmarshal(
-  vm: QuickJSVm,
-  handle: QuickJSHandle,
-  map: VMMap,
-  marshal: (target: unknown) => QuickJSHandle,
-  proxyKeySymbol?: symbol,
-  sync?: SyncMode
-): any {
-  const [result] = unmarshalInner(
-    vm,
-    handle,
-    map,
-    marshal,
-    proxyKeySymbol,
-    sync
-  );
+export type Options = {
+  vm: QuickJSVm;
+  map: VMMap;
+  proxyKeySymbol?: symbol;
+  marshal: (target: unknown) => QuickJSHandle;
+  syncMode?: (target: unknown) => SyncMode | undefined;
+};
+
+export function unmarshal(handle: QuickJSHandle, options: Options): any {
+  const [result] = unmarshalInner(handle, options);
   return result;
 }
 
 function unmarshalInner(
-  vm: QuickJSVm,
   handle: QuickJSHandle,
-  map: VMMap,
-  marshal: (target: unknown) => QuickJSHandle,
-  proxyKeySymbol?: symbol,
-  sync?: SyncMode
+  options: Options
 ): [any, boolean] {
+  const { vm, map, marshal, proxyKeySymbol, syncMode } = options;
+
   if (vm !== map.vm) {
     throw new Error("vm and map.vm do not match");
   }
@@ -51,12 +43,11 @@ function unmarshalInner(
     }
   }
 
-  const unmarshal2 = (h: QuickJSHandle) =>
-    unmarshalInner(vm, h, map, marshal, proxyKeySymbol, sync);
+  const unmarshal2 = (h: QuickJSHandle) => unmarshalInner(h, options);
   const preUnmarshal = (target: any, h: QuickJSHandle): any => {
     const key =
-      sync && isObject(target) && proxyKeySymbol
-        ? wrap(sync, vm, target, marshal, proxyKeySymbol)
+      isObject(target) && proxyKeySymbol
+        ? wrap(vm, target, proxyKeySymbol, marshal, syncMode)
         : target;
     map.set(key, h);
     return key;
@@ -71,11 +62,11 @@ function unmarshalInner(
 }
 
 function wrap<T extends object = any>(
-  sync: SyncMode,
   vm: QuickJSVm,
   target: T,
+  proxyKeySymbol: symbol,
   marshal: (target: any) => QuickJSHandle,
-  proxyKeySymbol: symbol
+  syncMode?: (target: T) => SyncMode | undefined
 ): T {
   return new Proxy(target, {
     get(obj, key) {
@@ -85,6 +76,7 @@ function wrap<T extends object = any>(
       const v = isObject(value)
         ? (value as any)[proxyKeySymbol] ?? value
         : value;
+      const sync = syncMode?.(obj) ?? "host";
       if (sync === "vm" || Reflect.set(obj, key, v, receiver)) {
         if (sync === "host") return true;
         vm.setProp(marshal(receiver), key as string, marshal(v));

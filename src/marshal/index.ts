@@ -11,14 +11,21 @@ export type SyncMode = "both" | "host" | "vm";
 export type Options = {
   vm: QuickJSVm;
   map: VMMap;
-  isMarshalable?: (target: any) => boolean;
-  unmarshal: (handle: QuickJSHandle) => unknown;
   proxyKeySymbol?: QuickJSHandle;
-  sync?: SyncMode;
+  unmarshal: (handle: QuickJSHandle) => unknown;
+  isMarshalable?: (target: unknown) => boolean;
+  syncMode?: (target: unknown) => SyncMode | undefined;
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {
-  const { vm, map, isMarshalable, unmarshal, proxyKeySymbol, sync } = options;
+  const {
+    vm,
+    map,
+    proxyKeySymbol,
+    unmarshal,
+    isMarshalable,
+    syncMode,
+  } = options;
 
   if (vm !== map.vm) {
     throw new Error("options.vm and map.vm do not match");
@@ -43,10 +50,8 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
   const marshal2 = (t: unknown) => marshal(t, options);
   const preMarshal = (t: unknown, handle: QuickJSHandle): QuickJSHandle => {
     const h =
-      sync && isObject(target) && proxyKeySymbol
-        ? handle.consume(h =>
-            wrap(sync, vm, target, h, unmarshal, proxyKeySymbol)
-          )
+      isObject(target) && proxyKeySymbol
+        ? wrap(vm, target, handle, proxyKeySymbol, unmarshal, syncMode)
         : handle;
 
     map.set(t, h);
@@ -70,53 +75,72 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
 }
 
 function wrap(
-  sync: SyncMode,
   vm: QuickJSVm,
   target: any,
   handle: QuickJSHandle,
+  proxyKeySymbol: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => any,
-  proxyKeySymbol: QuickJSHandle
+  syncMode?: (target: unknown) => SyncMode | undefined
 ): QuickJSHandle {
-  return vm
-    .unwrapResult(
-      vm.evalCode(`(target, setter, sym, sync) => new Proxy(target, {
-        get(obj, key) {
-          return key === sym ? obj : Reflect.get(obj, key)
-        },
-        set(obj, key, value) {
-          const v = typeof value === "object" && value !== null || typeof value === "function"
-            ? value[sym] ?? value
-            : value;
-          if (sync === "host" || Reflect.set(obj, key, v)) {
-            if (sync !== "vm") {
-              setter(key, v);
+  return consumeAll(
+    [
+      handle,
+      vm.newFunction("", () => {
+        const res = syncMode?.(target);
+        if (typeof res === "string") return vm.newString(res);
+        return vm.undefined;
+      }),
+      vm.unwrapResult(
+        vm.evalCode(`(target, setter, sym, getSyncMode) => new Proxy(target, {
+          get(obj, key) {
+            return key === sym ? obj : Reflect.get(obj, key)
+          },
+          set(obj, key, value) {
+            const v = typeof value === "object" && value !== null || typeof value === "function"
+              ? value[sym] ?? value
+              : value;
+            const sync = getSyncMode() ?? "vm";
+            if (sync === "host" || Reflect.set(obj, key, v)) {
+              if (sync !== "vm") {
+                setter(key, v);
+              }
+              return true;
             }
-            return true;
+            return false;
           }
-          return false;
-        }
       })`)
-    )
-    .consume(wrapper => {
-      return vm
-        .newFunction("", (keyHandle, valueHandle) => {
-          const key = unmarshal(keyHandle);
-          const value = unmarshal(valueHandle);
-          target[key] = value;
-        })
-        .consume(setter => {
-          return vm.unwrapResult(
-            vm.callFunction(
-              wrapper,
-              vm.undefined,
-              handle,
-              setter,
-              proxyKeySymbol,
-              vm.newString(sync)
-            )
-          );
-        });
-    });
+      ),
+      vm.newFunction("", (keyHandle, valueHandle) => {
+        const key = unmarshal(keyHandle);
+        const value = unmarshal(valueHandle);
+        target[key] = value;
+      }),
+    ],
+    ([handle2, getSyncMode, wrapper, setter]) =>
+      vm.unwrapResult(
+        vm.callFunction(
+          wrapper,
+          vm.undefined,
+          handle2,
+          setter,
+          proxyKeySymbol,
+          getSyncMode
+        )
+      )
+  );
+}
+
+function consumeAll<T extends QuickJSHandle[], K>(
+  handles: T,
+  cb: (handles: T) => K
+) {
+  try {
+    return cb(handles);
+  } finally {
+    for (const h of handles) {
+      if (h.alive) h.dispose();
+    }
+  }
 }
 
 export default marshal;

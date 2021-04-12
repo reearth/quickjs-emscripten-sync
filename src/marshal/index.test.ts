@@ -138,8 +138,7 @@ it("class", async () => {
   expect(vm.dump(vm.unwrapResult(vm.callFunction(methodHoge, instance)))).toBe(
     101
   );
-  // ++this.a in hoge method does not work because the method is called in the host side and this arg is not proxied.
-  expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
+  expect(vm.dump(vm.getProp(instance, "a"))).toBe(100); // syncMode is host so the change will not propagate to vm
 
   const getter = vm.unwrapResult(vm.evalCode(`a => a.foo`));
   const setter = vm.unwrapResult(vm.evalCode(`(a, b) => a.foo = b`));
@@ -149,8 +148,7 @@ it("class", async () => {
   vm.unwrapResult(
     vm.callFunction(setter, vm.undefined, instance, vm.newString("b"))
   );
-  // setter does not work because it is called in the host side and this arg is not proxied.
-  expect(vm.dump(vm.getProp(instance, "b"))).toBe("foo!");
+  expect(vm.dump(vm.getProp(instance, "b"))).toBe("foo!"); // syncMode is host so the change will not propagate to vm
 
   staticA.dispose();
   newA.dispose();
@@ -176,21 +174,26 @@ it("vm not match", async () => {
 });
 
 it("sync both", async () => {
-  const { vm, marshal, dispose } = await setup();
+  const syncMode = jest.fn(_ => "both" as SyncMode);
+  const { vm, marshal, dispose } = await setup({ syncMode });
 
   const obj = {
     a: 1,
   };
 
   const map = new VMMap(vm);
-  const handle = marshal(obj, map, "both");
+  const handle = marshal(obj, map);
   if (!map) throw new Error("map is undefined");
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
   expect(obj.a).toBe(1);
+
   vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
     vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
   );
+
+  expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(obj);
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // affected
   expect(obj.a).toBe(2); // affected
 
@@ -199,21 +202,27 @@ it("sync both", async () => {
 });
 
 it("sync host", async () => {
-  const { vm, marshal, dispose } = await setup();
+  const syncMode = jest.fn(_ => "host" as SyncMode);
+  const { vm, marshal, dispose } = await setup({ syncMode });
 
   const obj = {
     a: 1,
   };
 
   const map = new VMMap(vm);
-  const handle = marshal(obj, map, "host");
+  const handle = marshal(obj, map);
   if (!map) throw new Error("map is undefined");
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(1);
   expect(obj.a).toBe(1);
+  expect(syncMode).toBeCalledTimes(0);
+
   vm.unwrapResult(vm.evalCode(`(a) => a.a = 2`)).consume(s =>
     vm.unwrapResult(vm.callFunction(s, vm.undefined, handle))
   );
+
+  expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(obj);
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not affected
   expect(obj.a).toBe(2); // affected
 
@@ -235,43 +244,60 @@ it("vm not match", async () => {
 });
 
 it("marshalable", async () => {
-  const marshalable = jest.fn((a: any) => a !== globalThis);
+  const isMarshalable = jest.fn((a: any) => a !== globalThis);
   const { vm, marshal, dispose } = await setup({
-    marshalable,
+    isMarshalable,
   });
 
   const map = new VMMap(vm);
   const handle = marshal({ a: globalThis, b: 1 }, map);
 
   expect(vm.dump(handle)).toEqual({ a: undefined, b: 1 });
-  expect(marshalable).toBeCalledWith(globalThis);
-  expect(marshalable).toReturnWith(false);
+  expect(isMarshalable).toBeCalledWith(globalThis);
+  expect(isMarshalable).toReturnWith(false);
 
   map.dispose();
   dispose();
 });
 
-const setup = async (options?: { marshalable?: (target: any) => boolean }) => {
+const setup = async ({
+  isMarshalable,
+  syncMode,
+}: {
+  isMarshalable?: (target: any) => boolean;
+  syncMode?: (target: unknown) => SyncMode;
+} = {}) => {
   const vm = (await getQuickJS()).createVm();
-  const unmarshaler = (v: QuickJSHandle) => vm.dump(v);
-  const sym = vm.unwrapResult(vm.evalCode("Symbol()"));
+  const proxyKeySymbol = vm.unwrapResult(vm.evalCode("Symbol()"));
   const instanceOf = vm.unwrapResult(vm.evalCode(`(a, b) => a instanceof b`));
+  const unwrap = vm.unwrapResult(vm.evalCode(`(t, p) => t?.[p] ?? t`));
   return {
     vm,
-    marshal: (v: any, map: VMMap, sync?: SyncMode) =>
+    marshal: (v: any, map: VMMap) =>
       marshal(v, {
         vm,
         map,
-        unmarshal: unmarshaler,
-        proxyKeySymbol: sym,
-        isMarshalable: options?.marshalable,
-        sync,
+        proxyKeySymbol,
+        unmarshal: h => {
+          return (
+            map.getByHandle(h) ??
+            // vm.dump does not support proxy so unwrapping is needed
+            vm
+              .unwrapResult(
+                vm.callFunction(unwrap, vm.undefined, h, proxyKeySymbol)
+              )
+              .consume(h2 => vm.dump(h2))
+          );
+        },
+        isMarshalable,
+        syncMode,
       }),
     instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
       vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
     dispose: () => {
+      unwrap.dispose();
       instanceOf.dispose();
-      sym.dispose();
+      proxyKeySymbol.dispose();
       vm.dispose();
     },
   };

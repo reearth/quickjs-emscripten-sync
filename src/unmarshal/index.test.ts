@@ -1,6 +1,6 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import VMMap from "../vmmap";
-import unmarshal from ".";
+import unmarshal, { SyncMode } from ".";
 
 it("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
@@ -16,7 +16,7 @@ it("primitive, array, object", async () => {
     bbb: () => "bar"
   })`)
   );
-  const target = unmarshal(vm, handle, map, marshal);
+  const target = unmarshal(handle, { vm, map, marshal });
 
   expect(target).toEqual({
     hoge: "foo",
@@ -74,7 +74,7 @@ it("func", async () => {
     vm.evalCode(`(function(a) { return a.a + "!"; })`)
   );
   const map = new VMMap(vm);
-  const func = unmarshal(vm, handle, map, marshal);
+  const func = unmarshal(handle, { vm, map, marshal });
   const arg = { a: "hoge" };
   expect(func(arg)).toBe("hoge!");
   expect(marshal).toBeCalledTimes(2);
@@ -118,7 +118,7 @@ it("class", async () => {
       Cls
     }`)
   );
-  const Cls = unmarshal(vm, handle, map, marshal);
+  const Cls = unmarshal(handle, { vm, map, marshal });
 
   expect(Cls.hoge).toBe("foo");
   expect(Cls.foo instanceof Cls).toBe(true);
@@ -141,21 +141,31 @@ it("sync both", async () => {
     (v: unknown) =>
       map.get(v) ?? (typeof v === "number" ? vm.newNumber(v) : vm.undefined)
   );
+  const syncMode = jest.fn(_ => "both" as SyncMode);
 
-  const sym = Symbol();
+  const proxyKeySymbol = Symbol();
   const handle = vm.unwrapResult(
     vm.evalCode(`
       globalThis.AAA = { a: 1 };
       AAA
     `)
   );
-  const target = unmarshal(vm, handle, map, marshal, sym, "both");
+  const target = unmarshal(handle, {
+    vm,
+    map,
+    marshal,
+    proxyKeySymbol,
+    syncMode,
+  });
 
   expect(target).toEqual({
     a: 1,
   });
   expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1);
+  expect(syncMode).toBeCalledTimes(0);
   target.a = 2;
+  expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(target);
   expect(target.a).toBe(2); // affected
   expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(2); // affected
 
@@ -171,21 +181,31 @@ it("sync vm", async () => {
     (v: unknown) =>
       map.get(v) ?? (typeof v === "number" ? vm.newNumber(v) : vm.undefined)
   );
+  const syncMode = jest.fn(_ => "vm" as SyncMode);
 
-  const sym = Symbol();
+  const proxyKeySymbol = Symbol();
   const handle = vm.unwrapResult(
     vm.evalCode(`{
       globalThis.AAA = { a: 1 };
       AAA
     }`)
   );
-  const target = unmarshal(vm, handle, map, marshal, sym, "vm");
+  const target = unmarshal(handle, {
+    vm,
+    map,
+    marshal,
+    proxyKeySymbol,
+    syncMode,
+  });
 
   expect(target).toEqual({
     a: 1,
   });
   expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(1);
+  expect(syncMode).toBeCalledTimes(0);
   target.a = 2;
+  expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(target);
   expect(target.a).toBe(1); // not affected
   expect(vm.dump(vm.unwrapResult(vm.evalCode(`AAA.a`)))).toBe(2); // affected
 
@@ -199,9 +219,9 @@ it("vm not match", async () => {
   const vm1 = quickjs.createVm();
   const vm2 = quickjs.createVm();
   const map = new VMMap(vm2);
-  expect(() => unmarshal(vm1, vm1.null, map, () => vm1.null)).toThrow(
-    "vm and map.vm do not match"
-  );
+  expect(() =>
+    unmarshal(vm1.null, { vm: vm1, map, marshal: () => vm1.null })
+  ).toThrow("vm and map.vm do not match");
   map.dispose();
   vm1.dispose();
   vm2.dispose();
