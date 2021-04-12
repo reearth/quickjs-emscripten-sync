@@ -76,7 +76,7 @@ function wrap<T extends object = any>(
       const v = isObject(value)
         ? (value as any)[proxyKeySymbol] ?? value
         : value;
-      const sync = syncMode?.(obj) ?? "host";
+      const sync = syncMode?.(receiver) ?? "host";
       if (sync === "vm" || Reflect.set(obj, key, v, receiver)) {
         if (sync === "host") return true;
         vm.setProp(marshal(receiver), key as string, marshal(v));
