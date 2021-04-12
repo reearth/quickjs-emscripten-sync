@@ -8,7 +8,7 @@ it("arrow function", async () => {
     vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`(a, b) => a + b`));
   const func = unmarshalFunction(vm, handle, marshal, unmarshal, preUnmarshal);
@@ -43,7 +43,7 @@ it("function", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (a) { return this.a + a; })`)
@@ -81,7 +81,7 @@ it("constructor", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (b) { this.a = b + 2; })`)
@@ -126,7 +126,7 @@ it("class", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`)

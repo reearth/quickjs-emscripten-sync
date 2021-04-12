@@ -4,7 +4,7 @@ export default function unmarshalArray(
   vm: QuickJSVm,
   handle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
-  preUnmarshal: (target: unknown, handle: QuickJSHandle) => void
+  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T
 ): any[] | undefined {
   const isArrayFunc = vm.unwrapResult(vm.evalCode(`Array.isArray`));
   const isArray = vm.dump(
@@ -14,8 +14,7 @@ export default function unmarshalArray(
 
   if (!isArray) return;
 
-  let array: any[] = [];
-  preUnmarshal(array, handle);
+  let array: any[] = preUnmarshal([], handle);
 
   vm.newFunction("", (value, index) => {
     const i = vm.getNumber(index);

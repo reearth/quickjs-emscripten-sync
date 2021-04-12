@@ -7,7 +7,7 @@ it("works", async () => {
     vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`[1, true, {}]`));
   const array = unmarshalArray(vm, handle, unmarshal, preUnmarshal);

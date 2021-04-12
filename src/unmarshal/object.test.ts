@@ -7,7 +7,7 @@ it("normal", async () => {
     vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1, b: true })`));
   const obj = unmarshalObject(vm, handle, unmarshal, preUnmarshal);
@@ -30,7 +30,7 @@ it("properties", async () => {
     disposables.push(v);
     return [vm.typeof(v) === "function" ? () => {} : vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`{
@@ -76,7 +76,7 @@ it("prototype", async () => {
     vm.typeof(v) === "object" ? { a: () => 1 } : vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn();
+  const preUnmarshal = jest.fn(a => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`Object.create({ a: () => 1 })`));
   const obj = unmarshalObject(vm, handle, unmarshal, preUnmarshal) as any;
