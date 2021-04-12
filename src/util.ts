@@ -11,10 +11,13 @@ export function isObject(value: any): value is object | Function {
   );
 }
 
-export function complexity(value: any): number {
+export function walkObject(
+  value: any,
+  callback?: (target: any, set: Set<any>) => boolean | void
+): Set<any> {
   const set = new Set<any>();
   const walk = (v: any) => {
-    if (!isObject(v) || set.has(v)) return;
+    if (!isObject(v) || set.has(v) || callback?.(v, set) === false) return;
     set.add(v);
 
     if (Array.isArray(v)) {
@@ -39,5 +42,9 @@ export function complexity(value: any): number {
   };
 
   walk(value);
-  return set.size;
+  return set;
+}
+
+export function complexity(value: any, max?: number): number {
+  return walkObject(value, max ? (_, set) => set.size < max : undefined).size;
 }

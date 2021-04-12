@@ -3,7 +3,7 @@ import VMMap from "./vmmap";
 import VMSet from "./vmset";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
-import { complexity, isES2015Class, isObject } from "./util";
+import { complexity, isES2015Class, isObject, walkObject } from "./util";
 
 export {
   Arena,
@@ -14,6 +14,7 @@ export {
   complexity,
   isES2015Class,
   isObject,
+  walkObject,
 };
 
 export type Options = {

@@ -1,4 +1,4 @@
-import { isES2015Class, isObject, complexity } from "./util";
+import { isES2015Class, isObject, walkObject, complexity } from "./util";
 
 it("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);
@@ -24,6 +24,17 @@ it("isObject", () => {
   expect(isObject(true)).toBe(false);
 });
 
+it("walkObject", () => {
+  const cb = jest.fn();
+  const obj = { a: { b: 1, c: () => {} } };
+  const set = new Set<any>([obj, obj.a, obj.a.c]);
+  expect(walkObject(obj, cb)).toEqual(set);
+  expect(cb).toBeCalledTimes(3);
+  expect(cb).toBeCalledWith(obj, set);
+  expect(cb).toBeCalledWith(obj.a, set);
+  expect(cb).toBeCalledWith(obj.a.c, set);
+});
+
 it("complexity", () => {
   expect(complexity(0)).toBe(0);
   expect(complexity(NaN)).toBe(0);
@@ -39,4 +50,5 @@ it("complexity", () => {
   expect(complexity(function() {})).toBe(2);
   expect(complexity(class {})).toBe(2);
   expect(complexity({ a: {} })).toBe(2);
+  expect(complexity({ a: {} }, 1)).toBe(1);
 });
