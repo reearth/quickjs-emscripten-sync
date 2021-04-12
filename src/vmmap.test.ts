@@ -238,3 +238,58 @@ it("iterator", async () => {
   map.dispose();
   vm.dispose(); // test whether no exception occurs
 });
+
+it("consume", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const handle = vm.newObject();
+
+  const map = new VMMap(vm);
+  map.set(target, handle);
+
+  const obj = {};
+  const callback = jest.fn(() => obj);
+  expect(handle.alive).toBe(true);
+  const result = map.consume(target, callback);
+  expect(result).toBe(obj);
+  expect(callback).toBeCalledTimes(1);
+  expect(callback).toBeCalledWith(handle);
+  expect(handle.alive).toBe(false);
+
+  map.dispose();
+  vm.dispose(); // test whether no exception occurs
+});
+
+it("consumeByHandle", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const handle = vm.newObject();
+  const handle2 = vm // different handle but points to the same object
+    .unwrapResult(vm.evalCode(`a => a`))
+    .consume(f => vm.unwrapResult(vm.callFunction(f, vm.undefined, handle)));
+
+  const map = new VMMap(vm);
+  map.set(target, handle);
+
+  const obj = {};
+  const callback = jest.fn(_ => obj);
+
+  expect(handle.alive).toBe(true);
+  expect(handle2.alive).toBe(true);
+
+  const result = map.consumeByHandle(handle2, callback);
+
+  expect(result).toBe(obj);
+  expect(callback).toBeCalledTimes(1);
+  expect(callback.mock.calls[0][0] === handle).toBe(true);
+  expect(handle.alive).toBe(false);
+  expect(handle2.alive).toBe(true);
+
+  handle2.dispose();
+  map.dispose();
+  vm.dispose(); // test whether no exception occurs
+});

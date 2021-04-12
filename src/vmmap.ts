@@ -128,6 +128,33 @@ export default class VMMap {
     }
   }
 
+  consume<T = void>(
+    key: any,
+    fn?: (handle: QuickJSHandle) => T
+  ): T | undefined {
+    const handle = this.get(key);
+    if (!handle) return;
+    this.delete(key);
+    if (fn && handle) {
+      return handle.consume(fn);
+    }
+    return;
+  }
+
+  consumeByHandle<T = void>(
+    handle: QuickJSHandle,
+    fn?: (handle: QuickJSHandle) => T
+  ): T | undefined {
+    const key = this.getByHandle(handle);
+    if (typeof key === "undefined") return;
+    const handle2 = this.get(key);
+    this.delete(key);
+    if (fn && handle2) {
+      return handle2.consume(fn);
+    }
+    return;
+  }
+
   get size() {
     return this._map.size;
   }
