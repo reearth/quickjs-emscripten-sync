@@ -9,7 +9,7 @@ it("empty object", async () => {
 
   const obj = {};
   const marshal = jest.fn();
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
 
   const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -45,7 +45,7 @@ it("normal object", async () => {
       ? vm.newString(v)
       : vm.null
   );
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
 
   const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -84,7 +84,7 @@ it("prototype", async () => {
   const proto = { a: 100 };
   const protoHandle = vm.newObject();
   vm.setProp(protoHandle, "a", vm.newNumber(100));
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
 
   const obj = Object.create(proto);
   obj.b = "hoge";

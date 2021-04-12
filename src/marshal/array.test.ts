@@ -12,7 +12,7 @@ it("works", async () => {
   const marshal = jest.fn(v =>
     v === true ? vm.true : v === "a" ? vm.newString(v) : vm.null
   );
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
   const target = ["a", null, true];
   const handle = marshalArray(vm, target, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -32,7 +32,7 @@ it("works", async () => {
 it("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn();
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
 
   expect(marshalArray(vm, undefined, marshal, preMarshal)).toBe(undefined);
   expect(marshalArray(vm, null, marshal, preMarshal)).toBe(undefined);

@@ -17,7 +17,7 @@ it("normal func", async () => {
       : vm.null
   );
   const unmarshal = jest.fn(v => (eq(v, vm.global) ? undefined : vm.dump(v)));
-  const preMarshal = jest.fn();
+  const preMarshal = jest.fn((_, a) => a);
   const innerfn = jest.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
 
@@ -65,7 +65,7 @@ it("func which has properties", async () => {
     fn,
     marshal,
     v => vm.dump(v),
-    () => {}
+    (_, a) => a
   );
   if (!handle) throw new Error("handle is undefined");
 
@@ -104,7 +104,7 @@ it("class", async () => {
     }
   }
 
-  const handle = marshalFunction(vm, A, marshal, unmarshal, () => {});
+  const handle = marshalFunction(vm, A, marshal, unmarshal, (_, a) => a);
   if (!handle) throw new Error("handle is undefined");
 
   const newA = vm.unwrapResult(vm.evalCode(`A => new A(100)`));
@@ -152,7 +152,7 @@ it("class with symbol", async () => {
     A,
     marshal,
     v => vm.dump(v),
-    () => {},
+    (_, a) => a,
     sym
   );
   if (!handle) throw new Error("handle is undefined");

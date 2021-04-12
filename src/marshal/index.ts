@@ -6,7 +6,7 @@ import marshalPrimitive from "./primitive";
 import VMMap from "../vmmap";
 import { isObject } from "..";
 
-export type SyncMode = "both" | "host";
+export type SyncMode = "both" | "host" | "vm";
 
 export type Options = {
   vm: QuickJSVm;
@@ -18,54 +18,53 @@ export type Options = {
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {
-  if (options.vm !== options.map.vm) {
+  const { vm, map, isMarshalable, unmarshal, proxyKeySymbol, sync } = options;
+
+  if (vm !== map.vm) {
     throw new Error("options.vm and map.vm do not match");
   }
 
   {
-    const primitive = marshalPrimitive(options.vm, target);
+    const primitive = marshalPrimitive(vm, target);
     if (primitive) {
       return primitive;
     }
   }
 
   {
-    const handle = options.map.get(target);
+    const handle = map.get(target);
     if (handle) return handle;
   }
 
-  if (options?.isMarshalable?.(target) === false) {
-    return options.vm.undefined;
+  if (isMarshalable?.(target) === false) {
+    return vm.undefined;
   }
 
   const marshal2 = (t: unknown) => marshal(t, options);
-  const preMarshal = (t: unknown, h: QuickJSHandle) => {
-    options.map.set(t, h);
+  const preMarshal = (t: unknown, handle: QuickJSHandle): QuickJSHandle => {
+    const h =
+      sync && isObject(target) && proxyKeySymbol
+        ? handle.consume(h =>
+            wrap(sync, vm, target, h, unmarshal, proxyKeySymbol)
+          )
+        : handle;
+
+    map.set(t, h);
+    return h;
   };
 
   const result =
-    marshalArray(options.vm, target, marshal2, preMarshal) ??
+    marshalArray(vm, target, marshal2, preMarshal) ??
     marshalFunction(
-      options.vm,
+      vm,
       target,
       marshal2,
-      options.unmarshal,
+      unmarshal,
       preMarshal,
-      options.proxyKeySymbol
+      proxyKeySymbol
     ) ??
-    marshalObject(options.vm, target, marshal2, preMarshal) ??
-    options.vm.undefined;
-
-  const pks = options.proxyKeySymbol;
-  const syncMode = options.sync;
-  if (syncMode && isObject(target) && pks) {
-    const result2 = result.consume(h =>
-      wrap(syncMode, options.vm, target, h, options.unmarshal, pks)
-    );
-    options.map.delete(target);
-    options.map.set(target, result2);
-    return result2;
-  }
+    marshalObject(vm, target, marshal2, preMarshal) ??
+    vm.undefined;
 
   return result;
 }
@@ -88,14 +87,10 @@ function wrap(
           const v = typeof value === "object" && value !== null || typeof value === "function"
             ? value[sym] ?? value
             : value;
-
-          if (sync === "host") {
-            setter(key, v);
-            return true;
-          }
-
-          if (Reflect.set(obj, key, v)) {
-            setter(key, v);
+          if (sync === "host" || Reflect.set(obj, key, v)) {
+            if (sync !== "vm") {
+              setter(key, v);
+            }
             return true;
           }
           return false;
