@@ -37,7 +37,7 @@ it("wrap, unwrap, isWrapped", async () => {
 
   expect(
     wrap(vm, wrapped, proxyKeySymbol, proxyKeySymbolHandle, marshal, syncMode)
-  ).toBe(undefined);
+  ).toBe(wrapped);
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
@@ -211,8 +211,8 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
       proxyKeySymbolHandle,
       unmarshal,
       syncMode
-    )
-  ).toBe(undefined);
+    ) === wrapped
+  ).toBe(true);
 
   wrapped.dispose();
   handle.dispose();
@@ -434,5 +434,31 @@ it("wrap and wrapHandle", async () => {
   handle.dispose();
   proxyKeySymbolHandle.dispose();
   eqh.dispose();
+  vm.dispose();
+});
+
+it("non object", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const target = 1;
+  const handle = vm.newNumber(1);
+  const proxyKeySymbol = Symbol();
+  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+
+  expect(
+    wrap(vm, target, proxyKeySymbol, proxyKeySymbolHandle, jest.fn(), jest.fn())
+  ).toBe(undefined);
+
+  expect(
+    wrapHandle(
+      vm,
+      handle,
+      proxyKeySymbol,
+      proxyKeySymbolHandle,
+      jest.fn(),
+      jest.fn()
+    )
+  ).toBe(undefined);
+
+  proxyKeySymbolHandle.dispose();
   vm.dispose();
 });
