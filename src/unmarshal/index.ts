@@ -8,7 +8,7 @@ export type Options = {
   vm: QuickJSVm;
   marshal: (target: unknown) => QuickJSHandle;
   find: (handle: QuickJSHandle) => unknown | undefined;
-  pre: <T>(target: T, handle: QuickJSHandle) => T;
+  pre: <T>(target: T, handle: QuickJSHandle) => T | undefined;
 };
 
 export function unmarshal(handle: QuickJSHandle, options: Options): any {

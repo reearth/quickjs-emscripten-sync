@@ -40,7 +40,9 @@ export default function unmarshalProperties(
   }).consume(fn => {
     vm.unwrapResult(
       vm.evalCode(
-        `(o, fn) => { Object.entries(Object.getOwnPropertyDescriptors(o)).forEach(([k, v]) => fn(k, v)); }`
+        `(o, fn) => {
+          Object.entries(Object.getOwnPropertyDescriptors(o)).forEach(([k, v]) => fn(k, v));
+        }`
       )
     ).consume(getOwnPropertyDescriptors => {
       vm.unwrapResult(

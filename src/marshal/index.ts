@@ -9,7 +9,7 @@ export type Options = {
   unmarshal: (handle: QuickJSHandle) => unknown;
   isMarshalable?: (target: unknown) => boolean;
   find: (target: unknown) => QuickJSHandle | undefined;
-  pre: (target: unknown, handle: QuickJSHandle) => QuickJSHandle;
+  pre: (target: unknown, handle: QuickJSHandle) => QuickJSHandle | undefined;
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {

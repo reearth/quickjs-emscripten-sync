@@ -7,12 +7,15 @@ export default function marshalFunction(
   target: unknown,
   marshal: (target: unknown) => QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => unknown,
-  preMarshal: (target: unknown, handle: QuickJSHandle) => QuickJSHandle,
+  preMarshal: (
+    target: unknown,
+    handle: QuickJSHandle
+  ) => QuickJSHandle | undefined,
   proxyTarget?: QuickJSHandle
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
-  const handle = vm
+  const raw = vm
     .newFunction(target.name, function(...argHandles) {
       const that = unmarshal(this);
       const args = argHandles.map(a => unmarshal(a));
@@ -55,8 +58,8 @@ export default function marshalFunction(
         )
     );
 
-  const handle2 = preMarshal(target, handle);
-  marshalProperties(vm, target, handle2, marshal);
+  const handle = preMarshal(target, raw) ?? raw;
+  marshalProperties(vm, target, handle, marshal);
 
-  return handle2;
+  return handle;
 }

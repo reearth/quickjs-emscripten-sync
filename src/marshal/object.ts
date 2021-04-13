@@ -5,11 +5,15 @@ export default function marshalObject(
   vm: QuickJSVm,
   target: unknown,
   marshal: (target: unknown) => QuickJSHandle,
-  preMarshal: (target: unknown, handle: QuickJSHandle) => QuickJSHandle
+  preMarshal: (
+    target: unknown,
+    handle: QuickJSHandle
+  ) => QuickJSHandle | undefined
 ): QuickJSHandle | undefined {
   if (typeof target !== "object" || target === null) return;
 
-  const handle = preMarshal(target, vm.newObject());
+  const raw = vm.newObject();
+  const handle = preMarshal(target, raw) ?? raw;
 
   // prototype
   const prototype = Object.getPrototypeOf(target);

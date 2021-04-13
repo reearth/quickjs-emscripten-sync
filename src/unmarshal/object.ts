@@ -5,7 +5,7 @@ export default function unmarshalObject(
   vm: QuickJSVm,
   handle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
-  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T
+  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined
 ): object | undefined {
   if (
     vm.typeof(handle) !== "object" ||
@@ -18,7 +18,8 @@ export default function unmarshalObject(
   )
     return;
 
-  const obj = preUnmarshal({}, handle);
+  const raw = {};
+  const obj = preUnmarshal(raw, handle) ?? raw;
 
   const prototype = vm
     .unwrapResult(
@@ -39,7 +40,7 @@ export default function unmarshalObject(
     Object.setPrototypeOf(obj, prototype);
   }
 
-  unmarshalProperties(vm, handle, obj, unmarshal);
+  unmarshalProperties(vm, handle, raw, unmarshal);
 
   return obj;
 }

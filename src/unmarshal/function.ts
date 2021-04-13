@@ -6,11 +6,11 @@ export default function unmarshalFunction(
   handle: QuickJSHandle,
   marshal: (value: unknown) => QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
-  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T
+  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined
 ): Function | undefined {
   if (vm.typeof(handle) !== "function") return;
 
-  const func = preUnmarshal(function(this: any, ...args: any[]) {
+  const raw = function(this: any, ...args: any[]) {
     const thisHandle = marshal(this);
     const argHandles = args.map(a => marshal(a));
 
@@ -37,9 +37,10 @@ export default function unmarshalFunction(
     const [result, alreadyExists] = unmarshal(resultHandle);
     if (alreadyExists) resultHandle.dispose();
     return result;
-  }, handle);
+  };
 
-  unmarshalProperties(vm, handle, func, unmarshal);
+  const func = preUnmarshal(raw, handle) ?? raw;
+  unmarshalProperties(vm, handle, raw, unmarshal);
 
   return func;
 }

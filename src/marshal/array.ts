@@ -4,11 +4,15 @@ export default function marshalArray(
   vm: QuickJSVm,
   target: unknown,
   marshal: (target: any) => QuickJSHandle,
-  preMarshal: (target: unknown, handle: QuickJSHandle) => QuickJSHandle
+  preMarshal: (
+    target: unknown,
+    handle: QuickJSHandle
+  ) => QuickJSHandle | undefined
 ): QuickJSHandle | undefined {
   if (!Array.isArray(target)) return;
 
-  const handle = preMarshal(target, vm.newArray());
+  const raw = vm.newArray();
+  const handle = preMarshal(target, raw) ?? raw;
   const push = vm.getProp(handle, "push");
 
   target.forEach(item => {
