@@ -7,7 +7,7 @@ it("init and dispose", async () => {
 
   const map = new VMMap(vm);
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("get and set", async () => {
@@ -34,7 +34,7 @@ it("get and set", async () => {
   expect(map.get(target)).toBe(undefined);
 
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("getByHandle", async () => {
@@ -55,7 +55,7 @@ it("getByHandle", async () => {
 
   handle2.dispose();
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("delete", async () => {
@@ -75,10 +75,10 @@ it("delete", async () => {
 
   handle.dispose();
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
-it("size and cleanup", async () => {
+it("size", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -91,11 +91,9 @@ it("size and cleanup", async () => {
   expect(map.size).toBe(1);
   handle.dispose();
   expect(map.size).toBe(1);
-  map.cleanup();
-  expect(map.size).toBe(0);
 
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("clear", async () => {
@@ -115,7 +113,7 @@ it("clear", async () => {
 
   handle.dispose();
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("merge", async () => {
@@ -123,90 +121,26 @@ it("merge", async () => {
   const vm = quickjs.createVm();
 
   const target = {};
+  const target2 = {};
   const handle = vm.newObject();
+  const handle2 = vm.newObject();
 
   const map = new VMMap(vm);
   const map2 = new VMMap(vm);
-  map.set(target, handle);
+  map.set(target, handle, target2, handle2);
   expect(map.size).toBe(1);
   expect(map.get(target)).toBe(handle);
+  expect(map.get(target2)).toBe(handle);
   expect(map2.size).toBe(0);
   map2.merge(map);
   expect(map2.size).toBe(1);
   expect(map2.get(target)).toBe(handle);
+  expect(map2.get(target2)).toBe(handle);
 
   map.clear();
   map.dispose();
   map2.dispose();
-  vm.dispose(); // test whether no exception occurs
-});
-
-it("entries", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
-
-  const target = {};
-  const handle = vm.newObject();
-
-  const map = new VMMap(vm);
-  expect(Array.from(map.entries())).toEqual([]);
-  map.set(target, handle);
-  expect(Array.from(map.entries())).toEqual([[target, handle]]);
-
-  handle.dispose();
-  map.dispose();
-  vm.dispose(); // test whether no exception occurs
-});
-
-it("symbol", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
-  const objectis = vm.unwrapResult(vm.evalCode("Object.is"));
-  const wrapper = vm.unwrapResult(
-    vm.evalCode(
-      `(v, s) => new Proxy(v, { get: (o, k) => k === s ? o : Reflect.get(o, k) })`
-    )
-  );
-
-  const sym = vm.unwrapResult(vm.evalCode("Symbol()"));
-  const key = {};
-  const obj = vm.newObject();
-  const obj2 = vm.newObject();
-  const wrapped = vm.unwrapResult(
-    vm.callFunction(wrapper, vm.undefined, obj, sym)
-  );
-
-  const map = new VMMap(vm, sym);
-  expect(
-    vm.dump(
-      vm.unwrapResult(
-        vm.callFunction(objectis, vm.undefined, sym, map.proxyTarget())
-      )
-    )
-  ).toBe(true);
-
-  expect(map.get(key)).toBe(undefined);
-  expect(map.getByHandle(wrapped)).toBe(undefined);
-  expect(map.getByHandle(obj)).toBe(undefined);
-  expect(map.getByHandle(obj2)).toBe(undefined);
-
-  map.set(key, wrapped);
-
-  expect(map.get(key)).toBe(wrapped);
-  expect(map.getByHandle(wrapped)).toBe(key);
-  expect(map.getByHandle(obj)).toBe(key);
-  expect(map.getByHandle(obj2)).toBe(undefined);
-
-  expect(wrapped.alive).toBe(true);
-  map.dispose();
-  expect(wrapped.alive).toBe(false);
-
-  obj2.dispose();
-  obj.dispose();
-  sym.dispose();
-  wrapper.dispose();
-  objectis.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
 it("iterator", async () => {
@@ -214,82 +148,123 @@ it("iterator", async () => {
   const vm = quickjs.createVm();
 
   const target = {};
+  const target2 = {};
   const handle = vm.newObject();
+  const handle2 = vm.newObject();
 
   const map = new VMMap(vm);
-  map.set(target, handle);
+  map.set(target, handle, target2, handle2);
 
   const iter = map[Symbol.iterator]();
   const first = iter.next();
   expect(first.value[0]).toBe(target);
   expect(first.value[1] === handle).toBe(true);
+  expect(first.value[2]).toBe(target2);
+  expect(first.value[3] === handle2).toBe(true);
   expect(first.done).toBe(false);
+
   const second = iter.next();
   expect(second.done).toBe(true);
 
   let i = 0;
-  for (const [k, v] of map) {
+  for (const [k, v, k2, v2] of map) {
     expect(k).toBe(target);
     expect(v === handle).toBe(true);
+    expect(k2).toBe(target2);
+    expect(v2 === handle2).toBe(true);
     i++;
   }
   expect(i).toBe(1);
 
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
 });
 
-it("consume", async () => {
+it("get and set 2", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
   const target = {};
+  const target2 = {};
   const handle = vm.newObject();
+  const handle2 = vm.newObject();
 
   const map = new VMMap(vm);
-  map.set(target, handle);
 
-  const obj = {};
-  const callback = jest.fn(() => obj);
-  expect(handle.alive).toBe(true);
-  const result = map.consume(target, callback);
-  expect(result).toBe(obj);
-  expect(callback).toBeCalledTimes(1);
-  expect(callback).toBeCalledWith(handle);
-  expect(handle.alive).toBe(false);
-
-  map.dispose();
-  vm.dispose(); // test whether no exception occurs
-});
-
-it("consumeByHandle", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
-
-  const target = {};
-  const handle = vm.newObject();
-  const handle2 = vm // different handle but points to the same object
-    .unwrapResult(vm.evalCode(`a => a`))
-    .consume(f => vm.unwrapResult(vm.callFunction(f, vm.undefined, handle)));
-
-  const map = new VMMap(vm);
-  map.set(target, handle);
-
-  const obj = {};
-  const callback = jest.fn(_ => obj);
-
-  expect(handle.alive).toBe(true);
-  expect(handle2.alive).toBe(true);
-
-  const result = map.consumeByHandle(handle2, callback);
-
-  expect(result).toBe(obj);
-  expect(callback).toBeCalledTimes(1);
-  expect(callback.mock.calls[0][0] === handle).toBe(true);
-  expect(handle.alive).toBe(false);
-  expect(handle2.alive).toBe(true);
+  map.set(target, handle, target2, handle2);
+  expect(map.get(target)).toBe(handle);
+  expect(map.get(target2)).toBe(handle);
+  expect(map.getByHandle(handle)).toBe(target);
+  expect(map.getByHandle(handle2)).toBe(target);
 
   handle2.dispose();
+  handle.dispose();
+
+  expect(map.get(target)).toBe(undefined);
+  expect(map.get(target2)).toBe(undefined);
+  expect(map.getByHandle(handle)).toBe(undefined);
+  expect(map.getByHandle(handle2)).toBe(undefined);
+
   map.dispose();
-  vm.dispose(); // test whether no exception occurs
+  vm.dispose();
+});
+
+it("delete 2", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const target2 = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+
+  map.set(target, handle, target2, handle2);
+  expect(map.get(target)).toBe(handle);
+  expect(map.get(target2)).toBe(handle);
+  expect(map.getByHandle(handle)).toBe(target);
+  expect(map.getByHandle(handle2)).toBe(target);
+
+  map.delete(target);
+
+  expect(map.get(target)).toBe(undefined);
+  expect(map.get(target2)).toBe(undefined);
+  expect(map.getByHandle(handle)).toBe(undefined);
+  expect(map.getByHandle(handle2)).toBe(undefined);
+
+  handle.dispose();
+  handle2.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it("delete 3", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const target2 = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+
+  map.set(target, handle, target2, handle2);
+  expect(map.get(target)).toBe(handle);
+  expect(map.get(target2)).toBe(handle);
+  expect(map.getByHandle(handle)).toBe(target);
+  expect(map.getByHandle(handle2)).toBe(target);
+
+  map.delete(target2);
+
+  expect(map.get(target)).toBe(undefined);
+  expect(map.get(target2)).toBe(undefined);
+  expect(map.getByHandle(handle)).toBe(undefined);
+  expect(map.getByHandle(handle2)).toBe(undefined);
+
+  handle.dispose();
+  handle2.dispose();
+  map.dispose();
+  vm.dispose();
 });
