@@ -22,7 +22,7 @@ export default function unmarshalArray(
     const [v] = unmarshal(value);
 
     if (v) {
-      array[i] = v;
+      raw[i] = v;
     }
   }).consume(fn => {
     vm.unwrapResult(

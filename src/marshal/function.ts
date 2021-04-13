@@ -59,7 +59,7 @@ export default function marshalFunction(
     );
 
   const handle = preMarshal(target, raw) ?? raw;
-  marshalProperties(vm, target, handle, marshal);
+  marshalProperties(vm, target, raw, marshal);
 
   return handle;
 }

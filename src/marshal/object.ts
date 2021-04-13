@@ -31,7 +31,7 @@ export default function marshalObject(
     );
   }
 
-  marshalProperties(vm, target, handle, marshal);
+  marshalProperties(vm, target, raw, marshal);
 
   return handle;
 }
