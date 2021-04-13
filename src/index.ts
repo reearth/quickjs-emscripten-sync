@@ -1,6 +1,5 @@
 import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
 import VMMap from "./vmmap";
-import VMSet from "./vmset";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
@@ -8,7 +7,6 @@ import { complexity, isES2015Class, isObject, walkObject } from "./util";
 export {
   Arena,
   VMMap,
-  VMSet,
   marshal,
   unmarshal,
   complexity,
