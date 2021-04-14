@@ -10,6 +10,7 @@ export type Options = {
   isMarshalable?: (target: unknown) => boolean;
   find: (target: unknown) => QuickJSHandle | undefined;
   pre: (target: unknown, handle: QuickJSHandle) => QuickJSHandle | undefined;
+  preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any;
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {
@@ -35,7 +36,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
 
   const result =
     marshalArray(vm, target, marshal2, pre) ??
-    marshalFunction(vm, target, marshal2, unmarshal, pre) ??
+    marshalFunction(vm, target, marshal2, unmarshal, pre, options.preApply) ??
     marshalObject(vm, target, marshal2, pre) ??
     vm.undefined;
 

@@ -10,7 +10,8 @@ export default function marshalFunction(
   preMarshal: (
     target: unknown,
     handle: QuickJSHandle
-  ) => QuickJSHandle | undefined
+  ) => QuickJSHandle | undefined,
+  preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
@@ -28,8 +29,8 @@ export default function marshalFunction(
         return this;
       }
 
-      const result = target.apply(that, args);
-      return marshal(result);
+      const call = () => target.apply(that, args);
+      return marshal(preApply ? preApply(target, that, args) : call());
     })
     .consume(handle2 =>
       // fucntions created by vm.newFunction are not callable as a class constrcutor

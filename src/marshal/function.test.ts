@@ -129,6 +129,52 @@ it("class", async () => {
   vm.dispose();
 });
 
+it("preApply", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const instanceOf = vm.unwrapResult(
+    vm.evalCode(`(cls, i) => i instanceof cls`)
+  );
+
+  const marshal = (v: any) => {
+    if (typeof v === "string") return vm.newString(v);
+    if (typeof v === "number") return vm.newNumber(v);
+    return vm.null;
+  };
+  const unmarshal = (v: QuickJSHandle) =>
+    vm.typeof(v) === "object" ? that : vm.dump(v);
+  const preApply = jest.fn(
+    (a: Function, b: any, c: any[]) => a.apply(b, c) + "!"
+  );
+  const that = {};
+  const thatHandle = vm.newObject();
+
+  const fn = () => "foo";
+  const handle = marshalFunction(
+    vm,
+    fn,
+    marshal,
+    unmarshal,
+    (_, a) => a,
+    preApply
+  );
+  if (!handle) throw new Error("handle is undefined");
+
+  expect(preApply).toBeCalledTimes(0);
+
+  const res = vm.unwrapResult(
+    vm.callFunction(handle, thatHandle, vm.newNumber(100), vm.newString("hoge"))
+  );
+
+  expect(preApply).toBeCalledTimes(1);
+  expect(preApply).toBeCalledWith(fn, that, [100, "hoge"]);
+  expect(vm.dump(res)).toBe("foo!");
+
+  thatHandle.dispose();
+  handle.dispose();
+  instanceOf.dispose();
+  vm.dispose();
+});
+
 it("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();
