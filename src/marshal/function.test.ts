@@ -129,51 +129,6 @@ it("class", async () => {
   vm.dispose();
 });
 
-it("class with symbol", async () => {
-  const vm = (await getQuickJS()).createVm();
-
-  const disposables: QuickJSHandle[] = [];
-  const marshal = (v: any) => {
-    if (typeof v === "string") return vm.newString(v);
-    if (typeof v === "number") return vm.newNumber(v);
-    if (typeof v === "object") {
-      const obj = vm.newObject();
-      disposables.push(obj);
-      return obj;
-    }
-    return vm.null;
-  };
-
-  class A {}
-
-  const sym = vm.unwrapResult(vm.evalCode("Symbol()"));
-  const handle = marshalFunction(
-    vm,
-    A,
-    marshal,
-    v => vm.dump(v),
-    (_, a) => a,
-    sym
-  );
-  if (!handle) throw new Error("handle is undefined");
-
-  const actual = vm.getProp(handle, sym);
-  expect(vm.typeof(actual)).toBe("function");
-
-  const newA = vm.unwrapResult(vm.evalCode(`A => new A()`));
-  // Test that raw functions cannot be used as a class constructor
-  expect(() =>
-    vm.unwrapResult(vm.callFunction(newA, vm.undefined, actual))
-  ).toThrow("not a constructor");
-
-  disposables.forEach(d => d.dispose());
-  newA.dispose();
-  actual.dispose();
-  handle.dispose();
-  sym.dispose();
-  vm.dispose();
-});
-
 it("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();

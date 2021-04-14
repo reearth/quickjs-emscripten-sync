@@ -10,8 +10,7 @@ export default function marshalFunction(
   preMarshal: (
     target: unknown,
     handle: QuickJSHandle
-  ) => QuickJSHandle | undefined,
-  proxyTarget?: QuickJSHandle
+  ) => QuickJSHandle | undefined
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
@@ -36,25 +35,15 @@ export default function marshalFunction(
       // fucntions created by vm.newFunction are not callable as a class constrcutor
       vm
         .unwrapResult(
-          vm.evalCode(`(Cls, proxyTarget) => {
+          vm.evalCode(`Cls => {
             const fn = function(...args) { return Cls.apply(this, args); };
             fn.name = Cls.name;
             fn.length = Cls.length;
-            if (typeof proxyTarget === "symbol") {
-              fn[proxyTarget] = Cls;
-            }
             return fn;
           }`)
         )
         .consume(createClass =>
-          vm.unwrapResult(
-            vm.callFunction(
-              createClass,
-              vm.undefined,
-              handle2,
-              proxyTarget ?? vm.undefined
-            )
-          )
+          vm.unwrapResult(vm.callFunction(createClass, vm.undefined, handle2))
         )
     );
 
