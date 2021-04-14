@@ -1,4 +1,6 @@
 import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
+import { VmCallResult } from "quickjs-emscripten/dist/vm-interface";
+
 import VMMap from "./vmmap";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
@@ -41,19 +43,9 @@ export default class Arena {
     this._symbolHandle.dispose();
   }
 
-  evalCode<T = any>(code: string, sync?: boolean): T | undefined {
-    const result = this.vm.evalCode(code);
-    if (!result) return;
-    if ("value" in result) {
-      const rv = result.value.consume(v => this._unmarshal(v));
-      if (sync) {
-        walkObject(rv, v => {
-          this._sync.add(this._unwrap(v));
-        });
-      }
-      return rv;
-    }
-    throw result.error.consume(err => this._unmarshal(err));
+  evalCode<T = any>(code: string): T | undefined {
+    let handle = this.vm.evalCode(code);
+    return this._unwrapResult(handle);
   }
 
   expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T {
@@ -71,6 +63,14 @@ export default class Arena {
     return Object.fromEntries(newobject) as T;
   }
 
+  _unwrapResult(result: VmCallResult<QuickJSHandle> | undefined): any {
+    if (!result) return;
+    if ("value" in result) {
+      return result.value.consume(v => this._unmarshal(v));
+    }
+    throw result.error.consume(err => this._unmarshal(err));
+  }
+
   _marshal(target: any): QuickJSHandle {
     const map = new VMMap(this.vm);
     map.merge(this._map);
@@ -81,15 +81,17 @@ export default class Arena {
       isMarshalable: t =>
         this._options?.isMarshalable?.(this._unwrap(t)) ?? true,
       find: t => map.get(t),
-      pre: (t, h) => this._register(t, h)?.[1],
+      pre: (t, h) => this._register(t, h, map)?.[1],
       preApply: (target, that, args) => {
         const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
         // override sync mode of this object while calling the function
         if (unwrapped) this._temporalSync.add(unwrapped);
-        const res = target.apply(that, args);
-        // restore sync mode
-        if (unwrapped) this._temporalSync.delete(unwrapped);
-        return res;
+        try {
+          return target.apply(that, args);
+        } finally {
+          // restore sync mode
+          if (unwrapped) this._temporalSync.delete(unwrapped);
+        }
       },
     });
 
@@ -104,13 +106,15 @@ export default class Arena {
       vm: this.vm,
       marshal: (v: any) => this._marshal(v),
       find: h => this._map.getByHandle(h),
-      pre: (t: any, h: QuickJSHandle) => this._register(t, h, true)?.[0],
+      pre: (t: any, h: QuickJSHandle) =>
+        this._register(t, h, undefined, true)?.[0],
     });
   }
 
   _register(
     t: any,
     h: QuickJSHandle,
+    map: VMMap = this._map,
     sync?: boolean
   ): [Wrapped<any>, Wrapped<QuickJSHandle>] | undefined {
     const wrappedT = this._wrap(t);
@@ -120,13 +124,12 @@ export default class Arena {
     const unwrappedT = this._unwrap(t);
     const [unwrappedH, unwrapped] = this._unwrapHandle(h);
 
-    const res = this._map.set(wrappedT, wrappedH, unwrappedT, unwrappedH);
+    const res = map.set(wrappedT, wrappedH, unwrappedT, unwrappedH);
     if (!res) {
       // already registered
       if (unwrapped) unwrappedH.dispose();
-    }
-
-    if (sync) {
+      throw new Error("already registered");
+    } else if (sync) {
       this._sync.add(unwrappedT);
     }
 
