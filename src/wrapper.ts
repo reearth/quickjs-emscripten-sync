@@ -74,9 +74,8 @@ export function wrapHandle(
               if (sync !== "vm") {
                 setter(receiver, key, v);
               }
-              return true;
             }
-            return false;
+            return true;
           }
       })`)
       ),
