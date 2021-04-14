@@ -230,11 +230,10 @@ it("wrapHandle without sync", async () => {
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
-  const unmarshal = jest.fn();
-  const syncMode = jest.fn(handle => {
-    if (wrapped) expect(eq(handle, wrapped)).toBe(true);
-    return undefined;
-  });
+  const unmarshal = jest.fn((h: QuickJSHandle) =>
+    wrapped && eq(h, wrapped) ? target : vm.dump(h)
+  );
+  const syncMode = jest.fn();
 
   const wrapped = wrapHandle(
     vm,
@@ -255,8 +254,10 @@ it("wrapHandle without sync", async () => {
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(1); // not synced
-  expect(unmarshal).toBeCalledTimes(0);
+  expect(unmarshal).toBeCalledTimes(1);
+  expect(unmarshal).toReturnWith(target);
   expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(target);
 
   wrapped.dispose();
   handle.dispose();
@@ -277,12 +278,7 @@ it("wrapHandle with both sync", async () => {
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
     wrapped && eq(handle, wrapped) ? target : vm.dump(handle)
   );
-  const syncMode = jest.fn(
-    (handle: QuickJSHandle): SyncMode => {
-      if (wrapped) expect(eq(handle, wrapped)).toBe(true);
-      return "both";
-    }
-  );
+  const syncMode = jest.fn((): SyncMode => "both");
 
   const wrapped = wrapHandle(
     vm,
@@ -303,10 +299,12 @@ it("wrapHandle with both sync", async () => {
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2); // synced
-  expect(unmarshal).toBeCalledTimes(3);
+  expect(unmarshal).toBeCalledTimes(4);
+  expect(unmarshal).toReturnWith(target); // twice
   expect(unmarshal).toReturnWith("a");
   expect(unmarshal).toReturnWith(2);
   expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(target);
 
   wrapped.dispose();
   handle.dispose();
@@ -327,12 +325,7 @@ it("wrapHandle with host sync", async () => {
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
     wrapped && eq(handle, wrapped) ? target : vm.dump(handle)
   );
-  const syncMode = jest.fn(
-    (handle: QuickJSHandle): SyncMode => {
-      if (wrapped) expect(eq(handle, wrapped)).toBe(true);
-      return "host";
-    }
-  );
+  const syncMode = jest.fn((): SyncMode => "host");
 
   const wrapped = wrapHandle(
     vm,
@@ -353,10 +346,12 @@ it("wrapHandle with host sync", async () => {
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not set
   expect(target.a).toBe(2); // synced
-  expect(unmarshal).toBeCalledTimes(3);
+  expect(unmarshal).toBeCalledTimes(4);
+  expect(unmarshal).toReturnWith(target); // twice
   expect(unmarshal).toReturnWith("a");
   expect(unmarshal).toReturnWith(2);
   expect(syncMode).toBeCalledTimes(1);
+  expect(syncMode).toBeCalledWith(target);
 
   wrapped.dispose();
   handle.dispose();
@@ -413,8 +408,8 @@ it("wrap and wrapHandle", async () => {
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2);
   expect(marshal).toBeCalledTimes(0);
-  expect(unmarshal).toBeCalledTimes(3);
-  expect(unmarshal).toReturnWith(wrapped);
+  expect(unmarshal).toBeCalledTimes(4);
+  expect(unmarshal).toReturnWith(wrapped); // twice
   expect(unmarshal).toReturnWith("a");
   expect(unmarshal).toReturnWith(2);
 

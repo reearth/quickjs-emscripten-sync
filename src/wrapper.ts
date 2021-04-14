@@ -56,7 +56,7 @@ export function wrapHandle(
   return consumeAll(
     [
       vm.newFunction("", h => {
-        const res = syncMode?.(h);
+        const res = syncMode?.(unmarshal(h));
         if (typeof res === "string") return vm.newString(res);
         return vm.undefined;
       }),
