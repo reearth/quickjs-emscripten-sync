@@ -52,34 +52,28 @@ export default class VMMap {
     this._disposables.add(this._mapClear);
   }
 
-  set(key: any, value: QuickJSHandle, key2?: any, value2?: QuickJSHandle) {
-    if (this.setUnsafe(key, value, key2, value2)) {
-      // Needed to avoid dangling handles
-      throw new Error("handle already exists that points to the same value");
-    }
-  }
-
-  setUnsafe(
+  set(
     key: any,
-    value: QuickJSHandle,
+    handle: QuickJSHandle,
     key2?: any,
-    value2?: QuickJSHandle
-  ) {
-    if (!value.alive) return false;
+    handle2?: QuickJSHandle
+  ): boolean {
+    if (!handle.alive || (handle2 && !handle2.alive)) return false;
 
     const v = this.get(key) ?? this.get(key2);
     if (v) {
-      return v !== value || v !== value2;
+      // handle and handle2 are unused so they should be disposed
+      return v === handle || v === handle2;
     }
 
     const counter = this._counter++;
     this._map1.set(key, counter);
-    this._map3.set(counter, value);
+    this._map3.set(counter, handle);
     this._counterMap.set(counter, key);
     if (key2) {
       this._map2.set(key2, counter);
-      if (value2) {
-        this._map4.set(counter, value2);
+      if (handle2) {
+        this._map4.set(counter, handle2);
       }
     }
 
@@ -87,13 +81,13 @@ export default class VMMap {
       this._call(
         this._mapSet,
         undefined,
-        value,
+        handle,
         c,
-        value2 ?? this.vm.undefined
+        handle2 ?? this.vm.undefined
       );
     });
 
-    return false;
+    return true;
   }
 
   merge(
