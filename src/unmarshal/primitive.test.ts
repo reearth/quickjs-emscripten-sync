@@ -10,6 +10,9 @@ it("works", async () => {
   expect(unmarshalPrimitive(vm, vm.null)).toEqual([null, true]);
   expect(unmarshalPrimitive(vm, vm.newString("hoge"))).toEqual(["hoge", true]);
   expect(unmarshalPrimitive(vm, vm.newNumber(-10))).toEqual([-10, true]);
+  // expect(
+  //   unmarshalPrimitive(vm, vm.unwrapResult(vm.evalCode(`BigInt(1)`)))
+  // ).toEqual([BigInt(1), true]);
 
   const obj = vm.newObject();
   expect(unmarshalPrimitive(vm, obj)).toEqual([undefined, false]);

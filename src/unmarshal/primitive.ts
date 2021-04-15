@@ -23,6 +23,16 @@ export default function unmarshalPrimitive(
     }
   }
 
-  // symbol and bigint not supported yet
+  // BigInt is not supported by quickjs-emscripten
+  // if (ty === "bigint") {
+  //   const str = vm
+  //     .getProp(handle, "toString")
+  //     .consume(toString => vm.unwrapResult(vm.callFunction(toString, handle)))
+  //     .consume(str => vm.getString(str));
+  //   const bi = BigInt(str);
+  //   return [bi, true];
+  // }
+
+  // symbol is not supported yet
   return [undefined, false];
 }

@@ -16,6 +16,12 @@ it("works", async () => {
   expect(eq(marshalPrimitive(vm, 1), vm.newNumber(1))).toBe(true);
   expect(eq(marshalPrimitive(vm, -100), vm.newNumber(-100))).toBe(true);
   expect(eq(marshalPrimitive(vm, "hoge"), vm.newString("hoge"))).toBe(true);
+  // expect(
+  //   eq(
+  //     marshalPrimitive(vm, BigInt(1)),
+  //     vm.unwrapResult(vm.evalCode("BigInt(1)"))
+  //   )
+  // ).toBe(true);
 
   expect(marshalPrimitive(vm, () => {})).toBe(undefined);
   expect(marshalPrimitive(vm, [])).toBe(undefined);

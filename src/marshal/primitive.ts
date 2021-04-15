@@ -15,7 +15,14 @@ export default function marshalPrimitive(
       return target ? vm.true : vm.false;
     case "object":
       return target === null ? vm.null : undefined;
+    // BigInt is not supported by quickjs-emscripten
+    // case "bigint":
+    //   vm.unwrapResult(vm.evalCode(`s => BigInt(s)`)).consume(n =>
+    //     vm.unwrapResult(
+    //       vm.callFunction(n, vm.undefined, vm.newString(target.toString()))
+    //     )
+    //   );
   }
-  // bigint and symbol is not supported yet
+  // symbol is not supported yet
   return undefined;
 }
