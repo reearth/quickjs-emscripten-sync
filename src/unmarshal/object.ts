@@ -1,5 +1,6 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalProperties from "./properties";
+import { call } from "../vmutil";
 
 export default function unmarshalObject(
   vm: QuickJSVm,
@@ -21,21 +22,19 @@ export default function unmarshalObject(
   const raw = {};
   const obj = preUnmarshal(raw, handle) ?? raw;
 
-  const prototype = vm
-    .unwrapResult(
-      vm.evalCode(`o => {
-        const p = Object.getPrototypeOf(o);
-        return !p || p === Object.prototype ? undefined : p;
-      }`)
-    )
-    .consume(getPrototypeOf =>
-      vm.unwrapResult(vm.callFunction(getPrototypeOf, vm.undefined, handle))
-    )
-    .consume(prototype => {
-      if (vm.typeof(prototype) === "undefined") return;
-      const [proto] = unmarshal(prototype);
-      return proto;
-    });
+  const prototype = call(
+    vm,
+    `o => {
+      const p = Object.getPrototypeOf(o);
+      return !p || p === Object.prototype ? undefined : p;
+    }`,
+    undefined,
+    handle
+  ).consume(prototype => {
+    if (vm.typeof(prototype) === "undefined") return;
+    const [proto] = unmarshal(prototype);
+    return proto;
+  });
   if (typeof prototype === "object") {
     Object.setPrototypeOf(obj, prototype);
   }

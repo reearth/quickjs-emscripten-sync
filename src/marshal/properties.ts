@@ -1,4 +1,5 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import { call } from "../vmutil";
 
 export default function marshalProperties(
   vm: QuickJSVm,
@@ -38,13 +39,7 @@ export default function marshalProperties(
     }
   );
 
-  vm.unwrapResult(vm.evalCode(`Object.defineProperties`)).consume(
-    defineProperties => {
-      vm.unwrapResult(
-        vm.callFunction(defineProperties, vm.undefined, handle, descs)
-      ).dispose();
-    }
-  );
+  call(vm, `Object.defineProperties`, undefined, handle, descs).dispose();
 
   descs.dispose();
 }

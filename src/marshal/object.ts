@@ -1,4 +1,5 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import { call } from "../vmutil";
 import marshalProperties from "./properties";
 
 export default function marshalObject(
@@ -22,13 +23,13 @@ export default function marshalObject(
       ? marshal(prototype)
       : undefined;
   if (prototypeHandle) {
-    vm.unwrapResult(vm.evalCode("Object.setPrototypeOf")).consume(
-      setPrototypeOf => {
-        vm.unwrapResult(
-          vm.callFunction(setPrototypeOf, vm.undefined, handle, prototypeHandle)
-        ).dispose();
-      }
-    );
+    call(
+      vm,
+      "Object.setPrototypeOf",
+      undefined,
+      handle,
+      prototypeHandle
+    ).dispose();
   }
 
   marshalProperties(vm, target, raw, marshal);

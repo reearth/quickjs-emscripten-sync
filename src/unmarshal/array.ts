@@ -1,4 +1,5 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import { call } from "../vmutil";
 
 export default function unmarshalArray(
   vm: QuickJSVm,
@@ -20,16 +21,11 @@ export default function unmarshalArray(
   vm.newFunction("", (value, index) => {
     const i = vm.getNumber(index);
     const [v] = unmarshal(value);
-
     if (v) {
       raw[i] = v;
     }
   }).consume(fn => {
-    vm.unwrapResult(
-      vm.evalCode(`(a, fn) => a.forEach((v, i) => fn(v, i))`)
-    ).consume(forEach => {
-      vm.unwrapResult(vm.callFunction(forEach, vm.undefined, handle, fn));
-    });
+    call(vm, `(a, fn) => a.forEach((v, i) => fn(v, i))`, undefined, handle, fn);
   });
 
   return array;

@@ -1,5 +1,6 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 import { isES2015Class, isObject } from "../util";
+import { call } from "../vmutil";
 import marshalProperties from "./properties";
 
 export default function marshalFunction(
@@ -29,23 +30,23 @@ export default function marshalFunction(
         return this;
       }
 
-      const call = () => target.apply(that, args);
-      return marshal(preApply ? preApply(target, that, args) : call());
+      return marshal(
+        preApply ? preApply(target, that, args) : target.apply(that, args)
+      );
     })
     .consume(handle2 =>
       // fucntions created by vm.newFunction are not callable as a class constrcutor
-      vm
-        .unwrapResult(
-          vm.evalCode(`Cls => {
-            const fn = function(...args) { return Cls.apply(this, args); };
-            fn.name = Cls.name;
-            fn.length = Cls.length;
-            return fn;
-          }`)
-        )
-        .consume(createClass =>
-          vm.unwrapResult(vm.callFunction(createClass, vm.undefined, handle2))
-        )
+      call(
+        vm,
+        `Cls => {
+          const fn = function(...args) { return Cls.apply(this, args); };
+          fn.name = Cls.name;
+          fn.length = Cls.length;
+          return fn;
+        }`,
+        undefined,
+        handle2
+      )
     );
 
   const handle = preMarshal(target, raw) ?? raw;

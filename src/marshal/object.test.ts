@@ -1,4 +1,5 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { call } from "../vmutil";
 import marshalObject from "./object";
 
 it("empty object", async () => {
@@ -77,9 +78,6 @@ it("normal object", async () => {
 
 it("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
-  const getPrototypeOf = vm.unwrapResult(vm.evalCode(`Object.getPrototypeOf`));
-  const entries = vm.unwrapResult(vm.evalCode(`Object.entries`));
-  const eq = vm.unwrapResult(vm.evalCode(`Object.is`));
 
   const proto = { a: 100 };
   const protoHandle = vm.newObject();
@@ -107,25 +105,16 @@ it("prototype", async () => {
   expect(vm.typeof(handle)).toBe("object");
   expect(vm.getNumber(vm.getProp(handle, "a"))).toBe(100);
   expect(vm.getString(vm.getProp(handle, "b"))).toBe("hoge");
-  const e = vm.unwrapResult(vm.callFunction(entries, vm.undefined, handle));
+  const e = call(vm, "Object.entries", undefined, handle);
   expect(vm.dump(e)).toEqual([["b", "hoge"]]);
-  const protoHandle2 = vm.unwrapResult(
-    vm.callFunction(getPrototypeOf, vm.undefined, handle)
-  );
+  const protoHandle2 = call(vm, "Object.getPrototypeOf", vm.undefined, handle);
   expect(
-    vm.dump(
-      vm.unwrapResult(
-        vm.callFunction(eq, vm.undefined, protoHandle, protoHandle2)
-      )
-    )
+    vm.dump(call(vm, `Object.is`, undefined, protoHandle, protoHandle2))
   ).toBe(true);
 
   protoHandle2.dispose();
   e.dispose();
   handle.dispose();
   protoHandle.dispose();
-  getPrototypeOf.dispose();
-  entries.dispose();
-  eq.dispose();
   vm.dispose();
 });

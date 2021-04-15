@@ -1,5 +1,6 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 import { isObject } from "./util";
+import { call, isHandleObject, consumeAll } from "./vmutil";
 
 export type SyncMode = "both" | "vm" | "host";
 
@@ -60,8 +61,18 @@ export function wrapHandle(
         if (typeof res === "string") return vm.newString(res);
         return vm.undefined;
       }),
-      vm.unwrapResult(
-        vm.evalCode(`(target, setter, sym, getSyncMode) => new Proxy(target, {
+      vm.newFunction("", (h, keyHandle, valueHandle) => {
+        const target = unmarshal(h);
+        if (!target) return;
+        const key = unmarshal(keyHandle);
+        const value = unmarshal(valueHandle);
+        unwrap(target, proxyKeySymbol)[key] = value;
+      }),
+    ],
+    ([getSyncMode, setter]) =>
+      call(
+        vm,
+        `(target, setter, sym, getSyncMode) => new Proxy(target, {
           get(obj, key, receiver) {
             return key === sym ? obj : Reflect.get(obj, key, receiver)
           },
@@ -77,26 +88,12 @@ export function wrapHandle(
             }
             return true;
           }
-      })`)
-      ),
-      vm.newFunction("", (h, keyHandle, valueHandle) => {
-        const target = unmarshal(h);
-        if (!target) return;
-        const key = unmarshal(keyHandle);
-        const value = unmarshal(valueHandle);
-        unwrap(target, proxyKeySymbol)[key] = value;
-      }),
-    ],
-    ([getSyncMode, wrapper, setter]) =>
-      vm.unwrapResult(
-        vm.callFunction(
-          wrapper,
-          vm.undefined,
-          handle,
-          setter,
-          proxyKeySymbolHandle,
-          getSyncMode
-        )
+        })`,
+        undefined,
+        handle,
+        setter,
+        proxyKeySymbolHandle,
+        getSyncMode
       ) as Wrapped<QuickJSHandle>
   );
 }
@@ -111,14 +108,7 @@ export function unwrapHandle(
   key: QuickJSHandle
 ): [QuickJSHandle, boolean] {
   if (!isHandleWrapped(vm, handle, key)) return [handle, false];
-  return [
-    vm
-      .unwrapResult(vm.evalCode(`(a, b) => a[b]`))
-      .consume(f =>
-        vm.unwrapResult(vm.callFunction(f, vm.undefined, handle, key))
-      ),
-    true,
-  ];
+  return [vm.getProp(handle, key), true];
 }
 
 export function isWrapped<T>(obj: T, key: string | symbol): obj is Wrapped<T> {
@@ -130,38 +120,13 @@ export function isHandleWrapped(
   handle: QuickJSHandle,
   key: QuickJSHandle
 ): handle is Wrapped<QuickJSHandle> {
-  return vm
-    .unwrapResult(
-      vm.evalCode(
-        `(a, s) => (typeof a === "object" && a !== null || typeof a === "function") && !!a[s]`
-      )
+  return !!vm.dump(
+    call(
+      vm,
+      `(a, s) => (typeof a === "object" && a !== null || typeof a === "function") && !!a[s]`,
+      undefined,
+      handle,
+      key
     )
-    .consume(f =>
-      vm.dump(vm.unwrapResult(vm.callFunction(f, vm.undefined, handle, key)))
-    );
-}
-
-export function isHandleObject(vm: QuickJSVm, handle: QuickJSHandle): boolean {
-  return vm
-    .unwrapResult(
-      vm.evalCode(
-        `a => typeof a === "object" && a !== null || typeof a === "function"`
-      )
-    )
-    .consume(f =>
-      vm.dump(vm.unwrapResult(vm.callFunction(f, vm.undefined, handle)))
-    );
-}
-
-export function consumeAll<T extends QuickJSHandle[], K>(
-  handles: T,
-  cb: (handles: T) => K
-) {
-  try {
-    return cb(handles);
-  } finally {
-    for (const h of handles) {
-      if (h.alive) h.dispose();
-    }
-  }
+  );
 }

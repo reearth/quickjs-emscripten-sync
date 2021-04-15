@@ -8,6 +8,7 @@ import {
   isHandleWrapped,
   SyncMode,
 } from "./wrapper";
+import { call, eq } from "./vmutil";
 
 it("wrap, unwrap, isWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
@@ -167,9 +168,6 @@ it("wrap with vm sync", async () => {
 
 it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
-  const eqh = vm.unwrapResult(vm.evalCode(`Object.is`));
-  const eq = (a: QuickJSHandle, b: QuickJSHandle) =>
-    !!vm.dump(vm.unwrapResult(vm.callFunction(eqh, vm.undefined, a, b)));
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
@@ -200,7 +198,7 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   const [handle2, unwrapped2] = unwrapHandle(vm, wrapped, proxyKeySymbolHandle);
   expect(unwrapped2).toBe(true);
   handle2.consume(h => {
-    expect(eq(handle, h)).toBe(true);
+    expect(eq(vm, handle, h)).toBe(true);
   });
 
   expect(
@@ -217,7 +215,6 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  eqh.dispose();
   vm.dispose();
 });
 
@@ -248,9 +245,7 @@ it("wrapHandle without sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  vm.unwrapResult(vm.evalCode(`a => a.a = 2`)).consume(f =>
-    vm.unwrapResult(vm.callFunction(f, vm.undefined, wrapped))
-  );
+  call(vm, `a => a.a = 2`, undefined, wrapped);
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(1); // not synced
@@ -293,9 +288,7 @@ it("wrapHandle with both sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  vm.unwrapResult(vm.evalCode(`a => a.a = 2`)).consume(f =>
-    vm.unwrapResult(vm.callFunction(f, vm.undefined, wrapped))
-  );
+  call(vm, `a => a.a = 2`, undefined, wrapped);
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2); // synced
@@ -340,9 +333,7 @@ it("wrapHandle with host sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  vm.unwrapResult(vm.evalCode(`a => a.a = 2`)).consume(f =>
-    vm.unwrapResult(vm.callFunction(f, vm.undefined, wrapped))
-  );
+  call(vm, `a => a.a = 2`, undefined, wrapped);
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not set
   expect(target.a).toBe(2); // synced
@@ -401,9 +392,7 @@ it("wrap and wrapHandle", async () => {
   );
   if (!wrappedHandle) throw new Error("wrappedHandle is undefined");
 
-  vm.unwrapResult(vm.evalCode(`a => a.a = 2`)).consume(f =>
-    vm.unwrapResult(vm.callFunction(f, vm.undefined, wrappedHandle))
-  );
+  call(vm, `a => a.a = 2`, undefined, wrappedHandle);
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2);

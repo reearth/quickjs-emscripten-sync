@@ -1,22 +1,14 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { send, eq, call } from "../vmutil";
 import marshalFunction from "./function";
 
 it("normal func", async () => {
   const vm = (await getQuickJS()).createVm();
-  const eqh = vm.unwrapResult(vm.evalCode(`Object.is`));
-  const eq = (a: QuickJSHandle | undefined, b: QuickJSHandle) =>
-    !!vm.dump(
-      vm.unwrapResult(vm.callFunction(eqh, vm.undefined, a ?? vm.undefined, b))
-    );
 
-  const marshal = jest.fn(v =>
-    typeof v === "string"
-      ? vm.newString(v)
-      : typeof v === "number"
-      ? vm.newNumber(v)
-      : vm.null
+  const marshal = jest.fn(v => send(vm, v));
+  const unmarshal = jest.fn(v =>
+    eq(vm, v, vm.global) ? undefined : vm.dump(v)
   );
-  const unmarshal = jest.fn(v => (eq(v, vm.global) ? undefined : vm.dump(v)));
   const preMarshal = jest.fn((_, a) => a);
   const innerfn = jest.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
@@ -43,19 +35,12 @@ it("normal func", async () => {
   expect(unmarshal.mock.results[2].value).toBe(true);
 
   handle.dispose();
-  eqh.dispose();
   vm.dispose();
 });
 
 it("func which has properties", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(v =>
-    typeof v === "string"
-      ? vm.newString(v)
-      : typeof v === "number"
-      ? vm.newNumber(v)
-      : vm.null
-  );
+  const marshal = jest.fn(v => send(vm, v));
 
   const fn = () => {};
   fn.hoge = "foo";
@@ -79,9 +64,6 @@ it("func which has properties", async () => {
 
 it("class", async () => {
   const vm = (await getQuickJS()).createVm();
-  const instanceOf = vm.unwrapResult(
-    vm.evalCode(`(cls, i) => i instanceof cls`)
-  );
 
   const disposables: QuickJSHandle[] = [];
   const marshal = (v: any) => {
@@ -114,9 +96,7 @@ it("class", async () => {
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(1);
   expect(
     vm.dump(
-      vm.unwrapResult(
-        vm.callFunction(instanceOf, vm.undefined, handle, instance)
-      )
+      call(vm, "(cls, i) => i instanceof cls", undefined, handle, instance)
     )
   ).toBe(true);
   expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
@@ -125,15 +105,11 @@ it("class", async () => {
   instance.dispose();
   newA.dispose();
   handle.dispose();
-  instanceOf.dispose();
   vm.dispose();
 });
 
 it("preApply", async () => {
   const vm = (await getQuickJS()).createVm();
-  const instanceOf = vm.unwrapResult(
-    vm.evalCode(`(cls, i) => i instanceof cls`)
-  );
 
   const marshal = (v: any) => {
     if (typeof v === "string") return vm.newString(v);
@@ -171,7 +147,6 @@ it("preApply", async () => {
 
   thatHandle.dispose();
   handle.dispose();
-  instanceOf.dispose();
   vm.dispose();
 });
 

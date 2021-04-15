@@ -1,9 +1,10 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { send } from "../vmutil";
 import unmarshalFunction from "./function";
 
 it("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(v => vm.newNumber(v));
+  const marshal = jest.fn(v => send(vm, v));
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
     false,
@@ -19,7 +20,7 @@ it("arrow function", async () => {
   expect(marshal).toBeCalledWith(undefined);
   expect(marshal).toBeCalledWith(1);
   expect(marshal).toBeCalledWith(2);
-  expect(unmarshal.mock.calls.length).toBe(3); // a + b, func.name, func.length
+  expect(unmarshal).toReturnTimes(3);
   expect(unmarshal).toReturnWith([3, false]); // a + b
   expect(unmarshal).toReturnWith([func.name, false]);
   expect(unmarshal).toReturnWith([func.length, false]);
@@ -36,7 +37,7 @@ it("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
-  const marshal = jest.fn(v => (v === that ? thatHandle : vm.newNumber(v)));
+  const marshal = jest.fn(v => (v === that ? thatHandle : send(vm, v)));
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
@@ -73,8 +74,8 @@ it("function", async () => {
 it("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((v: unknown) =>
-    typeof v === "number" ? vm.newNumber(v) : vm.null
+  const marshal = jest.fn(v =>
+    typeof v === "object" ? vm.undefined : send(vm, v)
   );
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
@@ -99,10 +100,10 @@ it("constructor", async () => {
   const instance = new Cls(100);
   expect(instance instanceof Cls).toBe(true);
   expect(instance.a).toBe(102);
-  expect(marshal).toBeCalledTimes(2); // this, 100
+  expect(marshal).toBeCalledTimes(2);
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(100);
-  expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
+  expect(unmarshal).toReturnTimes(4);
   expect(unmarshal).toReturnWith([instance, false]);
   expect(unmarshal).toReturnWith([Cls.prototype, false]);
   expect(unmarshal).toReturnWith([Cls.name, false]);
@@ -117,8 +118,8 @@ it("constructor", async () => {
 
 it("class", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v: unknown) =>
-    typeof v === "number" ? vm.newNumber(v) : vm.null
+  const marshal = jest.fn(v =>
+    typeof v === "object" ? vm.undefined : send(vm, v)
   );
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
@@ -144,10 +145,10 @@ it("class", async () => {
   const instance = new Cls(2);
   expect(instance instanceof Cls).toBe(true);
   expect(instance.a).toBe(3);
-  expect(marshal).toBeCalledTimes(2); // this, 2
+  expect(marshal).toBeCalledTimes(2);
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(2);
-  expect(unmarshal.mock.calls.length).toBe(4); // instance, Cls.prototype, Cls.name, Cls.length
+  expect(unmarshal).toReturnTimes(4);
   expect(unmarshal).toReturnWith([instance, false]);
   expect(unmarshal).toReturnWith([Cls.prototype, false]);
   expect(unmarshal).toReturnWith([Cls.name, false]);

@@ -1,11 +1,15 @@
 import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
-import { VmCallResult } from "quickjs-emscripten/dist/vm-interface";
+import {
+  SuccessOrFail,
+  VmCallResult,
+} from "quickjs-emscripten/dist/vm-interface";
 
 import VMMap from "./vmmap";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
+import { call, eq, isHandleObject, send, consumeAll } from "./vmutil";
 
 export {
   Arena,
@@ -16,6 +20,11 @@ export {
   isES2015Class,
   isObject,
   walkObject,
+  call,
+  eq,
+  isHandleObject,
+  send,
+  consumeAll,
 };
 
 export type Options = {

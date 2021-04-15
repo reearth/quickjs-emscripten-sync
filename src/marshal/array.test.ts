@@ -1,31 +1,24 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
+import { send, eq } from "../vmutil";
 import marshalArray from "./array";
 
 it("works", async () => {
   const vm = (await getQuickJS()).createVm();
-  const eqh = vm.unwrapResult(vm.evalCode(`Object.is`));
-  const eq = (a: QuickJSHandle | undefined, b: QuickJSHandle) =>
-    !!vm.dump(
-      vm.unwrapResult(vm.callFunction(eqh, vm.undefined, a ?? vm.undefined, b))
-    );
 
-  const marshal = jest.fn(v =>
-    v === true ? vm.true : v === "a" ? vm.newString(v) : vm.null
-  );
+  const marshal = jest.fn(v => send(vm, v));
   const preMarshal = jest.fn((_, a) => a);
   const target = ["a", null, true];
   const handle = marshalArray(vm, target, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
   expect(vm.getNumber(vm.getProp(handle, "length"))).toBe(3);
-  expect(eq(vm.getProp(handle, 0), vm.newString("a"))).toBe(true);
-  expect(eq(vm.getProp(handle, 1), vm.null)).toBe(true);
-  expect(eq(vm.getProp(handle, 2), vm.true)).toBe(true);
+  expect(eq(vm, vm.getProp(handle, 0), vm.newString("a"))).toBe(true);
+  expect(eq(vm, vm.getProp(handle, 1), vm.null)).toBe(true);
+  expect(eq(vm, vm.getProp(handle, 2), vm.true)).toBe(true);
   expect(marshal.mock.calls).toEqual([["a"], [null], [true]]);
   expect(preMarshal.mock.calls).toEqual([[target, handle]]);
 
   handle.dispose();
-  eqh.dispose();
   vm.dispose();
 });
 

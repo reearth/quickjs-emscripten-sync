@@ -1,5 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
 import VMMap from "./vmmap";
+import { call } from "./vmutil";
 
 it("init and dispose", async () => {
   const quickjs = await getQuickJS();
@@ -22,9 +23,7 @@ it("get and set", async () => {
   expect(map.set(target, handle)).toBe(true);
   expect(map.get(target)).toBe(handle);
   // a new handle that points to the same value
-  const handle2 = vm
-    .unwrapResult(vm.evalCode(`a => a`))
-    .consume(a => vm.unwrapResult(vm.callFunction(a, vm.undefined, handle)));
+  const handle2 = call(vm, `a => a`, undefined, handle);
   expect(map.set(target, handle2)).toBe(false);
 
   handle2.dispose();

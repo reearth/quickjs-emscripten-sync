@@ -1,6 +1,7 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import marshal from ".";
+import { getQuickJS } from "quickjs-emscripten";
 import VMMap from "../vmmap";
+import { instanceOf } from "../vmutil";
+import marshal from ".";
 
 it("primitive, array, object", async () => {
   const { vm, map, marshal, dispose } = await setup();
@@ -72,7 +73,7 @@ it("function", async () => {
 });
 
 it("class", async () => {
-  const { vm, map, marshal, instanceOf, dispose } = await setup();
+  const { vm, map, marshal, dispose } = await setup();
 
   class A {
     a: number;
@@ -117,13 +118,13 @@ it("class", async () => {
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(1);
   expect(vm.dump(vm.getProp(handle, "name"))).toBe("A");
   const staticA = vm.getProp(handle, "a");
-  expect(instanceOf(staticA, handle)).toBe(true);
+  expect(instanceOf(vm, staticA, handle)).toBe(true);
   expect(vm.dump(vm.getProp(staticA, "a"))).toBe(100);
   expect(vm.dump(vm.getProp(staticA, "b"))).toBe("a!");
 
   const newA = vm.unwrapResult(vm.evalCode(`A => new A("foo")`));
   const instance = vm.unwrapResult(vm.callFunction(newA, vm.undefined, handle));
-  expect(instanceOf(instance, handle)).toBe(true);
+  expect(instanceOf(vm, instance, handle)).toBe(true);
   expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
   expect(vm.dump(vm.getProp(instance, "b"))).toBe("foo!");
   const methodHoge = vm.getProp(instance, "hoge");
@@ -173,7 +174,6 @@ const setup = async ({
   isMarshalable?: (target: any) => boolean;
 } = {}) => {
   const vm = (await getQuickJS()).createVm();
-  const instanceOf = vm.unwrapResult(vm.evalCode(`(a, b) => a instanceof b`));
   const map = new VMMap(vm);
   return {
     vm,
@@ -189,11 +189,8 @@ const setup = async ({
         },
         find: t => map.get(t),
       }),
-    instanceOf: (a: QuickJSHandle, b: QuickJSHandle): boolean =>
-      vm.dump(vm.unwrapResult(vm.callFunction(instanceOf, vm.undefined, a, b))),
     dispose: () => {
       map.dispose();
-      instanceOf.dispose();
       vm.dispose();
     },
   };

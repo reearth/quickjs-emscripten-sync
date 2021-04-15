@@ -1,4 +1,5 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import { call } from "../vmutil";
 
 export default function unmarshalProperties(
   vm: QuickJSVm,
@@ -38,16 +39,14 @@ export default function unmarshalProperties(
 
     Object.defineProperty(target, keyName, desc);
   }).consume(fn => {
-    vm.unwrapResult(
-      vm.evalCode(
-        `(o, fn) => {
-          Object.entries(Object.getOwnPropertyDescriptors(o)).forEach(([k, v]) => fn(k, v));
-        }`
-      )
-    ).consume(getOwnPropertyDescriptors => {
-      vm.unwrapResult(
-        vm.callFunction(getOwnPropertyDescriptors, vm.undefined, handle, fn)
-      ).dispose();
-    });
+    call(
+      vm,
+      `(o, fn) => {
+        Object.entries(Object.getOwnPropertyDescriptors(o)).forEach(([k, v]) => fn(k, v));
+      }`,
+      undefined,
+      handle,
+      fn
+    ).dispose();
   });
 }

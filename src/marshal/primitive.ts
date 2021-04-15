@@ -1,4 +1,5 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+// import { call } from "../vmutil";
 
 export default function marshalPrimitive(
   vm: QuickJSVm,
@@ -17,11 +18,7 @@ export default function marshalPrimitive(
       return target === null ? vm.null : undefined;
     // BigInt is not supported by quickjs-emscripten
     // case "bigint":
-    //   vm.unwrapResult(vm.evalCode(`s => BigInt(s)`)).consume(n =>
-    //     vm.unwrapResult(
-    //       vm.callFunction(n, vm.undefined, vm.newString(target.toString()))
-    //     )
-    //   );
+    //   return call(vm, `s => BigInt(s)`, undefined, vm.newString(target.toString()));
   }
   // symbol is not supported yet
   return undefined;
