@@ -185,6 +185,7 @@ it("get and set 2", async () => {
   const target2 = {};
   const handle = vm.newObject();
   const handle2 = vm.newObject();
+  const handle3 = call(vm, `a => a`, undefined, handle);
 
   const map = new VMMap(vm);
 
@@ -193,7 +194,9 @@ it("get and set 2", async () => {
   expect(map.get(target2)).toBe(handle);
   expect(map.getByHandle(handle)).toBe(target);
   expect(map.getByHandle(handle2)).toBe(target);
+  expect(map.getByHandle(handle3)).toBe(target);
 
+  handle3.dispose();
   handle2.dispose();
   handle.dispose();
 
@@ -262,6 +265,72 @@ it("delete 3", async () => {
 
   handle.dispose();
   handle2.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it("delete with dispose", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const target2 = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+  map.set(target, handle, target2, handle2);
+  map.delete(target, true);
+
+  expect(handle.alive).toBe(false);
+  expect(handle2.alive).toBe(false);
+
+  map.dispose();
+  vm.dispose();
+});
+
+it("deleteByHandle", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const target2 = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+  map.set(target, handle, target2, handle2);
+
+  expect(map.getByHandle(handle)).toBe(target);
+  expect(map.getByHandle(handle2)).toBe(target);
+
+  map.deleteByHandle(handle);
+
+  expect(map.getByHandle(handle)).toBe(undefined);
+  expect(map.getByHandle(handle2)).toBe(undefined);
+
+  handle.dispose();
+  handle2.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it("deleteByHandle with dispose", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const target2 = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+  map.set(target, handle, target2, handle2);
+  map.deleteByHandle(handle, true);
+
+  expect(handle.alive).toBe(false);
+  expect(handle2.alive).toBe(false);
+
   map.dispose();
   vm.dispose();
 });

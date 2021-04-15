@@ -133,7 +133,7 @@ export default class VMMap {
     return !!this._map1.get(key) || !!this._map2.get(key);
   }
 
-  delete(key: any) {
+  delete(key: any, dispose?: boolean) {
     const num = this._map1.get(key) ?? this._map2.get(key);
     if (typeof num === "undefined") return;
 
@@ -170,12 +170,17 @@ export default class VMMap {
         break;
       }
     }
+
+    if (dispose) {
+      if (handle?.alive) handle.dispose();
+      if (handle2?.alive) handle2.dispose();
+    }
   }
 
-  deleteByHandle(handle: QuickJSHandle) {
+  deleteByHandle(handle: QuickJSHandle, dispose?: boolean) {
     const key = this.getByHandle(handle);
     if (typeof key !== "undefined") {
-      this.delete(key);
+      this.delete(key, dispose);
     }
   }
 
