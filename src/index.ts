@@ -54,7 +54,15 @@ export default class Arena {
 
   evalCode<T = any>(code: string): T | undefined {
     let handle = this.vm.evalCode(code);
-    return this._unwrapResult(handle);
+    return this._unwrapResultAndUnmarshal(handle);
+  }
+
+  executePendingJobs(maxJobsToExecute?: number): number {
+    const result = this.vm.executePendingJobs(maxJobsToExecute);
+    if ("value" in result) {
+      return result.value;
+    }
+    throw result.error.consume(err => this._unmarshal(err));
   }
 
   expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T {
@@ -72,12 +80,27 @@ export default class Arena {
     return Object.fromEntries(newobject) as T;
   }
 
-  _unwrapResult(result: VmCallResult<QuickJSHandle> | undefined): any {
-    if (!result) return;
+  startSync(target: any) {
+    if (!isObject(target)) return;
+    this._sync.add(this._unwrap(target));
+  }
+
+  endSync(target: any) {
+    this._sync.delete(this._unwrap(target));
+  }
+
+  _unwrapResult<T>(result: SuccessOrFail<T, QuickJSHandle>): T {
     if ("value" in result) {
-      return result.value.consume(v => this._unmarshal(v));
+      return result.value;
     }
     throw result.error.consume(err => this._unmarshal(err));
+  }
+
+  _unwrapResultAndUnmarshal(
+    result: VmCallResult<QuickJSHandle> | undefined
+  ): any {
+    if (!result) return;
+    return this._unwrapResult(result).consume(h => this._unmarshal(h));
   }
 
   _marshal(target: any): QuickJSHandle {
@@ -111,7 +134,8 @@ export default class Arena {
   }
 
   _unmarshal(handle: QuickJSHandle): any {
-    return unmarshal(this._wrapHandle(handle) ?? handle, {
+    const [wrappedHandle] = this._wrapHandle(handle);
+    return unmarshal(wrappedHandle ?? handle, {
       vm: this.vm,
       marshal: (v: any) => this._marshal(v),
       find: h => this._map.getByHandle(h),
@@ -127,7 +151,7 @@ export default class Arena {
     sync?: boolean
   ): [Wrapped<any>, Wrapped<QuickJSHandle>] | undefined {
     const wrappedT = this._wrap(t);
-    const wrappedH = this._wrapHandle(h);
+    const [wrappedH] = this._wrapHandle(h);
     if (!wrappedT || !wrappedH) return; // t or h is not an object
 
     const unwrappedT = this._unwrap(t);
@@ -167,7 +191,9 @@ export default class Arena {
     return unwrap(target, this._symbol);
   }
 
-  _wrapHandle(handle: QuickJSHandle): Wrapped<QuickJSHandle> | undefined {
+  _wrapHandle(
+    handle: QuickJSHandle
+  ): [Wrapped<QuickJSHandle> | undefined, boolean] {
     return wrapHandle(
       this.vm,
       handle,
