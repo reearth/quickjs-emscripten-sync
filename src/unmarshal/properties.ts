@@ -8,8 +8,13 @@ export default function unmarshalProperties(
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean]
 ) {
   vm.newFunction("", (key, value) => {
-    const keyName = vm.typeof(key) === "string" ? vm.getString(key) : undefined;
-    if (!keyName) return; // symbol not supported
+    const [keyName] = unmarshal(key);
+    if (
+      typeof keyName !== "string" &&
+      typeof keyName !== "number" &&
+      typeof keyName !== "symbol"
+    )
+      return;
 
     const desc = ([
       ["value", true],
@@ -42,7 +47,9 @@ export default function unmarshalProperties(
     call(
       vm,
       `(o, fn) => {
-        Object.entries(Object.getOwnPropertyDescriptors(o)).forEach(([k, v]) => fn(k, v));
+        const descs = Object.getOwnPropertyDescriptors(o);
+        Object.entries(descs).forEach(([k, v]) => fn(k, v));
+        Object.getOwnPropertySymbols(descs).forEach(k => fn(k, descs[k]));
       }`,
       undefined,
       handle,

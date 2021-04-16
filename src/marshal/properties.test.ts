@@ -1,4 +1,5 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { send } from "../vmutil";
 import marshalProperties from "./properties";
 
 it("works", async () => {
@@ -19,7 +20,8 @@ it("works", async () => {
   );
 
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn(() => {
+  const marshal = jest.fn(t => {
+    if (typeof t !== "function") return send(vm, t);
     const fn = vm.newFunction("", () => {});
     disposables.push(fn);
     return fn;
@@ -46,7 +48,13 @@ it("works", async () => {
   });
 
   marshalProperties(vm, obj, handle, marshal);
-  expect(marshal.mock.calls).toEqual([[bar], [fooGet], [fooSet]]);
+  expect(marshal.mock.calls).toEqual([
+    ["bar"],
+    [bar],
+    ["foo"],
+    [fooGet],
+    [fooSet],
+  ]);
 
   const expected = vm.unwrapResult(
     vm.evalCode(`({

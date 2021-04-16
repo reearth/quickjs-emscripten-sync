@@ -8,7 +8,7 @@ import {
   isHandleWrapped,
   SyncMode,
 } from "./wrapper";
-import { call, eq } from "./vmutil";
+import { call, eq, send } from "./vmutil";
 
 it("wrap, unwrap, isWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
@@ -87,12 +87,7 @@ it("wrap with both sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
-    (t: any): QuickJSHandle =>
-      t === wrapped
-        ? handle
-        : typeof t === "number"
-        ? vm.newNumber(t)
-        : vm.undefined
+    (t: any): QuickJSHandle => (t === wrapped ? handle : send(vm, t))
   );
   const syncMode = jest.fn((): SyncMode => "both");
 
@@ -113,8 +108,9 @@ it("wrap with both sync", async () => {
 
   expect(target.a).toBe(2);
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // synced
-  expect(marshal).toBeCalledTimes(2);
+  expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(2);
+  expect(marshal).toBeCalledWith("a");
   expect(syncMode).toBeCalledTimes(1);
   expect(syncMode).toBeCalledWith(wrapped);
 
@@ -130,12 +126,7 @@ it("wrap with vm sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
-    (t: any): QuickJSHandle =>
-      t === wrapped
-        ? handle
-        : typeof t === "number"
-        ? vm.newNumber(t)
-        : vm.undefined
+    (t: any): QuickJSHandle => (t === wrapped ? handle : send(vm, t))
   );
   const syncMode = jest.fn((): SyncMode => "vm");
 
@@ -156,8 +147,9 @@ it("wrap with vm sync", async () => {
 
   expect(target.a).toBe(1); // not set
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // synced
-  expect(marshal).toBeCalledTimes(2);
+  expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(2);
+  expect(marshal).toBeCalledWith("a");
   expect(syncMode).toBeCalledTimes(1);
   expect(syncMode).toBeCalledWith(wrapped);
 
@@ -361,11 +353,7 @@ it("wrap and wrapHandle", async () => {
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
     (t: any): QuickJSHandle =>
-      wrappedHandle && t === wrapped
-        ? wrappedHandle
-        : typeof t === "number"
-        ? vm.newNumber(t)
-        : vm.undefined
+      wrappedHandle && t === wrapped ? wrappedHandle : send(vm, t)
   );
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
     wrappedHandle && eq(handle, wrappedHandle) ? wrapped : vm.dump(handle)
@@ -408,8 +396,9 @@ it("wrap and wrapHandle", async () => {
 
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(3);
   expect(target.a).toBe(3);
-  expect(marshal).toBeCalledTimes(2);
+  expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(wrapped);
+  expect(marshal).toBeCalledWith("a");
   expect(marshal).toBeCalledWith(3);
   expect(unmarshal).toBeCalledTimes(0);
 

@@ -20,9 +20,11 @@ it("arrow function", async () => {
   expect(marshal).toBeCalledWith(undefined);
   expect(marshal).toBeCalledWith(1);
   expect(marshal).toBeCalledWith(2);
-  expect(unmarshal).toReturnTimes(3);
+  expect(unmarshal).toReturnTimes(5);
   expect(unmarshal).toReturnWith([3, false]); // a + b
+  expect(unmarshal).toReturnWith(["name", false]);
   expect(unmarshal).toReturnWith([func.name, false]);
+  expect(unmarshal).toReturnWith(["length", false]);
   expect(unmarshal).toReturnWith([func.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
@@ -57,10 +59,13 @@ it("function", async () => {
   expect(marshal).toBeCalledTimes(2); // this, 2
   expect(marshal).toBeCalledWith(that);
   expect(marshal).toBeCalledWith(2);
-  expect(unmarshal.mock.calls.length).toBe(4); // this.a + b, func.prototype, func.name, func.length
+  expect(unmarshal).toReturnTimes(7); // this.a + b, func.prototype, func.name, func.length
   expect(unmarshal).toReturnWith([3, false]); // this.a + b
+  expect(unmarshal).toReturnWith(["prototype", false]);
   expect(unmarshal).toReturnWith([func.prototype, false]);
+  expect(unmarshal).toReturnWith(["name", false]);
   expect(unmarshal).toReturnWith([func.name, false]);
+  expect(unmarshal).toReturnWith(["length", false]);
   expect(unmarshal).toReturnWith([func.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
@@ -103,10 +108,13 @@ it("constructor", async () => {
   expect(marshal).toBeCalledTimes(2);
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(100);
-  expect(unmarshal).toReturnTimes(4);
+  expect(unmarshal).toReturnTimes(7);
   expect(unmarshal).toReturnWith([instance, false]);
+  expect(unmarshal).toReturnWith(["prototype", false]);
   expect(unmarshal).toReturnWith([Cls.prototype, false]);
+  expect(unmarshal).toReturnWith(["name", false]);
   expect(unmarshal).toReturnWith([Cls.name, false]);
+  expect(unmarshal).toReturnWith(["length", false]);
   expect(unmarshal).toReturnWith([Cls.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
@@ -148,10 +156,13 @@ it("class", async () => {
   expect(marshal).toBeCalledTimes(2);
   expect(marshal).toBeCalledWith(instance);
   expect(marshal).toBeCalledWith(2);
-  expect(unmarshal).toReturnTimes(4);
+  expect(unmarshal).toReturnTimes(7);
   expect(unmarshal).toReturnWith([instance, false]);
+  expect(unmarshal).toReturnWith(["prototype", false]);
   expect(unmarshal).toReturnWith([Cls.prototype, false]);
+  expect(unmarshal).toReturnWith(["name", false]);
   expect(unmarshal).toReturnWith([Cls.name, false]);
+  expect(unmarshal).toReturnWith(["length", false]);
   expect(unmarshal).toReturnWith([Cls.length, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);

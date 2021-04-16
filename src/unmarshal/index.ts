@@ -3,6 +3,7 @@ import unmarshalArray from "./array";
 import unmarshalFunction from "./function";
 import unmarshalObject from "./object";
 import unmarshalPrimitive from "./primitive";
+import unmarshalSymbol from "./symbol";
 
 export type Options = {
   vm: QuickJSVm;
@@ -37,6 +38,7 @@ function unmarshalInner(
   const unmarshal2 = (h: QuickJSHandle) => unmarshalInner(h, options);
 
   const result =
+    unmarshalSymbol(vm, handle, pre) ??
     unmarshalArray(vm, handle, unmarshal2, pre) ??
     unmarshalFunction(vm, handle, marshal, unmarshal2, pre) ??
     unmarshalObject(vm, handle, unmarshal2, pre);

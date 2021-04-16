@@ -16,7 +16,7 @@ it("normal func", async () => {
   const handle = marshalFunction(vm, fn, marshal, unmarshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
-  expect(marshal.mock.calls).toEqual([[0], ["fn"]]); // fn.length, fn.name
+  expect(marshal.mock.calls).toEqual([["length"], [0], ["name"], ["fn"]]); // fn.length, fn.name
   expect(preMarshal.mock.calls).toEqual([[fn, handle]]); // fn.length, fn.name
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(0);

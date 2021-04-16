@@ -1,6 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
 import VMMap from "../vmmap";
-import { instanceOf } from "../vmutil";
+import { instanceOf, call } from "../vmutil";
 import marshal from ".";
 
 it("primitive, array, object", async () => {
@@ -20,6 +20,24 @@ it("primitive, array, object", async () => {
   expect(map.has(target.aaa)).toBe(true);
   expect(map.has(target.nested)).toBe(true);
   expect(map.has(target.aaa[2])).toBe(true);
+
+  dispose();
+});
+
+it("object with symbol key", async () => {
+  const { vm, marshal, dispose } = await setup();
+
+  const target = {
+    foo: "hoge",
+    [Symbol("a")]: 1,
+  };
+  const handle = marshal(target);
+  expect(vm.dump(call(vm, `a => a.foo`, undefined, handle))).toBe("hoge");
+  expect(
+    vm.dump(
+      call(vm, `a => a[Object.getOwnPropertySymbols(a)[0]]`, undefined, handle)
+    )
+  ).toBe(1);
 
   dispose();
 });

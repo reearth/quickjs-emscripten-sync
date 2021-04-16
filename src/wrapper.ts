@@ -17,7 +17,7 @@ export function wrap<T = any>(
   if (!isObject(target)) return undefined;
   if (isWrapped(target, proxyKeySymbol)) return target;
 
-  return new Proxy(target as any, {
+  const rec = new Proxy(target as any, {
     get(obj, key) {
       return key === proxyKeySymbol ? obj : Reflect.get(obj, key);
     },
@@ -32,15 +32,39 @@ export function wrap<T = any>(
           proxyKeySymbolHandle
         );
         if (unwrapped) {
-          handle2.consume(h => vm.setProp(h, key as string, marshal(v)));
+          handle2.consume(h => vm.setProp(h, marshal(key), marshal(v)));
         } else {
-          vm.setProp(handle2, key as string, marshal(v));
+          vm.setProp(handle2, marshal(key), marshal(v));
         }
         return true;
       }
-      return false;
+      return true;
     },
+    deleteProperty(obj, key) {
+      const sync = syncMode?.(rec) ?? "host";
+      const [handle2, unwrapped] = unwrapHandle(
+        vm,
+        marshal(rec),
+        proxyKeySymbolHandle
+      );
+      if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
+        if (sync === "host") return true;
+        if (unwrapped) {
+          handle2.consume(h =>
+            call(vm, `(a, b) => delete a[b]`, undefined, h, marshal(key))
+          );
+        } else {
+          call(vm, `(a, b) => delete a[b]`, undefined, handle2, marshal(key));
+        }
+        return true;
+      }
+      return true;
+    },
+    // defineProperty(target, key, attributes) {
+    // TODO
+    // }
   }) as Wrapped<T>;
+  return rec;
 }
 
 export function wrapHandle(
@@ -68,30 +92,49 @@ export function wrapHandle(
         const value = unmarshal(valueHandle);
         unwrap(target, proxyKeySymbol)[key] = value;
       }),
+      vm.newFunction("", (h, keyHandle) => {
+        const target = unmarshal(h);
+        if (!target) return;
+        const key = unmarshal(keyHandle);
+        delete unwrap(target, proxyKeySymbol)[key];
+      }),
     ],
-    ([getSyncMode, setter]) => [
+    ([getSyncMode, setter, deleter]) => [
       call(
         vm,
-        `(target, setter, sym, getSyncMode) => new Proxy(target, {
-          get(obj, key, receiver) {
-            return key === sym ? obj : Reflect.get(obj, key, receiver)
-          },
-          set(obj, key, value, receiver) {
-            const v = typeof value === "object" && value !== null || typeof value === "function"
-              ? value[sym] ?? value
-              : value;
-            const sync = getSyncMode(receiver) ?? "vm";
-            if (sync === "host" || Reflect.set(obj, key, v, receiver)) {
-              if (sync !== "vm") {
-                setter(receiver, key, v);
+        `(target, setter, deleter, sym, getSyncMode) => {
+          const rec = {
+            get(obj, key, receiver) {
+              return key === sym ? obj : Reflect.get(obj, key, receiver)
+            },
+            set(obj, key, value, receiver) {
+              const v = typeof value === "object" && value !== null || typeof value === "function"
+                ? value[sym] ?? value
+                : value;
+              const sync = getSyncMode(receiver) ?? "vm";
+              if (sync === "host" || Reflect.set(obj, key, v, receiver)) {
+                if (sync !== "vm") {
+                  setter(receiver, key, v);
+                }
               }
+              return true;
+            },
+            deleteProperty(obj, key) {
+              const sync = getSyncMode(receiver) ?? "vm";
+              if (sync === "host" || Reflect.deleteProperty(obj, key)) {
+                if (sync !== "vm") {
+                  deleter(rec, key);
+                }
+              }
+              return true;
             }
-            return true;
-          }
-        })`,
+          };
+          return new Proxy(target, rec)
+        }`,
         undefined,
         handle,
         setter,
+        deleter,
         proxyKeySymbolHandle,
         getSyncMode
       ) as Wrapped<QuickJSHandle>,

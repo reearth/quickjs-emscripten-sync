@@ -54,7 +54,7 @@ it("normal object", async () => {
   expect(vm.typeof(handle)).toBe("object");
   expect(vm.getNumber(vm.getProp(handle, "a"))).toBe(100);
   expect(vm.getString(vm.getProp(handle, "b"))).toBe("hoge");
-  expect(marshal.mock.calls).toEqual([[100], ["hoge"]]);
+  expect(marshal.mock.calls).toEqual([["a"], [100], ["b"], ["hoge"]]);
   expect(preMarshal).toBeCalledTimes(1);
   expect(preMarshal.mock.calls[0][0]).toBe(obj);
   expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze

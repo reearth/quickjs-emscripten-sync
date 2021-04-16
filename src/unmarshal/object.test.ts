@@ -1,7 +1,7 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalObject from "./object";
 
-it("normal", async () => {
+it("normal object", async () => {
   const vm = (await getQuickJS()).createVm();
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
@@ -13,8 +13,10 @@ it("normal", async () => {
   const obj = unmarshalObject(vm, handle, unmarshal, preUnmarshal);
   if (!obj) throw new Error("obj is undefined");
   expect(obj).toEqual({ a: 1, b: true });
-  expect(unmarshal.mock.calls.length).toBe(2);
+  expect(unmarshal).toReturnTimes(4);
+  expect(unmarshal).toReturnWith(["a", false]);
   expect(unmarshal).toReturnWith([1, false]);
+  expect(unmarshal).toReturnWith(["b", false]);
   expect(unmarshal).toReturnWith([true, false]);
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
@@ -58,10 +60,13 @@ it("properties", async () => {
       enumerable: false,
     },
   });
-  expect(unmarshal).toBeCalledTimes(4); // a.value, b.value, c.get, c.set
+  expect(unmarshal).toBeCalledTimes(7); // a.value, b.value, c.get, c.set
+  expect(unmarshal).toReturnWith(["a", false]);
   expect(unmarshal).toReturnWith([1, false]);
+  expect(unmarshal).toReturnWith(["b", false]);
   expect(unmarshal).toReturnWith([2, false]);
-  expect(unmarshal).toReturnWith([expect.any(Function), false]);
+  expect(unmarshal).toReturnWith(["c", false]);
+  expect(unmarshal).toReturnWith([expect.any(Function), false]); // get, set
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
 

@@ -2,25 +2,25 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import VMMap from "../vmmap";
 import unmarshal from ".";
 
-it("primitive, array, object", async () => {
+it.only("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(() => vm.undefined);
   const map = new VMMap(vm);
-
-  const handle = vm.unwrapResult(
-    vm.evalCode(`({
-    hoge: "foo",
-    foo: 1,
-    aaa: [1, true, {}],
-    nested: { aa: null, hoge: undefined },
-    bbb: () => "bar"
-  })`)
-  );
   const find = jest.fn(h => map.getByHandle(h));
   const pre = jest.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
   });
+
+  const handle = vm.unwrapResult(
+    vm.evalCode(`({
+      hoge: "foo",
+      foo: 1,
+      aaa: [1, true, {}],
+      nested: { aa: null, hoge: undefined },
+      bbb: () => "bar"
+    })`)
+  );
   const target = unmarshal(handle, { vm, pre, find, marshal });
 
   expect(target).toEqual({
@@ -49,6 +49,35 @@ it("primitive, array, object", async () => {
   expect(target.bbb()).toBe("bar");
   expect(marshal).toBeCalledTimes(1);
   expect(marshal).toBeCalledWith(target); // thisArg of target.bbb()
+
+  handle.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
+it.only("object with symbol key", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const map = new VMMap(vm);
+  const pre = (t: any, h: QuickJSHandle) => {
+    map.set(t, h);
+    return t;
+  };
+
+  const handle = vm.unwrapResult(
+    vm.evalCode(`({
+      hoge: "foo",
+      [Symbol("a")]: "bar"
+    })`)
+  );
+  const target = unmarshal(handle, {
+    vm,
+    pre,
+    find: () => undefined,
+    marshal: () => vm.undefined,
+  });
+
+  expect(target.hoge).toBe("foo");
+  expect(target[Object.getOwnPropertySymbols(target)[0]]).toBe("bar");
 
   handle.dispose();
   map.dispose();
