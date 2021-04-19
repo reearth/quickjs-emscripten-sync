@@ -137,7 +137,11 @@ export default class VMMap {
   }
 
   has(key: any) {
-    return !!this._map1.get(key) || !!this._map2.get(key);
+    return !!this.get(key);
+  }
+
+  hasHandle(handle: QuickJSHandle) {
+    return typeof this.getByHandle(handle) !== "undefined";
   }
 
   delete(key: any, dispose?: boolean) {
