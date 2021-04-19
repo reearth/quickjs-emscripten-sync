@@ -1,0 +1,34 @@
+export const defaultRegisteredObjects: [any, string][] = [
+  // basic objects
+  [Symbol, "Symbol"],
+  [Symbol.prototype, "Symbol.prototype"],
+  [Object, "Object"],
+  [Object.prototype, "Object.prototype"],
+  [Function, "Function"],
+  [Function.prototype, "Function.prototype"],
+  [Boolean, "Boolean"],
+  [Boolean.prototype, "Boolean.prototype"],
+  // errors
+  [Error, "Error"],
+  [Error.prototype, "Error.prototype"],
+  [EvalError, "EvalError"],
+  [EvalError.prototype, "EvalError.prototype"],
+  [RangeError, "RangeError"],
+  [RangeError.prototype, "RangeError.prototype"],
+  [ReferenceError, "ReferenceError"],
+  [ReferenceError.prototype, "ReferenceError.prototype"],
+  [SyntaxError, "SyntaxError"],
+  [SyntaxError.prototype, "SyntaxError.prototype"],
+  [TypeError, "TypeError"],
+  [TypeError.prototype, "TypeError.prototype"],
+  [URIError, "URIError"],
+  [URIError.prototype, "URIError.prototype"],
+  // built-in symbols
+  ...Object.getOwnPropertyNames(Symbol)
+    .map<[any, string] | undefined>(k =>
+      typeof (Symbol as any)[k] === "symbol"
+        ? [(Symbol as any)[k], `Symbol.${k}`]
+        : undefined
+    )
+    .filter((o): o is [any, string] => !!o),
+];
