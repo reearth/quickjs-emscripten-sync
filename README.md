@@ -48,7 +48,7 @@ arena.dispose();
 vm.dispose();
 ```
 
-[Example code](index.test.ts) is available as the unit test code.
+[Example code](src/index.test.ts) is available as the unit test code.
 
 ## Operating environment
 
@@ -181,7 +181,7 @@ type Options = {
 ```
 
 - **`isMarshalable`**: A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled.
-- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](default.ts). If you want to add a new pair to this, please do the following:
+- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
 
 ```js
 import { defaultRegisteredObjects } from "quickjs-emscripten-sync";
