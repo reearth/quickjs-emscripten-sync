@@ -262,7 +262,7 @@ test("expose -> evalCode", async () => {
 
 test("register and unregister", async () => {
   const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm);
+  const arena = new Arena(vm, { registeredObjects: [] });
 
   arena.register(Math, `Math`);
   expect(arena.evalCode(`Math`)).toBe(Math);
@@ -271,6 +271,37 @@ test("register and unregister", async () => {
   arena.unregister(Math);
   expect(arena.evalCode(`Math`)).not.toBe(Math);
   expect(arena.evalCode(`m => m === Math`)(Math)).toBe(false);
+
+  arena.register(Error, `Error`);
+  arena.register(Error.prototype, `Error.prototype`);
+  expect(arena.evalCode(`new Error()`)).toBeInstanceOf(Error);
+
+  arena.dispose();
+  vm.dispose();
+});
+
+test("registeredObjects option", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const arena = new Arena(vm, {
+    registeredObjects: [[Symbol.iterator, "Symbol.iterator"]],
+  });
+
+  expect(arena.evalCode(`Symbol.iterator`)).toBe(Symbol.iterator);
+  expect(arena.evalCode(`s => s === Symbol.iterator`)(Symbol.iterator)).toBe(
+    true
+  );
+
+  arena.dispose();
+  vm.dispose();
+});
+
+test("isMarshalable option", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const arena = new Arena(vm, {
+    isMarshalable: o => o !== globalThis,
+  });
+
+  expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
 
   arena.dispose();
   vm.dispose();

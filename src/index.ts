@@ -29,7 +29,43 @@ export {
 
 export type Options = {
   isMarshalable?: (target: any) => boolean;
+  registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
 };
+
+export const defaultRegisteredObjects: [any, string][] = [
+  // basic objects
+  [Symbol, "Symbol"],
+  [Symbol.prototype, "Symbol.prototype"],
+  [Object, "Object"],
+  [Object.prototype, "Object.prototype"],
+  [Function, "Function"],
+  [Function.prototype, "Function.prototype"],
+  [Boolean, "Boolean"],
+  [Boolean.prototype, "Boolean.prototype"],
+  // errors
+  [Error, "Error"],
+  [Error.prototype, "Error.prototype"],
+  [EvalError, "EvalError"],
+  [EvalError.prototype, "EvalError.prototype"],
+  [RangeError, "RangeError"],
+  [RangeError.prototype, "RangeError.prototype"],
+  [ReferenceError, "ReferenceError"],
+  [ReferenceError.prototype, "ReferenceError.prototype"],
+  [SyntaxError, "SyntaxError"],
+  [SyntaxError.prototype, "SyntaxError.prototype"],
+  [TypeError, "TypeError"],
+  [TypeError.prototype, "TypeError.prototype"],
+  [URIError, "URIError"],
+  [URIError.prototype, "URIError.prototype"],
+  // built-in symbols
+  ...Object.getOwnPropertyNames(Symbol)
+    .map<[any, string] | undefined>(k =>
+      typeof (Symbol as any)[k] === "symbol"
+        ? [(Symbol as any)[k], `Symbol.${k}`]
+        : undefined
+    )
+    .filter((o): o is [any, string] => !!o),
+];
 
 export default class Arena {
   vm: QuickJSVm;
@@ -48,6 +84,7 @@ export default class Arena {
     this._symbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
     this._map = new VMMap(vm);
     this._registeredMap = new VMMap(vm);
+    this.registerAll(options?.registeredObjects ?? defaultRegisteredObjects);
   }
 
   dispose() {
@@ -94,6 +131,7 @@ export default class Arena {
   }
 
   register(target: any, handleOrCode: QuickJSHandle | string) {
+    if (this._registeredMap.has(target)) return;
     const handle =
       typeof handleOrCode === "string"
         ? this._unwrapResult(this.vm.evalCode(handleOrCode))
@@ -152,7 +190,7 @@ export default class Arena {
       unmarshal: h => this._unmarshal(h),
       isMarshalable: t =>
         this._options?.isMarshalable?.(this._unwrap(t)) ?? true,
-      find: t => map.get(t),
+      find: t => this._registeredMap.get(t) ?? map.get(t),
       pre: (t, h) => this._register(t, h, map)?.[1],
       preApply: (target, that, args) => {
         const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
@@ -183,7 +221,7 @@ export default class Arena {
     return unmarshal(wrappedHandle ?? handle, {
       vm: this.vm,
       marshal: (v: any) => this._marshal(v),
-      find: h => this._map.getByHandle(h),
+      find: h => this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h),
       pre: (t: any, h: QuickJSHandle) =>
         this._register(t, h, undefined, true)?.[0],
     });
@@ -195,6 +233,10 @@ export default class Arena {
     map: VMMap = this._map,
     sync?: boolean
   ): [Wrapped<any>, Wrapped<QuickJSHandle>] | undefined {
+    if (this._registeredMap.has(t) || this._registeredMap.hasHandle(h)) {
+      return;
+    }
+
     const wrappedT = this._wrap(t);
     const [wrappedH] = this._wrapHandle(h);
     if (!wrappedT || !wrappedH) return; // t or h is not an object
