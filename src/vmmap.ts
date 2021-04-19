@@ -20,20 +20,27 @@ export default class VMMap {
     const result = vm
       .unwrapResult(
         vm.evalCode(`() => {
+        const mapSym = new Map();
         let map = new WeakMap();
         let map2 = new WeakMap();
         const isObj = o => typeof o === "object" && o !== null || typeof o === "function";
         return {
-          get: key => map.get(key) ?? map2.get(key) ?? -1,
+          get: key => mapSym.get(key) ?? map.get(key) ?? map2.get(key) ?? -1,
           set: (key, value, key2) => {
+            if (typeof key === "symbol") mapSym.set(key, value);
             if (isObj(key)) map.set(key, value);
             if (isObj(key2)) map2.set(key2, value);
           },
           delete: (key, key2) => {
+            mapSym.delete(key);
             map.delete(key);
             map2.delete(key2);
           },
-          clear: () => { map = new WeakMap(); map2 = new WeakMap(); }
+          clear: () => {
+            mapSym.clear();
+            map = new WeakMap();
+            map2 = new WeakMap();
+          }
         };
       }`)
       )
