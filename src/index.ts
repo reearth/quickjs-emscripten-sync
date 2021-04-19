@@ -30,10 +30,14 @@ export {
 };
 
 export type Options = {
+  /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
   isMarshalable?: (target: any) => boolean;
+  /** You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
+   *
+   * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, when  you have to dispose them manually when destroying the VM.
+   */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
 };
-
 
 export default class Arena {
   vm: QuickJSVm;
@@ -46,6 +50,7 @@ export default class Arena {
   _symbolHandle: QuickJSHandle;
   _options?: Options;
 
+  /** Construct a new Arena instance. It requires a quickjs-emscripten's VM initialized with `quickjs.createVM()`. */
   constructor(vm: QuickJSVm, options?: Options) {
     this.vm = vm;
     this._options = options;
@@ -55,17 +60,26 @@ export default class Arena {
     this.registerAll(options?.registeredObjects ?? defaultRegisteredObjects);
   }
 
+  /**
+   * Dispose the arena and managed handles. This method won't dispose VMs itself, so VM have to be disposed manually.
+   */
   dispose() {
     this._map.dispose();
     this._registeredMap.dispose();
     this._symbolHandle.dispose();
   }
 
-  evalCode<T = any>(code: string): T | undefined {
+  /**
+   * Eval JS code in the VM and get the result as an object in browser side. Also it converts and re-throw error objects when an error is thrown during evaluration.
+   */
+  evalCode<T = any>(code: string): T {
     let handle = this.vm.evalCode(code);
     return this._unwrapResultAndUnmarshal(handle);
   }
 
+  /**
+   * Almost same as `vm.executePendingJobs()`, but it converts and re-throw error objects when an error is thrown during evaluration.
+   */
   executePendingJobs(maxJobsToExecute?: number): number {
     const result = this.vm.executePendingJobs(maxJobsToExecute);
     if ("value" in result) {
@@ -74,6 +88,11 @@ export default class Arena {
     throw result.error.consume(err => this._unmarshal(err));
   }
 
+  /**
+   * Expose objects as global objects in the VM.
+   *
+   * If sync is true, this function returns objects wrapped with proxies. This is necessary in order to reflect changes to the object from the browser side to the VM side. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
+   */
   expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T {
     const newobject = Object.entries(obj).map(([key, value]) => {
       const value2 = sync ? this._wrap(value) : value;
@@ -89,15 +108,11 @@ export default class Arena {
     return Object.fromEntries(newobject) as T;
   }
 
-  startSync(target: any) {
-    if (!isObject(target)) return;
-    this._sync.add(this._unwrap(target));
-  }
-
-  endSync(target: any) {
-    this._sync.delete(this._unwrap(target));
-  }
-
+  /**
+   * Register a pair of objects that will be considered the same between the browser and the QuickJS VM.
+   *
+   * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, when  you have to dispose them manually when destroying the VM.
+   */
   register(target: any, handleOrCode: QuickJSHandle | string) {
     if (this._registeredMap.has(target)) return;
     const handle =
@@ -110,12 +125,18 @@ export default class Arena {
     this._registeredMap.set(target, handle);
   }
 
+  /**
+   * Exec `register` methods for each pairs.
+   */
   registerAll(map: Iterable<[any, QuickJSHandle | string]>) {
     for (const [k, v] of map) {
       this.register(k, v);
     }
   }
 
+  /**
+   * Unregister a pair of object registered with `registeredObjects` option and `register` method.
+   */
   unregister(target: any, dispose?: boolean) {
     this._registeredMap.delete(
       target,
@@ -124,10 +145,22 @@ export default class Arena {
     this._registeredMapDispose.delete(target);
   }
 
+  /**
+   * Exec `unregister` methods for each targets.
+   */
   unregisterAll(targets: Iterable<any>, dispose?: boolean) {
     for (const t of targets) {
       this.unregister(t, dispose);
     }
+  }
+
+  startSync(target: any) {
+    if (!isObject(target)) return;
+    this._sync.add(this._unwrap(target));
+  }
+
+  endSync(target: any) {
+    this._sync.delete(this._unwrap(target));
   }
 
   _unwrapResult<T>(result: SuccessOrFail<T, QuickJSHandle>): T {
