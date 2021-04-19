@@ -36,7 +36,6 @@ export function wrap<T = any>(
         } else {
           vm.setProp(handle2, marshal(key), marshal(v));
         }
-        return true;
       }
       return true;
     },
@@ -56,13 +55,9 @@ export function wrap<T = any>(
         } else {
           call(vm, `(a, b) => delete a[b]`, undefined, handle2, marshal(key));
         }
-        return true;
       }
       return true;
     },
-    // defineProperty(target, key, attributes) {
-    // TODO
-    // }
   }) as Wrapped<T>;
   return rec;
 }
@@ -103,7 +98,7 @@ export function wrapHandle(
       call(
         vm,
         `(target, setter, deleter, sym, getSyncMode) => {
-          const rec = {
+          const rec =  new Proxy(target, {
             get(obj, key, receiver) {
               return key === sym ? obj : Reflect.get(obj, key, receiver)
             },
@@ -120,16 +115,16 @@ export function wrapHandle(
               return true;
             },
             deleteProperty(obj, key) {
-              const sync = getSyncMode(receiver) ?? "vm";
+              const sync = getSyncMode(rec) ?? "vm";
               if (sync === "host" || Reflect.deleteProperty(obj, key)) {
                 if (sync !== "vm") {
                   deleter(rec, key);
                 }
               }
               return true;
-            }
-          };
-          return new Proxy(target, rec)
+            },
+          });
+          return rec;
         }`,
         undefined,
         handle,
