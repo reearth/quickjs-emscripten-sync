@@ -34,6 +34,8 @@ export type Options = {
 export default class Arena {
   vm: QuickJSVm;
   _map: VMMap;
+  _registeredMap: VMMap;
+  _registeredMapDispose: Set<any> = new Set();
   _sync: Set<any> = new Set();
   _temporalSync: Set<any> = new Set();
   _symbol = Symbol();
@@ -45,10 +47,12 @@ export default class Arena {
     this._options = options;
     this._symbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
     this._map = new VMMap(vm);
+    this._registeredMap = new VMMap(vm);
   }
 
   dispose() {
     this._map.dispose();
+    this._registeredMap.dispose();
     this._symbolHandle.dispose();
   }
 
@@ -89,6 +93,37 @@ export default class Arena {
     this._sync.delete(this._unwrap(target));
   }
 
+  register(target: any, handleOrCode: QuickJSHandle | string) {
+    const handle =
+      typeof handleOrCode === "string"
+        ? this._unwrapResult(this.vm.evalCode(handleOrCode))
+        : handleOrCode;
+    if (typeof handleOrCode === "string") {
+      this._registeredMapDispose.add(target);
+    }
+    this._registeredMap.set(target, handle);
+  }
+
+  registerAll(map: Iterable<[any, QuickJSHandle | string]>) {
+    for (const [k, v] of map) {
+      this.register(k, v);
+    }
+  }
+
+  unregister(target: any, dispose?: boolean) {
+    this._registeredMap.delete(
+      target,
+      this._registeredMapDispose.has(target) || dispose
+    );
+    this._registeredMapDispose.delete(target);
+  }
+
+  unregisterAll(targets: Iterable<any>, dispose?: boolean) {
+    for (const t of targets) {
+      this.unregister(t, dispose);
+    }
+  }
+
   _unwrapResult<T>(result: SuccessOrFail<T, QuickJSHandle>): T {
     if ("value" in result) {
       return result.value;
@@ -104,6 +139,11 @@ export default class Arena {
   }
 
   _marshal(target: any): QuickJSHandle {
+    const registered = this._registeredMap.get(target);
+    if (registered) {
+      return registered;
+    }
+
     const map = new VMMap(this.vm);
     map.merge(this._map);
 
@@ -134,6 +174,11 @@ export default class Arena {
   }
 
   _unmarshal(handle: QuickJSHandle): any {
+    const registered = this._registeredMap.getByHandle(handle);
+    if (typeof registered !== "undefined") {
+      return registered;
+    }
+
     const [wrappedHandle] = this._wrapHandle(handle);
     return unmarshal(wrappedHandle ?? handle, {
       vm: this.vm,

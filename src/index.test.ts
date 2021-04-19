@@ -259,3 +259,19 @@ test("expose -> evalCode", async () => {
   arena.dispose();
   vm.dispose();
 });
+
+test("register and unregister", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const arena = new Arena(vm);
+
+  arena.register(Math, `Math`);
+  expect(arena.evalCode(`Math`)).toBe(Math);
+  expect(arena.evalCode(`m => m === Math`)(Math)).toBe(true);
+
+  arena.unregister(Math);
+  expect(arena.evalCode(`Math`)).not.toBe(Math);
+  expect(arena.evalCode(`m => m === Math`)(Math)).toBe(false);
+
+  arena.dispose();
+  vm.dispose();
+});
