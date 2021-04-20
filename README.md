@@ -173,7 +173,7 @@ By default, quickjs-emscripten-sync doesn't prevent any marshaling, even in such
 
 ### `Arena`
 
-The Arena class manages generation of all handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
+The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
 
 #### `new Arena(vm: QuickJSVm, options?: Options)`
 
