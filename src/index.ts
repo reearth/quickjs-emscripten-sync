@@ -26,7 +26,7 @@ export {
   eq,
   isHandleObject,
   send,
-  consumeAll
+  consumeAll,
 };
 
 export type Options = {
