@@ -132,14 +132,16 @@ quicjs-emscripten-sync cannot prevent such dangerous case, so **PLEASE be very c
 ### Case 1: prototype pollution in browser
 
 ```js
+import { set } from "lodash-es";
+
 arena.expose({
-  // This function may cause prototype pollution in browser by QuickJS
-  danger: (key, value) => {
-    Object[key] = value;
+  danger: (keys, value) => {
+    // This function may cause prototype pollution in browser by QuickJS
+    set({}, keys, value)
   }
 });
 
-arena.evalCode(`danger("__proto__", { foo: () => {} })`);
+arena.evalCode(`danger("__proto__.a", () => { /* injected */ })`);
 ```
 
 ### Case 2: unintended HTTP request
@@ -152,7 +154,13 @@ This is because it enables the execution of unintended code such as XSS attacks,
 arena.expose({
   // This function may cause unintended HTTP request
   danger: (url, body) => {
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', },  body: JSON.stringify(body) });
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
   }
 });
 
