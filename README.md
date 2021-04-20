@@ -1,18 +1,18 @@
 # quickjs-emscripten-sync
 
-We can build the plugin system that works safety in the web browsers!
+We can build a plugin system that works safely in the web browser!
 
-This library wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) and provides a way to sync object state between browser and sandboxed QuickJS.
+This library wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) and provides a way to sync object state between the browser and sandboxed QuickJS.
 
-- Exchange and sync values between browser and QuickJS seemlessly
-  - Primitive (number, boolean, string, symbol)
-  - Array
-  - Function
-  - Class and instance
-  - Object with prototype and any property descriptors
+- Exchange and sync values between browser and QuickJS seamlessly
+  - Primitives (number, boolean, string, symbol)
+  - Arrays
+  - Functions
+  - Classes and instances
+  - Objects with prototypes and any property descriptors
 - Expose objects as a global object in QuickJS
 - Marshaling limitation for specific objects
-- Register a pair of objects that will be considered the same between browser and QuickJS
+- Register a pair of objects that will be considered the same between the browser and QuickJS
 
 ```
 npm install quickjs-emscripten quickjs-emscripten-sync
@@ -33,7 +33,7 @@ class Cls {
 const vm = (await getQuickJS()).createVm();
 const arena = new Arena(vm);
 
-// We can pass objects to VM and run codes safety without any pain
+// We can pass objects to the VM and run code safely without any pain
 arena.expose({
   Cls,
   cls: new Cls()
@@ -52,10 +52,10 @@ vm.dispose();
 
 ## Operating environment
 
-- Web browsers that supports WebAssembly
+- Web browsers that support WebAssembly
 - Node.js
 
-If you want to run quickjs-emscripten and quickjs-emscripten-sync in browsers, they have to be bundled with bundler tools such as webpack, because quickjs-emscripten is now written as CommonJS format and browsers cannot load it directly.
+If you want to run quickjs-emscripten and quickjs-emscripten-sync in a browser, they have to be bundled with a bundler tool such as webpack, because quickjs-emscripten is now written in CommonJS format and browsers cannot load it directly.
 
 ## Usage
 
@@ -70,7 +70,7 @@ import Arena from "quickjs-emscripten-sync";
   // init Arena
   const arena = new Arena(vm);
 
-  // expose objects to global object in QuickJS VM
+  // expose objects as global objects in QuickJS VM
   arena.expose({
     console: {
       log: console.log
@@ -79,7 +79,7 @@ import Arena from "quickjs-emscripten-sync";
   arena.evalCode(`console.log("hello, world");`); // run console.log
   arena.evalCode(`1 + 1`); // 2
 
-  // expose objects but also enables sync
+  // expose objects but also enable sync
   const data = { hoge: "foo" };
   const exposed = arena.expose({ data }, true);
 
@@ -95,13 +95,13 @@ import Arena from "quickjs-emscripten-sync";
 })();
 ```
 
-## Marshaling limitation
+## Marshaling limitations
 
 Objects are automatically converted when they cross between browser and QuickJS VM. The conversion of a browser object to a VM handle is called marshaling, and the conversion of a VM handle to a browser object is called unmarshaling.
 
 And for marshalling, it is possible to control whether the conversion is performed or not.
 
-For example, exposing browser's global object to QuickJS is very heavy and dangerous. So, exposing large and dangerous objects can be limited with `isMarshalable` options. If `false` is returned, just `undefined` is passed to QuickJS.
+For example, exposing the browser's global object to QuickJS is very heavy and dangerous. This exposure can be limited and controlled with the `isMarshalable` option. If `false` is returned, just `undefined` is passed to QuickJS.
 
 ```js
 import Arena, { complexity } from "quickjs-emscripten-sync";
@@ -110,7 +110,7 @@ const arena = new Arena(vm, {
   isMarshalable: (target: any) => {
     // prevent passing globalThis to QuickJS
     if (target === window) return false;
-    // complexity is helper function to deletect whether the object is heavy
+    // complexity is a helper function to detect whether the object is heavy
     if (complexity(target, 30) >= 30) return false;
     return true; // other objects are OK
   }
@@ -121,22 +121,22 @@ arena.evalCode(`a => a === undefined`)(document); // true
 arena.evalCode(`a => a === undefined`)(document); // true
 ```
 
-`complexity` function is useful to detect whether the object is heavy to be passed to QuickJS.
+The `complexity` function is useful to detect whether the object is too heavy to be passed to QuickJS.
 
 ## Security warning
 
-QuickJS has an environment isolated from the browser, so any code can be executed safely, but there are edge cases where some exposed objects by quicjs-emscripten-sync may break security.
+QuickJS has an environment isolated from the browser, so any code can be executed safely, but there are edge cases where some exposed objects by quickjs-emscripten-sync may break security.
 
-quicjs-emscripten-sync cannot prevent such dangerous case, so **PLEASE be very careful about what you expose to QuickJS!**
+quickjs-emscripten-sync cannot prevent such dangerous case, so **PLEASE be very careful and deliberate about what you expose to QuickJS!**
 
-### Case 1: prototype pollution in browser
+### Case 1: Prototype pollution in browser
 
 ```js
 import { set } from "lodash-es";
 
 arena.expose({
   danger: (keys, value) => {
-    // This function may cause prototype pollution in browser by QuickJS
+    // This function may cause prototype pollution in the browser by QuickJS
     set({}, keys, value)
   }
 });
@@ -144,15 +144,15 @@ arena.expose({
 arena.evalCode(`danger("__proto__.a", () => { /* injected */ })`);
 ```
 
-### Case 2: unintended HTTP request
+### Case 2: Unintended HTTP request
 
-It is very dangerous to expose or use directly or indirectly `window` object, `localStorage`, `fetch`, `XMLHttpRequest` ...
+It is very dangerous to expose or use directly or indirectly the `window` object, `localStorage`, `fetch`, `XMLHttpRequest` ...
 
 This is because it enables the execution of unintended code such as XSS attacks, such as reading local storage, sending unintended HTTP requests, and manipulating DOM objects.
 
 ```js
 arena.expose({
-  // This function may cause unintended HTTP request
+  // This function may cause unintended HTTP requests
   danger: (url, body) => {
     fetch(url, {
       method: "POST",
@@ -167,19 +167,19 @@ arena.expose({
 arena.evalCode(`danger("/api", { dangerous: true })`);
 ```
 
-By default, quickjs-emscripten-sync doesn't prevent any marshaling even such case. And there is many built-in objects in browser, so please note that it's hard to prevent all dangerous cases with `isMarshalable` option alone.
+By default, quickjs-emscripten-sync doesn't prevent any marshaling, even in such cases. And there are many built-in objects in the browser, so please note that it's hard to prevent all dangerous cases with the `isMarshalable` option alone.
 
 ## API
 
 ### `Arena`
 
-Arena class manages all handles generate once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
+The Arena class manages generation of all handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
 
 #### `new Arena(vm: QuickJSVm, options?: Options)`
 
-Construct a new Arena instance. It requires a quickjs-emscripten's VM initialized with `quickjs.createVM()`.
+Constructs a new Arena instance. It requires a quickjs-emscripten VM initialized with `quickjs.createVM()`.
 
-Options accepts:
+Options accepted:
 
 ```ts
 type Options = {
@@ -202,19 +202,19 @@ const arena = new Arena(vm, {
 });
 ```
 
-Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, when  you have to dispose them manually when destroying the VM.
+Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
 
 #### `dispose()`
 
-Dispose the arena and managed handles. This method won't dispose VMs itself, so VM have to be disposed manually.
+Dispose of the arena and managed handles. This method won't dispose the VM itself, so the VM has to be disposed of manually.
 
 #### `evalCode<T = any>(code: string): T | undefined`
 
-Eval JS code in the VM and get the result as an object in browser side. Also it converts and re-throw error objects when an error is thrown during evaluration.
+Evaluate JS code in the VM and get the result as an object on the browser side. It also converts and re-throws error objects when an error is thrown during evaluation.
 
 #### `executePendingJobs(): number`
 
-Almost same as `vm.executePendingJobs()`, but it converts and re-throw error objects when an error is thrown during evaluration.
+Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
 
 #### `expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T`
 
@@ -228,15 +228,15 @@ Register a pair of objects that will be considered the same between the browser 
 
 #### `unregisterAll(targets: Iterable<[any, string | QuickJSHandle]>)`
 
-Exec `register` methods for each pairs.
+Execute `register` methods for each pair.
 
 #### `unregister(target: any)`
 
-Unregister a pair of object registered with `registeredObjects` option and `register` method.
+Unregister a pair of objects that were registered with `registeredObjects` option and `register` method.
 
 #### `unregisterAll(targets: Iterable<any>)`
 
-Exec `unregister` methods for each targets.
+Execute `unregister` methods for each target.
 
 ### `defaultRegisteredObjects: [any, string][]`
 
@@ -250,11 +250,11 @@ Measure the complexity of an object as you traverse the field and prototype chai
 
 ### How to work
 
-quickjs-emscripten can execute JS code safety, but it requires to deal with a lot of handles and lifetimes. Also, when destroying the VM, any un-destroyed handles will result in an error.
+quickjs-emscripten can execute JS code safely, but it requires to deal with a lot of handles and lifetimes. Also, when destroying the VM, any un-destroyed handle will result in an error.
 
 quickjs-emscripten-sync will automatically manage all handles once generated by QuickJS VM in an Arena class. 
-And it automatically "marshal" objects as handles and "unmarshal" handles as objects to enable seamless data exchange between browser and QuickJS. It recursively traverses the object properties and prototype chain to transform objects. A function is called after its arguments and this arg are automatically converted for the environment in which the function is defined. The return value will be automatically converted to match the environment of the caller.
-Most objects are wrapped by proxies during conversion, allowing"set" and "delete" operations on objects to be synchronized between browser and QuickJS.
+And it will automatically "marshal" objects as handles and "unmarshal" handles as objects to enable seamless data exchange between the browser and QuickJS. It recursively traverses the object properties and prototype chain to transform objects. A function is called after its arguments and this arg are automatically converted for the environment in which the function is defined. The return value will be automatically converted to match the environment of the caller.
+Most objects are wrapped by proxies during conversion, allowing "set" and "delete" operations on objects to be synchronized between the browser and QuickJS.
 
 ### Limitations
 
