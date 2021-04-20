@@ -75,29 +75,30 @@ export function wrapHandle(
 
   return consumeAll(
     [
-      vm.newFunction("", h => {
+      vm.newFunction("getSyncMode", h => {
         const res = syncMode?.(unmarshal(h));
         if (typeof res === "string") return vm.newString(res);
         return vm.undefined;
       }),
-      vm.newFunction("", (h, keyHandle, valueHandle) => {
+      vm.newFunction("setter", (h, keyHandle, valueHandle) => {
         const target = unmarshal(h);
         if (!target) return;
         const key = unmarshal(keyHandle);
+        if (key === "__proto__") return; // for security
         const value = unmarshal(valueHandle);
         unwrap(target, proxyKeySymbol)[key] = value;
       }),
-      vm.newFunction("", (h, keyHandle) => {
+      vm.newFunction("deleter", (h, keyHandle) => {
         const target = unmarshal(h);
         if (!target) return;
         const key = unmarshal(keyHandle);
         delete unwrap(target, proxyKeySymbol)[key];
       }),
     ],
-    ([getSyncMode, setter, deleter]) => [
+    args => [
       call(
         vm,
-        `(target, setter, deleter, sym, getSyncMode) => {
+        `(target, sym, getSyncMode, setter, deleter) => {
           const rec =  new Proxy(target, {
             get(obj, key, receiver) {
               return key === sym ? obj : Reflect.get(obj, key, receiver)
@@ -128,10 +129,8 @@ export function wrapHandle(
         }`,
         undefined,
         handle,
-        setter,
-        deleter,
         proxyKeySymbolHandle,
-        getSyncMode
+        ...args
       ) as Wrapped<QuickJSHandle>,
       true,
     ]

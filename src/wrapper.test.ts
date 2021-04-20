@@ -295,6 +295,13 @@ test("wrapHandle with both sync", async () => {
   expect(vm.dump(vm.getProp(handle, "a"))).toBe(undefined);
   expect(target.a).toBe(undefined); // synced
 
+  // changing __proto__ will be blocked
+  call(vm, `a => { a.__proto__ = null; }`, undefined, wrapped);
+  expect(vm.dump(call(vm, `Object.getPrototypeOf`, undefined, handle))).toBe(
+    null
+  );
+  expect(Object.getPrototypeOf(target)).toBe(Object.prototype); // not changed
+
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
