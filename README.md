@@ -117,7 +117,7 @@ const arena = new Arena(vm, {
 });
 
 arena.evalCode(`a => a === undefined`)({});       // false
-arena.evalCode(`a => a === undefined`)(document); // true
+arena.evalCode(`a => a === undefined`)(window); // true
 arena.evalCode(`a => a === undefined`)(document); // true
 ```
 
