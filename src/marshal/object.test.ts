@@ -2,7 +2,7 @@ import { getQuickJS } from "quickjs-emscripten";
 import { call } from "../vmutil";
 import marshalObject from "./object";
 
-it("empty object", async () => {
+test("empty object", async () => {
   const vm = (await getQuickJS()).createVm();
   const prototypeCheck = vm.unwrapResult(
     vm.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`)
@@ -31,7 +31,7 @@ it("empty object", async () => {
   vm.dispose();
 });
 
-it("normal object", async () => {
+test("normal object", async () => {
   const vm = (await getQuickJS()).createVm();
   const prototypeCheck = vm.unwrapResult(
     vm.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`)
@@ -76,7 +76,7 @@ it("normal object", async () => {
   vm.dispose();
 });
 
-it("prototype", async () => {
+test("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
 
   const proto = { a: 100 };

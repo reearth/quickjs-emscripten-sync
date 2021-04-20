@@ -2,7 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { send, eq, call } from "../vmutil";
 import marshalFunction from "./function";
 
-it("normal func", async () => {
+test("normal func", async () => {
   const vm = (await getQuickJS()).createVm();
 
   const marshal = jest.fn(v => send(vm, v));
@@ -38,7 +38,7 @@ it("normal func", async () => {
   vm.dispose();
 });
 
-it("func which has properties", async () => {
+test("func which has properties", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(v => send(vm, v));
 
@@ -62,7 +62,7 @@ it("func which has properties", async () => {
   vm.dispose();
 });
 
-it("class", async () => {
+test("class", async () => {
   const vm = (await getQuickJS()).createVm();
 
   const disposables: QuickJSHandle[] = [];
@@ -108,7 +108,7 @@ it("class", async () => {
   vm.dispose();
 });
 
-it("preApply", async () => {
+test("preApply", async () => {
   const vm = (await getQuickJS()).createVm();
 
   const marshal = (v: any) => {
@@ -150,7 +150,7 @@ it("preApply", async () => {
   vm.dispose();
 });
 
-it("undefined", async () => {
+test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();
 

@@ -2,7 +2,7 @@ import { getQuickJS } from "quickjs-emscripten";
 import { send, eq } from "../vmutil";
 import marshalArray from "./array";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
 
   const marshal = jest.fn(v => send(vm, v));
@@ -22,7 +22,7 @@ it("works", async () => {
   vm.dispose();
 });
 
-it("undefined", async () => {
+test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn();
   const preMarshal = jest.fn((_, a) => a);

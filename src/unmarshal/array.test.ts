@@ -1,7 +1,7 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalArray from "./array";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
@@ -21,7 +21,7 @@ it("works", async () => {
   vm.dispose();
 });
 
-it("undefined", async () => {
+test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();
 

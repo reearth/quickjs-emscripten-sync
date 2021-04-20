@@ -8,7 +8,7 @@ import {
   send,
 } from "./vmutil";
 
-it("call", async () => {
+test("call", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -28,7 +28,7 @@ it("call", async () => {
   vm.dispose();
 });
 
-it("eq", async () => {
+test("eq", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -45,7 +45,7 @@ it("eq", async () => {
   vm.dispose();
 });
 
-it("instanceOf", async () => {
+test("instanceOf", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -61,7 +61,7 @@ it("instanceOf", async () => {
   vm.dispose();
 });
 
-it("isHandleObject", async () => {
+test("isHandleObject", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -80,7 +80,7 @@ it("isHandleObject", async () => {
   vm.dispose();
 });
 
-it("send", async () => {
+test("send", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -96,7 +96,7 @@ it("send", async () => {
   vm.dispose();
 });
 
-it("consumeAll", async () => {
+test("consumeAll", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 

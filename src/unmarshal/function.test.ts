@@ -2,7 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { send } from "../vmutil";
 import unmarshalFunction from "./function";
 
-it("arrow function", async () => {
+test("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(v => send(vm, v));
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
@@ -35,7 +35,7 @@ it("arrow function", async () => {
   vm.dispose();
 });
 
-it("function", async () => {
+test("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -76,7 +76,7 @@ it("function", async () => {
   vm.dispose();
 });
 
-it("constructor", async () => {
+test("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
   const marshal = jest.fn(v =>
@@ -124,7 +124,7 @@ it("constructor", async () => {
   vm.dispose();
 });
 
-it("class", async () => {
+test("class", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(v =>
     typeof v === "object" ? vm.undefined : send(vm, v)
@@ -172,7 +172,7 @@ it("class", async () => {
   vm.dispose();
 });
 
-it("undefined", async () => {
+test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();
 

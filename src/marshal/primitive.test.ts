@@ -2,7 +2,7 @@ import { getQuickJS } from "quickjs-emscripten";
 import { eq } from "../vmutil";
 import marshalPrimitive from "./primitive";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
 
   expect(marshalPrimitive(vm, undefined)).toBe(vm.undefined);

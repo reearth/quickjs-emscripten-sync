@@ -1,7 +1,7 @@
 import { getQuickJS } from "quickjs-emscripten";
 import unmarshalPrimitive from "./primitive";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
 
   expect(unmarshalPrimitive(vm, vm.undefined)).toEqual([undefined, true]);

@@ -3,7 +3,7 @@ import VMMap from "../vmmap";
 import { instanceOf, call } from "../vmutil";
 import marshal from ".";
 
-it("primitive, array, object", async () => {
+test("primitive, array, object", async () => {
   const { vm, map, marshal, dispose } = await setup();
 
   const target = {
@@ -24,7 +24,7 @@ it("primitive, array, object", async () => {
   dispose();
 });
 
-it("object with symbol key", async () => {
+test("object with symbol key", async () => {
   const { vm, marshal, dispose } = await setup();
 
   const target = {
@@ -42,7 +42,7 @@ it("object with symbol key", async () => {
   dispose();
 });
 
-it("arrow function", async () => {
+test("arrow function", async () => {
   const { vm, map, marshal, dispose } = await setup();
   const hoge = () => "foo";
   hoge.foo = { bar: 1 };
@@ -64,7 +64,7 @@ it("arrow function", async () => {
   dispose();
 });
 
-it("function", async () => {
+test("function", async () => {
   const { vm, map, marshal, dispose } = await setup();
 
   const bar = function(a: number, b: { hoge: number }) {
@@ -90,7 +90,7 @@ it("function", async () => {
   dispose();
 });
 
-it("class", async () => {
+test("class", async () => {
   const { vm, map, marshal, dispose } = await setup();
 
   class A {
@@ -171,7 +171,7 @@ it("class", async () => {
   dispose();
 });
 
-it("marshalable", async () => {
+test("marshalable", async () => {
   const isMarshalable = jest.fn((a: any) => a !== globalThis);
   const { vm, marshal, dispose } = await setup({
     isMarshalable,

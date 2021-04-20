@@ -10,7 +10,7 @@ import {
 } from "./wrapper";
 import { call, eq, send } from "./vmutil";
 
-it("wrap, unwrap, isWrapped", async () => {
+test("wrap, unwrap, isWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -45,7 +45,7 @@ it("wrap, unwrap, isWrapped", async () => {
   vm.dispose();
 });
 
-it("wrap without sync", async () => {
+test("wrap without sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -80,7 +80,7 @@ it("wrap without sync", async () => {
   vm.dispose();
 });
 
-it("wrap with both sync", async () => {
+test("wrap with both sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 } as { a?: number };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -123,7 +123,7 @@ it("wrap with both sync", async () => {
   vm.dispose();
 });
 
-it("wrap with vm sync", async () => {
+test("wrap with vm sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 } as { a?: number };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -166,7 +166,7 @@ it("wrap with vm sync", async () => {
   vm.dispose();
 });
 
-it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
+test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -217,7 +217,7 @@ it("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   vm.dispose();
 });
 
-it("wrapHandle without sync", async () => {
+test("wrapHandle without sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -256,7 +256,7 @@ it("wrapHandle without sync", async () => {
   vm.dispose();
 });
 
-it("wrapHandle with both sync", async () => {
+test("wrapHandle with both sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -301,7 +301,7 @@ it("wrapHandle with both sync", async () => {
   vm.dispose();
 });
 
-it("wrapHandle with host sync", async () => {
+test("wrapHandle with host sync", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -346,7 +346,7 @@ it("wrapHandle with host sync", async () => {
   vm.dispose();
 });
 
-it("wrap and wrapHandle", async () => {
+test("wrap and wrapHandle", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = { a: 1 };
   const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
@@ -409,7 +409,7 @@ it("wrap and wrapHandle", async () => {
   vm.dispose();
 });
 
-it("non object", async () => {
+test("non object", async () => {
   const vm = (await getQuickJS()).createVm();
   const target = 1;
   const handle = vm.newNumber(1);

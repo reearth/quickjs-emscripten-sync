@@ -1,7 +1,7 @@
 import { getQuickJS } from "quickjs-emscripten";
 import unmarshalSymbol from "./symbol";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
   const pre = jest.fn();
   const obj = vm.newObject();

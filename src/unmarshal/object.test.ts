@@ -1,7 +1,7 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import unmarshalObject from "./object";
 
-it("normal object", async () => {
+test("normal object", async () => {
   const vm = (await getQuickJS()).createVm();
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
@@ -25,7 +25,7 @@ it("normal object", async () => {
   vm.dispose();
 });
 
-it("properties", async () => {
+test("properties", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
@@ -75,7 +75,7 @@ it("properties", async () => {
   vm.dispose();
 });
 
-it("prototype", async () => {
+test("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.typeof(v) === "object" ? { a: () => 1 } : vm.dump(v),
@@ -97,7 +97,7 @@ it("prototype", async () => {
   vm.dispose();
 });
 
-it("undefined", async () => {
+test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
   const f = jest.fn();
 

@@ -2,7 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import VMMap from "../vmmap";
 import unmarshal from ".";
 
-it.only("primitive, array, object", async () => {
+test("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(() => vm.undefined);
   const map = new VMMap(vm);
@@ -55,7 +55,7 @@ it.only("primitive, array, object", async () => {
   vm.dispose();
 });
 
-it.only("object with symbol key", async () => {
+test("object with symbol key", async () => {
   const vm = (await getQuickJS()).createVm();
   const map = new VMMap(vm);
   const pre = (t: any, h: QuickJSHandle) => {
@@ -84,7 +84,7 @@ it.only("object with symbol key", async () => {
   vm.dispose();
 });
 
-it("func", async () => {
+test("func", async () => {
   const vm = (await getQuickJS()).createVm();
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
@@ -129,7 +129,7 @@ it("func", async () => {
   vm.dispose();
 });
 
-it("class", async () => {
+test("class", async () => {
   const vm = (await getQuickJS()).createVm();
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];

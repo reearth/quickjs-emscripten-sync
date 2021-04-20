@@ -2,7 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { send } from "../vmutil";
 import marshalProperties from "./properties";
 
-it("works", async () => {
+test("works", async () => {
   const vm = (await getQuickJS()).createVm();
   const descTester = vm.unwrapResult(
     vm.evalCode(`(obj, expected) => {
@@ -71,7 +71,7 @@ it("works", async () => {
   vm.dispose();
 });
 
-it("empty", async () => {
+test("empty", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn();
   const handle = vm.newObject();

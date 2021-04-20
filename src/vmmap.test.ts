@@ -2,7 +2,7 @@ import { getQuickJS } from "quickjs-emscripten";
 import VMMap from "./vmmap";
 import { call } from "./vmutil";
 
-it("init and dispose", async () => {
+test("init and dispose", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -11,7 +11,7 @@ it("init and dispose", async () => {
   vm.dispose();
 });
 
-it("get and set", async () => {
+test("get and set", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -34,7 +34,7 @@ it("get and set", async () => {
   vm.dispose();
 });
 
-it("getByHandle", async () => {
+test("getByHandle", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -55,7 +55,7 @@ it("getByHandle", async () => {
   vm.dispose();
 });
 
-it("delete", async () => {
+test("delete", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -75,7 +75,7 @@ it("delete", async () => {
   vm.dispose();
 });
 
-it("size", async () => {
+test("size", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -93,7 +93,7 @@ it("size", async () => {
   vm.dispose();
 });
 
-it("clear", async () => {
+test("clear", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -113,7 +113,7 @@ it("clear", async () => {
   vm.dispose();
 });
 
-it("merge", async () => {
+test("merge", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -140,7 +140,7 @@ it("merge", async () => {
   vm.dispose();
 });
 
-it("iterator", async () => {
+test("iterator", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -177,7 +177,7 @@ it("iterator", async () => {
   vm.dispose();
 });
 
-it("get and set 2", async () => {
+test("get and set 2", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -209,7 +209,7 @@ it("get and set 2", async () => {
   vm.dispose();
 });
 
-it("delete 2", async () => {
+test("delete 2", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -239,7 +239,7 @@ it("delete 2", async () => {
   vm.dispose();
 });
 
-it("delete 3", async () => {
+test("delete 3", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -269,7 +269,7 @@ it("delete 3", async () => {
   vm.dispose();
 });
 
-it("delete with dispose", async () => {
+test("delete with dispose", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -289,7 +289,7 @@ it("delete with dispose", async () => {
   vm.dispose();
 });
 
-it("deleteByHandle", async () => {
+test("deleteByHandle", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
@@ -315,7 +315,7 @@ it("deleteByHandle", async () => {
   vm.dispose();
 });
 
-it("deleteByHandle with dispose", async () => {
+test("deleteByHandle with dispose", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
