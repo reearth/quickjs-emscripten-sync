@@ -34,11 +34,14 @@ export type Options = {
   isMarshalable?: (target: any) => boolean;
   /** You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
    *
-   * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, when  you have to dispose them manually when destroying the VM.
+   * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
    */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
 };
 
+/**
+ * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
+ */
 export default class Arena {
   vm: QuickJSVm;
   _map: VMMap;
@@ -50,7 +53,7 @@ export default class Arena {
   _symbolHandle: QuickJSHandle;
   _options?: Options;
 
-  /** Construct a new Arena instance. It requires a quickjs-emscripten's VM initialized with `quickjs.createVM()`. */
+  /** Constructs a new Arena instance. It requires a quickjs-emscripten VM initialized with `quickjs.createVM()`. */
   constructor(vm: QuickJSVm, options?: Options) {
     this.vm = vm;
     this._options = options;
@@ -61,7 +64,7 @@ export default class Arena {
   }
 
   /**
-   * Dispose the arena and managed handles. This method won't dispose VMs itself, so VM have to be disposed manually.
+   * Dispose of the arena and managed handles. This method won't dispose the VM itself, so the VM has to be disposed of manually.
    */
   dispose() {
     this._map.dispose();
@@ -70,7 +73,7 @@ export default class Arena {
   }
 
   /**
-   * Eval JS code in the VM and get the result as an object in browser side. Also it converts and re-throw error objects when an error is thrown during evaluration.
+   * Evaluate JS code in the VM and get the result as an object on the browser side. It also converts and re-throws error objects when an error is thrown during evaluation.
    */
   evalCode<T = any>(code: string): T {
     let handle = this.vm.evalCode(code);
@@ -78,7 +81,7 @@ export default class Arena {
   }
 
   /**
-   * Almost same as `vm.executePendingJobs()`, but it converts and re-throw error objects when an error is thrown during evaluration.
+   * Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
    */
   executePendingJobs(maxJobsToExecute?: number): number {
     const result = this.vm.executePendingJobs(maxJobsToExecute);
@@ -126,7 +129,7 @@ export default class Arena {
   }
 
   /**
-   * Exec `register` methods for each pairs.
+   * Execute `register` methods for each pair.
    */
   registerAll(map: Iterable<[any, QuickJSHandle | string]>) {
     for (const [k, v] of map) {
@@ -135,7 +138,7 @@ export default class Arena {
   }
 
   /**
-   * Unregister a pair of object registered with `registeredObjects` option and `register` method.
+   * Unregister a pair of objects that were registered with `registeredObjects` option and `register` method.
    */
   unregister(target: any, dispose?: boolean) {
     this._registeredMap.delete(
@@ -146,7 +149,7 @@ export default class Arena {
   }
 
   /**
-   * Exec `unregister` methods for each targets.
+   * Execute `unregister` methods for each target.
    */
   unregisterAll(targets: Iterable<any>, dispose?: boolean) {
     for (const t of targets) {

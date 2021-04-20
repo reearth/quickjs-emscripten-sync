@@ -240,7 +240,7 @@ Execute `unregister` methods for each target.
 
 ### `defaultRegisteredObjects: [any, string][]`
 
-Default value of registeredObjects option.
+Default value of registeredObjects option of the Arena class constructor.
 
 ### `complexity(target: any, max?: number): number`
 

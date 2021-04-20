@@ -1,3 +1,6 @@
+/**
+ * Default value of registeredObjects option of the Arena class constructor.
+ */
 export const defaultRegisteredObjects: [any, string][] = [
   // basic objects
   [Symbol, "Symbol"],
