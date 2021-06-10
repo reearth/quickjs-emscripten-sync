@@ -16,7 +16,7 @@
     "start": "tsdx watch",
     "build": "tsdx build",
     "test": "tsdx test",
-    "lint": "tsdx lint",
+    "lint": "tsdx lint src",
     "prepare": "tsdx build",
     "size": "size-limit",
     "analyze": "size-limit --why"
@@ -47,19 +47,19 @@
     }
   ],
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^4.10.2",
-    "@typescript-eslint/eslint-plugin": "^4.22.0",
-    "@typescript-eslint/parser": "^4.22.0",
+    "@size-limit/preset-small-lib": "^4.12.0",
     "husky": "^6.0.0",
-    "quickjs-emscripten": "^0.11.0",
-    "size-limit": "^4.10.2",
+    "quickjs-emscripten": "^0.13.0",
+    "size-limit": "^4.12.0",
     "tsdx": "^0.14.1",
     "tslib": "^2.2.0",
-    "typescript": "^4.2.4"
+    "typescript": "^4.3.2"
   },
   "resolutions": {
-    "**/@typescript-eslint/eslint-plugin": "^4.20.0",
-    "**/@typescript-eslint/parser": "^4.20.0",
-    "**/typescript": "^4.2.3"
+    "**/@typescript-eslint/eslint-plugin": "^4.26.1",
+    "**/@typescript-eslint/parser": "^4.26.1",
+    "**/jest": "^27.0.4",
+    "**/ts-jest": "^27.0.3",
+    "**/typescript": "^4.3.2"
   }
 }
