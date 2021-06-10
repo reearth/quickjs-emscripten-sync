@@ -122,6 +122,7 @@ export default class Arena {
       typeof handleOrCode === "string"
         ? this._unwrapResult(this.vm.evalCode(handleOrCode))
         : handleOrCode;
+    if (eq(this.vm, handle, this.vm.undefined)) return;
     if (typeof handleOrCode === "string") {
       this._registeredMapDispose.add(target);
     }

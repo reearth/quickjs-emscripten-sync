@@ -11,6 +11,10 @@ export const defaultRegisteredObjects: [any, string][] = [
   [Function.prototype, "Function.prototype"],
   [Boolean, "Boolean"],
   [Boolean.prototype, "Boolean.prototype"],
+  [Array, "Array"],
+  [Array.prototype, "Array.prototype"],
+  // [BigInt, "BigInt"],
+  // [BigInt.prototype, "BigInt.prototype"],
   // errors
   [Error, "Error"],
   [Error.prototype, "Error.prototype"],
