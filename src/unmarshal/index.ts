@@ -1,5 +1,4 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
-import unmarshalArray from "./array";
 import unmarshalFunction from "./function";
 import unmarshalObject from "./object";
 import unmarshalPrimitive from "./primitive";
@@ -39,7 +38,6 @@ function unmarshalInner(
 
   const result =
     unmarshalSymbol(vm, handle, pre) ??
-    unmarshalArray(vm, handle, unmarshal2, pre) ??
     unmarshalFunction(vm, handle, marshal, unmarshal2, pre) ??
     unmarshalObject(vm, handle, unmarshal2, pre);
 

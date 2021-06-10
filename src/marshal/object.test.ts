@@ -76,6 +76,47 @@ test("normal object", async () => {
   vm.dispose();
 });
 
+test("array", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const isArray = vm.unwrapResult(vm.evalCode(`Array.isArray`));
+
+  const array = [1, "aa"];
+  const marshal = jest.fn(v =>
+    typeof v === "number"
+      ? vm.newNumber(v)
+      : typeof v === "string"
+      ? vm.newString(v)
+      : vm.null
+  );
+  const preMarshal = jest.fn((_, a) => a);
+
+  const handle = marshalObject(vm, array, marshal, preMarshal);
+  if (!handle) throw new Error("handle is undefined");
+
+  expect(vm.typeof(handle)).toBe("object");
+  expect(vm.getNumber(vm.getProp(handle, 0))).toBe(1);
+  expect(vm.getString(vm.getProp(handle, 1))).toBe("aa");
+  expect(vm.getNumber(vm.getProp(handle, "length"))).toBe(2);
+  expect(marshal.mock.calls).toEqual([
+    ["0"],
+    [1],
+    ["1"],
+    ["aa"],
+    ["length"],
+    [2],
+  ]);
+  expect(preMarshal).toBeCalledTimes(1);
+  expect(preMarshal.mock.calls[0][0]).toBe(array);
+  expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
+  expect(
+    vm.dump(vm.unwrapResult(vm.callFunction(isArray, vm.undefined, handle)))
+  ).toBe(true);
+
+  handle.dispose();
+  isArray.dispose();
+  vm.dispose();
+});
+
 test("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
 

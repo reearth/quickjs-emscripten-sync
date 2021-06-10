@@ -19,14 +19,18 @@ export default function unmarshalObject(
   )
     return;
 
-  const raw = {};
+  const raw = call(vm, "Array.isArray", undefined, handle).consume(r =>
+    vm.dump(r)
+  )
+    ? []
+    : {};
   const obj = preUnmarshal(raw, handle) ?? raw;
 
   const prototype = call(
     vm,
     `o => {
       const p = Object.getPrototypeOf(o);
-      return !p || p === Object.prototype ? undefined : p;
+      return !p || p === Object.prototype || p === Array.prototype ? undefined : p;
     }`,
     undefined,
     handle

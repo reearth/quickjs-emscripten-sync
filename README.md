@@ -273,10 +273,6 @@ arena.expose({ Cls });
 arena.evalCode(`new Cls()`); // Cls { hoge: "foo" }
 ```
 
-#### Array conversion
-
-For now, only the elements of the array will be subject to conversion. Any fields or methods attached to the array will be ignored.
-
 #### Operation synchronization
 
 For now, only the `set` and `deleteProperty` operations on objects are subject to synchronization. The result of `Object.defineProperty` on a proxied object will not be synchronized to the other side.

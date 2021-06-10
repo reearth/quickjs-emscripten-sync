@@ -13,13 +13,13 @@ export default function marshalObject(
 ): QuickJSHandle | undefined {
   if (typeof target !== "object" || target === null) return;
 
-  const raw = vm.newObject();
+  const raw = Array.isArray(target) ? vm.newArray() : vm.newObject();
   const handle = preMarshal(target, raw) ?? raw;
 
   // prototype
   const prototype = Object.getPrototypeOf(target);
   const prototypeHandle =
-    prototype && prototype !== Object.prototype
+    prototype && prototype !== Object.prototype && prototype !== Array.prototype
       ? marshal(prototype)
       : undefined;
   if (prototypeHandle) {

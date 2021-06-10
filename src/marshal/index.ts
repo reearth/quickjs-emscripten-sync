@@ -1,5 +1,4 @@
 import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
-import marshalArray from "./array";
 import marshalFunction from "./function";
 import marshalObject from "./object";
 import marshalPrimitive from "./primitive";
@@ -37,7 +36,6 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
 
   const result =
     marshalSymbol(vm, target, pre) ??
-    marshalArray(vm, target, marshal2, pre) ??
     marshalFunction(vm, target, marshal2, unmarshal, pre, options.preApply) ??
     marshalObject(vm, target, marshal2, pre) ??
     vm.undefined;

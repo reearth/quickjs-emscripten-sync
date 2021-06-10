@@ -33,6 +33,5 @@ export default function unmarshalPrimitive(
   //   return [bi, true];
   // }
 
-  // symbol is not supported yet
   return [undefined, false];
 }

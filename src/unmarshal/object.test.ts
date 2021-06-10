@@ -75,6 +75,32 @@ test("properties", async () => {
   vm.dispose();
 });
 
+test("array", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+    vm.dump(v),
+    false,
+  ]);
+  const preUnmarshal = jest.fn(a => a);
+
+  const handle = vm.unwrapResult(vm.evalCode(`[1, true, "a"]`));
+  const array = unmarshalObject(vm, handle, unmarshal, preUnmarshal);
+  expect((array as any)[0]).toEqual(1);
+  expect(Array.isArray(array)).toBe(true);
+  expect(unmarshal.mock.results[0].value).toEqual(["0", false]);
+  expect(unmarshal.mock.results[1].value).toEqual([1, false]);
+  expect(unmarshal.mock.results[2].value).toEqual(["1", false]);
+  expect(unmarshal.mock.results[3].value).toEqual([true, false]);
+  expect(unmarshal.mock.results[4].value).toEqual(["2", false]);
+  expect(unmarshal.mock.results[5].value).toEqual(["a", false]);
+  expect(unmarshal.mock.results[6].value).toEqual(["length", false]);
+  expect(unmarshal.mock.results[7].value).toEqual([3, false]);
+  expect(preUnmarshal).toBeCalledWith(array, handle);
+
+  handle.dispose();
+  vm.dispose();
+});
+
 test("prototype", async () => {
   const vm = (await getQuickJS()).createVm();
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
