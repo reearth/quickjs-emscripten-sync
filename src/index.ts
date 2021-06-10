@@ -32,7 +32,7 @@ export {
 export type Options = {
   /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
   isMarshalable?: (target: any) => boolean;
-  /** You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
+  /** You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
    *
    * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
    */
@@ -40,7 +40,7 @@ export type Options = {
 };
 
 /**
- * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
+ * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
  */
 export default class Arena {
   vm: QuickJSVm;
@@ -73,7 +73,7 @@ export default class Arena {
   }
 
   /**
-   * Evaluate JS code in the VM and get the result as an object on the browser side. It also converts and re-throws error objects when an error is thrown during evaluation.
+   * Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
    */
   evalCode<T = any>(code: string): T {
     let handle = this.vm.evalCode(code);
@@ -94,25 +94,32 @@ export default class Arena {
   /**
    * Expose objects as global objects in the VM.
    *
-   * If sync is true, this function returns objects wrapped with proxies. This is necessary in order to reflect changes to the object from the browser side to the VM side. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
+   * By default, exposed objects are not synchronized between the host and the VM.
+   * If you want to sync an objects, first wrap the object with sync method, and then expose the wrapped object.
    */
-  expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T {
-    const newobject = Object.entries(obj).map(([key, value]) => {
-      const value2 = sync ? this._wrap(value) : value;
-      const handle = this._marshal(value2);
-      if (sync) {
-        walkObject(value2, v => {
-          this._sync.add(this._unwrap(v));
-        });
-      }
+  expose(obj: { [k: string]: any }) {
+    for (const [key, value] of Object.entries(obj)) {
+      const handle = this._marshal(value);
       this.vm.setProp(this.vm.global, key, handle);
-      return [key, value2] as const;
-    });
-    return Object.fromEntries(newobject) as T;
+    }
   }
 
   /**
-   * Register a pair of objects that will be considered the same between the browser and the QuickJS VM.
+   * Enables sync for the object between the host and the VM and returns objects wrapped with proxies.
+   *
+   * The return value is necessary in order to reflect changes to the object from the host to the VM. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
+   */
+  sync<T>(target: T): T {
+    const wrapped = this._wrap(target);
+    if (typeof wrapped === "undefined") return target;
+    walkObject(wrapped, v => {
+      this._sync.add(this._unwrap(v));
+    });
+    return wrapped;
+  }
+
+  /**
+   * Register a pair of objects that will be considered the same between the host and the QuickJS VM.
    *
    * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, when  you have to dispose them manually when destroying the VM.
    */

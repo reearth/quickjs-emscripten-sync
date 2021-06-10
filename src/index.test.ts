@@ -146,7 +146,7 @@ describe("expose without sync", () => {
         return this.a++;
       },
     };
-    const obj2 = arena.expose({ obj });
+    arena.expose({ obj });
 
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
     expect(arena.evalCode(`obj.c()`)).toBe(1);
@@ -156,8 +156,7 @@ describe("expose without sync", () => {
     expect(arena.evalCode(`obj.a`)).toBe(3);
     expect(obj.a).toBe(3);
 
-    expect(obj).toBe(obj2.obj);
-    obj2.obj.a = 10;
+    obj.a = 10;
     expect(obj.a).toBe(10);
     expect(arena.evalCode(`obj.a`)).toBe(3); // not affected
 
@@ -182,7 +181,8 @@ describe("expose with sync", () => {
         return this.a++;
       },
     };
-    const obj2 = arena.expose({ obj }, true);
+    const obj2 = arena.sync(obj);
+    arena.expose({ obj: obj2 });
 
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
     expect(arena.evalCode(`obj.c()`)).toBe(1);
@@ -192,8 +192,8 @@ describe("expose with sync", () => {
     expect(arena.evalCode(`obj.a`)).toBe(3);
     expect(obj.a).toBe(3);
 
-    expect(obj).not.toBe(obj2.obj);
-    obj2.obj.a = 10;
+    expect(obj).not.toBe(obj2);
+    obj2.a = 10;
     expect(obj.a).toBe(10);
     expect(arena.evalCode(`obj.a`)).toBe(10); // affected
 
@@ -210,10 +210,8 @@ test("evalCode -> expose", async () => {
   const vm = (await getQuickJS()).createVm();
   const arena = new Arena(vm);
 
-  const { obj } = arena.expose(
-    { obj: arena.evalCode(`({ a: 1, b: 1 })`) },
-    true
-  );
+  const obj = arena.evalCode(`({ a: 1, b: 1 })`);
+  arena.expose({ obj });
 
   expect(obj.a).toBe(1);
   expect(arena.evalCode(`obj.a`)).toBe(1);
@@ -243,7 +241,8 @@ test("expose -> evalCode", async () => {
   const arena = new Arena(vm);
 
   const obj = { a: 1 };
-  const { obj: obj2 } = arena.expose({ obj }, true);
+  const obj2 = arena.sync(obj);
+  arena.expose({ obj: obj2 });
   const obj3 = arena.evalCode(`obj`);
 
   expect(obj3).toBe(obj2);

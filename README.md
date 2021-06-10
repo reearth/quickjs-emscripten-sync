@@ -4,7 +4,7 @@ We can build a plugin system that works safely in the web browser!
 
 This library wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) and provides a way to sync object state between the browser and sandboxed QuickJS.
 
-- Exchange and sync values between browser and QuickJS seamlessly
+- Exchange and sync values between the browser (host) and QuickJS seamlessly
   - Primitives (number, boolean, string, symbol)
   - Arrays
   - Functions
@@ -33,16 +33,22 @@ class Cls {
 const vm = (await getQuickJS()).createVm();
 const arena = new Arena(vm);
 
-// We can pass objects to the VM and run code safely without any pain
-arena.expose({
+// We can pass objects to the VM and run code safely
+const exposed = {
   Cls,
-  cls: new Cls()
-});
+  cls: new Cls(),
+  syncedCls: arena.sync(new Cls()),
+};
+arena.expose(exposed);
 
 arena.evalCode(`cls instanceof Cls`)); // returns true
 arena.evalCode(`cls.field`));          // returns 0
 arena.evalCode(`cls.method()`));       // returns 1
 arena.evalCode(`cls.field`));          // returns 1
+
+arena.evalCode(`syncedCls.field`);     // returns 0
+exposed.syncedCls.method();            // returns 1
+arena.evalCode(`syncedCls.field`);     // returns 1
 
 arena.dispose();
 vm.dispose();
@@ -55,7 +61,7 @@ vm.dispose();
 - Web browsers that support WebAssembly
 - Node.js
 
-If you want to run quickjs-emscripten and quickjs-emscripten-sync in a browser, they have to be bundled with a bundler tool such as webpack, because quickjs-emscripten is now written in CommonJS format and browsers cannot load it directly.
+If you want to run quickjs-emscripten and quickjs-emscripten-sync in a web browser, they have to be bundled with a bundler tool such as webpack, because quickjs-emscripten is now written in CommonJS format and web browsers cannot load it directly.
 
 ## Usage
 
@@ -80,8 +86,8 @@ import Arena from "quickjs-emscripten-sync";
   arena.evalCode(`1 + 1`); // 2
 
   // expose objects but also enable sync
-  const data = { hoge: "foo" };
-  const exposed = arena.expose({ data }, true);
+  const data = arena.sync({ hoge: "foo" });
+  const exposed = arena.expose({ data });
 
   arena.evalCode(`data.hoge = "bar"`);
   // eval code and operations to exposed objects are automatically synced
@@ -97,11 +103,11 @@ import Arena from "quickjs-emscripten-sync";
 
 ## Marshaling limitations
 
-Objects are automatically converted when they cross between browser and QuickJS VM. The conversion of a browser object to a VM handle is called marshaling, and the conversion of a VM handle to a browser object is called unmarshaling.
+Objects are automatically converted when they cross between the host and the QuickJS VM. The conversion of a host's object to a VM handle is called marshaling, and the conversion of a VM handle to a host's object is called unmarshaling.
 
 And for marshalling, it is possible to control whether the conversion is performed or not.
 
-For example, exposing the browser's global object to QuickJS is very heavy and dangerous. This exposure can be limited and controlled with the `isMarshalable` option. If `false` is returned, just `undefined` is passed to QuickJS.
+For example, exposing the host's global object to QuickJS is very heavy and dangerous. This exposure can be limited and controlled with the `isMarshalable` option. If `false` is returned, just `undefined` is passed to QuickJS.
 
 ```js
 import Arena, { complexity } from "quickjs-emscripten-sync";
@@ -167,13 +173,13 @@ arena.expose({
 arena.evalCode(`danger("/api", { dangerous: true })`);
 ```
 
-By default, quickjs-emscripten-sync doesn't prevent any marshaling, even in such cases. And there are many built-in objects in the browser, so please note that it's hard to prevent all dangerous cases with the `isMarshalable` option alone.
+By default, quickjs-emscripten-sync doesn't prevent any marshaling, even in such cases. And there are many built-in objects in the host, so please note that it's hard to prevent all dangerous cases with the `isMarshalable` option alone.
 
 ## API
 
 ### `Arena`
 
-The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between browser and QuickJS.
+The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
 
 #### `new Arena(vm: QuickJSVm, options?: Options)`
 
@@ -189,7 +195,7 @@ type Options = {
 ```
 
 - **`isMarshalable`**: A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled.
-- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the browser and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
+- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
 
 ```js
 import { defaultRegisteredObjects } from "quickjs-emscripten-sync";
@@ -210,21 +216,28 @@ Dispose of the arena and managed handles. This method won't dispose the VM itsel
 
 #### `evalCode<T = any>(code: string): T | undefined`
 
-Evaluate JS code in the VM and get the result as an object on the browser side. It also converts and re-throws error objects when an error is thrown during evaluation.
+Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
 
 #### `executePendingJobs(): number`
 
 Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
 
-#### `expose<T extends { [k: string]: any }>(obj: T, sync?: boolean): T`
+#### `expose(obj: { [k: string]: any })`
 
 Expose objects as global objects in the VM.
 
-If sync is true, this function returns objects wrapped with proxies. This is necessary in order to reflect changes to the object from the browser side to the VM side. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
+By default, exposed objects are not synchronized between the host and the VM.
+If you want to sync an objects, first wrap the object with sync method, and then expose the wrapped object.
+
+#### `sync<T>(target: T): T`
+
+Enables sync for the object between the host and the VM and returns objects wrapped with proxies.
+
+The return value is necessary in order to reflect changes to the object from the host to the VM. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
 
 #### `register(target: any, code: string | QuickJSHandle)`
 
-Register a pair of objects that will be considered the same between the browser and the QuickJS VM.
+Register a pair of objects that will be considered the same between the host and the QuickJS VM.
 
 #### `unregisterAll(targets: Iterable<[any, string | QuickJSHandle]>)`
 
