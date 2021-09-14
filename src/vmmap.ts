@@ -85,10 +85,6 @@ export default class VMMap {
     }
 
     this.vm.newNumber(counter).consume((c) => {
-      if (!this._mapSet.alive) {
-        throw new Error("VMMap::set: `this._mapSet` is not alive!");
-      }
-
       this._call(
         this._mapSet,
         undefined,
