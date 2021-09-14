@@ -305,3 +305,21 @@ test("isMarshalable option", async () => {
   arena.dispose();
   vm.dispose();
 });
+
+test("expose function that returns object", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const arena = new Arena(vm);
+
+  arena.expose({
+    makeObject: () => {
+      return {
+        myFavoriteNumber: 42,
+      };
+    },
+  });
+
+  expect(arena.evalCode(`makeObject().myFavoriteNumber`)).toBe(42);
+
+  arena.dispose();
+  vm.dispose();
+});
