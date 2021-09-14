@@ -39,7 +39,7 @@ test("normal object", async () => {
   const entries = vm.unwrapResult(vm.evalCode(`Object.entries`));
 
   const obj = { a: 100, b: "hoge" };
-  const marshal = jest.fn(v =>
+  const marshal = jest.fn((v) =>
     typeof v === "number"
       ? vm.newNumber(v)
       : typeof v === "string"
@@ -81,7 +81,7 @@ test("array", async () => {
   const isArray = vm.unwrapResult(vm.evalCode(`Array.isArray`));
 
   const array = [1, "aa"];
-  const marshal = jest.fn(v =>
+  const marshal = jest.fn((v) =>
     typeof v === "number"
       ? vm.newNumber(v)
       : typeof v === "string"
@@ -130,7 +130,7 @@ test("prototype", async () => {
   const handle = marshalObject(
     vm,
     obj,
-    v =>
+    (v) =>
       v === proto
         ? protoHandle
         : typeof v === "string"

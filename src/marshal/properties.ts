@@ -17,7 +17,7 @@ export default function marshalProperties(
     const setHandle =
       typeof desc.set === "undefined" ? undefined : marshal(desc.set);
 
-    vm.newObject().consume(descObj => {
+    vm.newObject().consume((descObj) => {
       Object.entries(desc).forEach(([k, v]) => {
         const v2 =
           k === "value"
@@ -39,7 +39,7 @@ export default function marshalProperties(
 
   const desc = Object.getOwnPropertyDescriptors(target);
   Object.entries(desc).forEach(([k, v]) => cb(k, v));
-  Object.getOwnPropertySymbols(desc).forEach(k => cb(k, (desc as any)[k]));
+  Object.getOwnPropertySymbols(desc).forEach((k) => cb(k, (desc as any)[k]));
 
   call(vm, `Object.defineProperties`, undefined, handle, descs).dispose();
 

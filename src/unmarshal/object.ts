@@ -13,13 +13,13 @@ export default function unmarshalObject(
     // null check
     vm
       .unwrapResult(vm.evalCode("o => o === null"))
-      .consume(n =>
+      .consume((n) =>
         vm.dump(vm.unwrapResult(vm.callFunction(n, vm.undefined, handle)))
       )
   )
     return;
 
-  const raw = call(vm, "Array.isArray", undefined, handle).consume(r =>
+  const raw = call(vm, "Array.isArray", undefined, handle).consume((r) =>
     vm.dump(r)
   )
     ? []
@@ -34,7 +34,7 @@ export default function unmarshalObject(
     }`,
     undefined,
     handle
-  ).consume(prototype => {
+  ).consume((prototype) => {
     if (vm.typeof(prototype) === "undefined") return;
     const [proto] = unmarshal(prototype);
     return proto;

@@ -13,7 +13,6 @@ import { call, eq, isHandleObject, send, consumeAll } from "./vmutil";
 import { defaultRegisteredObjects } from "./default";
 
 export {
-  Arena,
   VMMap,
   defaultRegisteredObjects,
   marshal,
@@ -42,7 +41,7 @@ export type Options = {
 /**
  * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
  */
-export default class Arena {
+export class Arena {
   vm: QuickJSVm;
   _map: VMMap;
   _registeredMap: VMMap;
@@ -76,7 +75,7 @@ export default class Arena {
    * Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
    */
   evalCode<T = any>(code: string): T {
-    let handle = this.vm.evalCode(code);
+    const handle = this.vm.evalCode(code);
     return this._unwrapResultAndUnmarshal(handle);
   }
 
@@ -88,7 +87,7 @@ export default class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume(err => this._unmarshal(err));
+    throw result.error.consume((err) => this._unmarshal(err));
   }
 
   /**
@@ -112,7 +111,7 @@ export default class Arena {
   sync<T>(target: T): T {
     const wrapped = this._wrap(target);
     if (typeof wrapped === "undefined") return target;
-    walkObject(wrapped, v => {
+    walkObject(wrapped, (v) => {
       this._sync.add(this._unwrap(v));
     });
     return wrapped;
@@ -178,14 +177,14 @@ export default class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume(err => this._unmarshal(err));
+    throw result.error.consume((err) => this._unmarshal(err));
   }
 
   _unwrapResultAndUnmarshal(
     result: VmCallResult<QuickJSHandle> | undefined
   ): any {
     if (!result) return;
-    return this._unwrapResult(result).consume(h => this._unmarshal(h));
+    return this._unwrapResult(result).consume((h) => this._unmarshal(h));
   }
 
   _marshal(target: any): QuickJSHandle {
@@ -199,10 +198,10 @@ export default class Arena {
 
     const handle = marshal(this._wrap(target) ?? target, {
       vm: this.vm,
-      unmarshal: h => this._unmarshal(h),
-      isMarshalable: t =>
+      unmarshal: (h) => this._unmarshal(h),
+      isMarshalable: (t) =>
         this._options?.isMarshalable?.(this._unwrap(t)) ?? true,
-      find: t => this._registeredMap.get(t) ?? map.get(t),
+      find: (t) => this._registeredMap.get(t) ?? map.get(t),
       pre: (t, h) => this._register(t, h, map)?.[1],
       preApply: (target, that, args) => {
         const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
@@ -233,7 +232,8 @@ export default class Arena {
     return unmarshal(wrappedHandle ?? handle, {
       vm: this.vm,
       marshal: (v: any) => this._marshal(v),
-      find: h => this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h),
+      find: (h) =>
+        this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h),
       pre: (t: any, h: QuickJSHandle) =>
         this._register(t, h, undefined, true)?.[0],
     });
@@ -281,8 +281,8 @@ export default class Arena {
       target,
       this._symbol,
       this._symbolHandle,
-      t => this._marshal(t),
-      t => this._syncMode(t)
+      (t) => this._marshal(t),
+      (t) => this._syncMode(t)
     );
   }
 
@@ -298,8 +298,8 @@ export default class Arena {
       handle,
       this._symbol,
       this._symbolHandle,
-      h => this._unmarshal(h),
-      t => this._syncMode(t)
+      (h) => this._unmarshal(h),
+      (t) => this._syncMode(t)
     );
   }
 

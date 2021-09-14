@@ -15,7 +15,7 @@ export default function unmarshalPrimitive(
   } else if (ty === "object") {
     const isNull = vm
       .unwrapResult(vm.evalCode("a => a === null"))
-      .consume(n =>
+      .consume((n) =>
         vm.dump(vm.unwrapResult(vm.callFunction(n, vm.undefined, handle)))
       );
     if (isNull) {

@@ -106,10 +106,10 @@ test("consumeAll", async () => {
   expect(
     consumeAll(
       handles,
-      jest.fn(_ => o)
+      jest.fn(() => o)
     )
   ).toBe(o);
-  expect(handles.every(h => !h.alive)).toBe(true);
+  expect(handles.every((h) => !h.alive)).toBe(true);
 
   const handles2 = [vm.newObject(), vm.newObject()];
   expect(() =>
@@ -117,7 +117,7 @@ test("consumeAll", async () => {
       throw new Error("qes error");
     })
   ).toThrow("qes error");
-  expect(handles2.every(h => !h.alive)).toBe(true);
+  expect(handles2.every((h) => !h.alive)).toBe(true);
 
   vm.dispose();
 });

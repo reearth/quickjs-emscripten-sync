@@ -44,7 +44,7 @@ export default class VMMap {
         };
       }`)
       )
-      .consume(fn => this._call(fn, undefined));
+      .consume((fn) => this._call(fn, undefined));
 
     this._mapGet = vm.getProp(result, "get");
     this._mapSet = vm.getProp(result, "set");
@@ -84,7 +84,7 @@ export default class VMMap {
       }
     }
 
-    this.vm.newNumber(counter).consume(c => {
+    this.vm.newNumber(counter).consume((c) => {
       this._call(
         this._mapSet,
         undefined,

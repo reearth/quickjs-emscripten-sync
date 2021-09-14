@@ -6,7 +6,7 @@ test("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
   const marshal = jest.fn(() => vm.undefined);
   const map = new VMMap(vm);
-  const find = jest.fn(h => map.getByHandle(h));
+  const find = jest.fn((h) => map.getByHandle(h));
   const pre = jest.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
@@ -32,16 +32,16 @@ test("primitive, array, object", async () => {
   });
   expect(map.size).toBe(5);
   expect(map.getByHandle(handle)).toBe(target);
-  vm.getProp(handle, "aaa").consume(h =>
+  vm.getProp(handle, "aaa").consume((h) =>
     expect(map.getByHandle(h)).toBe(target.aaa)
   );
   vm.getProp(handle, "aaa")
-    .consume(h => vm.getProp(h, 2))
-    .consume(h => expect(map.getByHandle(h)).toBe(target.aaa[2]));
-  vm.getProp(handle, "nested").consume(h =>
+    .consume((h) => vm.getProp(h, 2))
+    .consume((h) => expect(map.getByHandle(h)).toBe(target.aaa[2]));
+  vm.getProp(handle, "nested").consume((h) =>
     expect(map.getByHandle(h)).toBe(target.nested)
   );
-  vm.getProp(handle, "bbb").consume(h =>
+  vm.getProp(handle, "bbb").consume((h) =>
     expect(map.getByHandle(h)).toBe(target.bbb)
   );
 
@@ -108,7 +108,7 @@ test("func", async () => {
     vm.evalCode(`(function(a) { return a.a + "!"; })`)
   );
   const map = new VMMap(vm);
-  const find = jest.fn(h => map.getByHandle(h));
+  const find = jest.fn((h) => map.getByHandle(h));
   const pre = jest.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
@@ -124,7 +124,7 @@ test("func", async () => {
   expect(map.has(func.prototype)).toBe(true);
 
   map.dispose();
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   jsonParse.dispose();
   vm.dispose();
 });
@@ -157,7 +157,7 @@ test("class", async () => {
       Cls
     }`)
   );
-  const find = jest.fn(h => map.getByHandle(h));
+  const find = jest.fn((h) => map.getByHandle(h));
   const pre = jest.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
@@ -173,7 +173,7 @@ test("class", async () => {
 
   handle.dispose();
   map.dispose();
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   jsonParse.dispose();
   vm.dispose();
 });

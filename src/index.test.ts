@@ -1,5 +1,5 @@
 import { getQuickJS } from "quickjs-emscripten";
-import Arena from ".";
+import { Arena } from ".";
 
 describe("evalCode", () => {
   test("simple object and function", async () => {
@@ -45,7 +45,7 @@ describe("evalCode", () => {
           return ++this.a;
         }
       };
-  
+
       new Cls(100);
     }`);
     const Cls = arena.evalCode(`globalThis.Cls`);
@@ -297,7 +297,7 @@ test("registeredObjects option", async () => {
 test("isMarshalable option", async () => {
   const vm = (await getQuickJS()).createVm();
   const arena = new Arena(vm, {
-    isMarshalable: o => o !== globalThis,
+    isMarshalable: (o) => o !== globalThis,
   });
 
   expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);

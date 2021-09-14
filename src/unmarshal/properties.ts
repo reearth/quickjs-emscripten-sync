@@ -16,14 +16,16 @@ export default function unmarshalProperties(
     )
       return;
 
-    const desc = ([
-      ["value", true],
-      ["get", true],
-      ["set", true],
-      ["configurable", false],
-      ["enumerable", false],
-      ["writable", false],
-    ] as const).reduce<PropertyDescriptor>((desc, [key, unmarshable]) => {
+    const desc = (
+      [
+        ["value", true],
+        ["get", true],
+        ["set", true],
+        ["configurable", false],
+        ["enumerable", false],
+        ["writable", false],
+      ] as const
+    ).reduce<PropertyDescriptor>((desc, [key, unmarshable]) => {
       const h = vm.getProp(value, key);
       const ty = vm.typeof(h);
 
@@ -43,7 +45,7 @@ export default function unmarshalProperties(
     }, {});
 
     Object.defineProperty(target, keyName, desc);
-  }).consume(fn => {
+  }).consume((fn) => {
     call(
       vm,
       `(o, fn) => {

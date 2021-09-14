@@ -5,8 +5,8 @@ import marshalFunction from "./function";
 test("normal func", async () => {
   const vm = (await getQuickJS()).createVm();
 
-  const marshal = jest.fn(v => send(vm, v));
-  const unmarshal = jest.fn(v =>
+  const marshal = jest.fn((v) => send(vm, v));
+  const unmarshal = jest.fn((v) =>
     eq(vm, v, vm.global) ? undefined : vm.dump(v)
   );
   const preMarshal = jest.fn((_, a) => a);
@@ -40,7 +40,7 @@ test("normal func", async () => {
 
 test("func which has properties", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(v => send(vm, v));
+  const marshal = jest.fn((v) => send(vm, v));
 
   const fn = () => {};
   fn.hoge = "foo";
@@ -49,7 +49,7 @@ test("func which has properties", async () => {
     vm,
     fn,
     marshal,
-    v => vm.dump(v),
+    (v) => vm.dump(v),
     (_, a) => a
   );
   if (!handle) throw new Error("handle is undefined");
@@ -101,7 +101,7 @@ test("class", async () => {
   ).toBe(true);
   expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   instance.dispose();
   newA.dispose();
   handle.dispose();

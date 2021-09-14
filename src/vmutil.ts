@@ -6,7 +6,7 @@ export function call(
   thisArg?: QuickJSHandle,
   ...args: QuickJSHandle[]
 ): QuickJSHandle {
-  return vm.unwrapResult(vm.evalCode(code)).consume(f => {
+  return vm.unwrapResult(vm.evalCode(code)).consume((f) => {
     if (typeof thisArg === "undefined" && args.length === 0) return f;
     return vm.unwrapResult(
       vm.callFunction(f, thisArg ?? vm.undefined, ...args)

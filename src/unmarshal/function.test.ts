@@ -4,12 +4,12 @@ import unmarshalFunction from "./function";
 
 test("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(v => send(vm, v));
+  const marshal = jest.fn((v) => send(vm, v));
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn(a => a);
+  const preUnmarshal = jest.fn((a) => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`(a, b) => a + b`));
   const func = unmarshalFunction(vm, handle, marshal, unmarshal, preUnmarshal);
@@ -39,14 +39,14 @@ test("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
-  const marshal = jest.fn(v => (v === that ? thatHandle : send(vm, v)));
+  const marshal = jest.fn((v) => (v === that ? thatHandle : send(vm, v)));
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn(a => a);
+  const preUnmarshal = jest.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (a) { return this.a + a; })`)
@@ -70,7 +70,7 @@ test("function", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   thatHandle.dispose();
   handle.dispose();
   vm.dispose();
@@ -79,7 +79,7 @@ test("function", async () => {
 test("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn(v =>
+  const marshal = jest.fn((v) =>
     typeof v === "object" ? vm.undefined : send(vm, v)
   );
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
@@ -87,7 +87,7 @@ test("constructor", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn(a => a);
+  const preUnmarshal = jest.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (b) { this.a = b + 2; })`)
@@ -119,14 +119,14 @@ test("constructor", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   vm.dispose();
 });
 
 test("class", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(v =>
+  const marshal = jest.fn((v) =>
     typeof v === "object" ? vm.undefined : send(vm, v)
   );
   const disposables: QuickJSHandle[] = [];
@@ -135,7 +135,7 @@ test("class", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn(a => a);
+  const preUnmarshal = jest.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`)
@@ -167,7 +167,7 @@ test("class", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   vm.dispose();
 });

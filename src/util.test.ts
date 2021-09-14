@@ -3,7 +3,7 @@ import { isES2015Class, isObject, walkObject, complexity } from "./util";
 test("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);
   expect(isES2015Class(class A {})).toBe(true);
-  expect(isES2015Class(function() {})).toBe(false);
+  expect(isES2015Class(function () {})).toBe(false);
   expect(isES2015Class(function A() {})).toBe(false);
   expect(isES2015Class(() => {})).toBe(false);
   expect(isES2015Class({})).toBe(false);
@@ -14,7 +14,7 @@ test("isES2015Class", () => {
 test("isObject", () => {
   expect(isObject({})).toBe(true);
   expect(isObject(Object.create(null))).toBe(true);
-  expect(isObject(function() {})).toBe(true);
+  expect(isObject(function () {})).toBe(true);
   expect(isObject(function A() {})).toBe(true);
   expect(isObject(() => {})).toBe(true);
   expect(isObject(class {})).toBe(true);
@@ -47,7 +47,7 @@ test("complexity", () => {
   expect(complexity({ a: 1 })).toBe(1);
   expect(complexity(() => {})).toBe(1);
   expect(complexity([{}])).toBe(2);
-  expect(complexity(function() {})).toBe(2);
+  expect(complexity(function () {})).toBe(2);
   expect(complexity(class {})).toBe(2);
   expect(complexity({ a: {} })).toBe(2);
   expect(complexity({ a: {} }, 1)).toBe(1);

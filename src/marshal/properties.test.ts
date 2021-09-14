@@ -20,7 +20,7 @@ test("works", async () => {
   );
 
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn(t => {
+  const marshal = jest.fn((t) => {
     if (typeof t !== "function") return send(vm, t);
     const fn = vm.newFunction("", () => {});
     disposables.push(fn);
@@ -65,7 +65,7 @@ test("works", async () => {
   vm.unwrapResult(vm.callFunction(descTester, vm.undefined, handle, expected));
 
   expected.dispose();
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   descTester.dispose();
   vm.dispose();

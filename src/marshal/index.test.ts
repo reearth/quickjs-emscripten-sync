@@ -67,7 +67,7 @@ test("arrow function", async () => {
 test("function", async () => {
   const { vm, map, marshal, dispose } = await setup();
 
-  const bar = function(a: number, b: { hoge: number }) {
+  const bar = function (a: number, b: { hoge: number }) {
     return a + b.hoge;
   };
   const handle = marshal(bar);
@@ -199,13 +199,13 @@ const setup = async ({
     marshal: (v: any) =>
       marshal(v, {
         vm,
-        unmarshal: h => map.getByHandle(h) ?? vm.dump(h),
+        unmarshal: (h) => map.getByHandle(h) ?? vm.dump(h),
         isMarshalable,
         pre: (t, h) => {
           map.set(t, h);
           return h;
         },
-        find: t => map.get(t),
+        find: (t) => map.get(t),
       }),
     dispose: () => {
       map.dispose();

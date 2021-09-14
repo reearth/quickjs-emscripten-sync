@@ -11,9 +11,9 @@ export default function unmarshalFunction(
 ): Function | undefined {
   if (vm.typeof(handle) !== "function") return;
 
-  const raw = function(this: any, ...args: any[]) {
+  const raw = function (this: any, ...args: any[]) {
     const thisHandle = marshal(this);
-    const argHandles = args.map(a => marshal(a));
+    const argHandles = args.map((a) => marshal(a));
 
     if (new.target) {
       const [instance] = unmarshal(

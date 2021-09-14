@@ -32,7 +32,7 @@ export function wrap<T = any>(
           proxyKeySymbolHandle
         );
         if (unwrapped) {
-          handle2.consume(h => vm.setProp(h, marshal(key), marshal(v)));
+          handle2.consume((h) => vm.setProp(h, marshal(key), marshal(v)));
         } else {
           vm.setProp(handle2, marshal(key), marshal(v));
         }
@@ -49,7 +49,7 @@ export function wrap<T = any>(
       if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
         if (sync === "host") return true;
         if (unwrapped) {
-          handle2.consume(h =>
+          handle2.consume((h) =>
             call(vm, `(a, b) => delete a[b]`, undefined, h, marshal(key))
           );
         } else {
@@ -75,7 +75,7 @@ export function wrapHandle(
 
   return consumeAll(
     [
-      vm.newFunction("getSyncMode", h => {
+      vm.newFunction("getSyncMode", (h) => {
         const res = syncMode?.(unmarshal(h));
         if (typeof res === "string") return vm.newString(res);
         return vm.undefined;
@@ -95,7 +95,7 @@ export function wrapHandle(
         delete unwrap(target, proxyKeySymbol)[key];
       }),
     ],
-    args => [
+    (args) => [
       call(
         vm,
         `(target, sym, getSyncMode, setter, deleter) => {

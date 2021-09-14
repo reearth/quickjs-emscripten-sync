@@ -45,7 +45,7 @@ test("works", async () => {
   expect(unmarshal).toReturnWith(["c", false]);
   expect(unmarshal).toReturnWith([expect.any(Function), false]); // get, set
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   vm.dispose();
 });

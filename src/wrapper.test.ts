@@ -197,7 +197,7 @@ test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
 
   const [handle2, unwrapped2] = unwrapHandle(vm, wrapped, proxyKeySymbolHandle);
   expect(unwrapped2).toBe(true);
-  handle2.consume(h => {
+  handle2.consume((h) => {
     expect(eq(vm, handle, h)).toBe(true);
   });
 

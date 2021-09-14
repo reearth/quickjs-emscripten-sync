@@ -17,9 +17,9 @@ export default function marshalFunction(
   if (typeof target !== "function") return;
 
   const raw = vm
-    .newFunction(target.name, function(...argHandles) {
+    .newFunction(target.name, function (...argHandles) {
       const that = unmarshal(this);
-      const args = argHandles.map(a => unmarshal(a));
+      const args = argHandles.map((a) => unmarshal(a));
 
       if (isES2015Class(target) && isObject(that)) {
         // Class constructors cannot be invoked without new expression, and new.target is not changed
@@ -34,7 +34,7 @@ export default function marshalFunction(
         preApply ? preApply(target, that, args) : target.apply(that, args)
       );
     })
-    .consume(handle2 =>
+    .consume((handle2) =>
       // fucntions created by vm.newFunction are not callable as a class constrcutor
       call(
         vm,
