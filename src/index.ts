@@ -30,7 +30,7 @@ export {
 
 export type Options = {
   /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
-  isMarshalable?: (target: any) => boolean;
+  isMarshalable?: boolean | "json" | ((target: any) => boolean | "json");
   /** You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
    *
    * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
@@ -100,6 +100,11 @@ export class Arena {
     for (const [key, value] of Object.entries(obj)) {
       const handle = this._marshal(value);
       this.vm.setProp(this.vm.global, key, handle);
+
+      // if marshaling mode is json, handle will not registered so it should be disposed
+      if (!this._map.hasHandle(handle)) {
+        handle.dispose();
+      }
     }
   }
 
@@ -187,8 +192,9 @@ export class Arena {
     return this._unwrapResult(result).consume(this._unmarshal);
   }
 
-  _isMarshalable = (t: unknown): boolean => {
-    return this._options?.isMarshalable?.(this._unwrap(t)) ?? true;
+  _isMarshalable = (t: unknown): boolean | "json" => {
+    const im = this._options?.isMarshalable;
+    return (typeof im === "function" ? im(this._unwrap(t)) : im) ?? true;
   };
 
   _marshalFind = (t: unknown) => {
@@ -203,8 +209,12 @@ export class Arena {
 
   _marshalPre = (
     t: unknown,
-    h: QuickJSHandle
-  ): Wrapped<QuickJSHandle> | undefined => this._register(t, h, this._map)?.[1];
+    h: QuickJSHandle,
+    mode: true | "json" | undefined
+  ): Wrapped<QuickJSHandle> | undefined => {
+    if (mode === "json") return;
+    return this._register(t, h, this._map)?.[1];
+  };
 
   _marshalPreApply = (
     target: Function,
@@ -238,10 +248,11 @@ export class Arena {
     });
   };
 
-  _preUnmarshal = (t: any, h: QuickJSHandle) =>
-    this._register(t, h, undefined, true)?.[0];
+  _preUnmarshal = (t: any, h: QuickJSHandle): Wrapped<any> => {
+    return this._register(t, h, undefined, true)?.[0];
+  };
 
-  _unmarshalFind = (h: QuickJSHandle) => {
+  _unmarshalFind = (h: QuickJSHandle): unknown => {
     return this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h);
   };
 

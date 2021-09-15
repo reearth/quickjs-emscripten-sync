@@ -337,14 +337,49 @@ test("registeredObjects option", async () => {
   vm.dispose();
 });
 
-test("isMarshalable option", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, {
-    isMarshalable: (o) => o !== globalThis,
+describe("isMarshalable option", () => {
+  test("false", async () => {
+    const vm = (await getQuickJS()).createVm();
+    const arena = new Arena(vm, { isMarshalable: false });
+
+    expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
+    expect(arena.evalCode(`s => s === undefined`)({})).toBe(true);
+    arena.expose({ aaa: globalThis });
+    expect(arena.evalCode(`aaa`)).toBeUndefined();
+
+    arena.dispose();
+    vm.dispose();
   });
 
-  expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
+  test("json", async () => {
+    const vm = (await getQuickJS()).createVm();
+    const arena = new Arena(vm, { isMarshalable: "json" });
 
-  arena.dispose();
-  vm.dispose();
+    const obj = { a: () => {}, b: new Date(), c: [() => {}, 1] };
+    arena.expose({ obj });
+    expect(arena.evalCode(`obj`)).toStrictEqual({
+      b: obj.b.toISOString(),
+      c: [null, 1],
+    });
+
+    arena.dispose();
+    vm.dispose();
+  });
+
+  test("conditional", async () => {
+    const vm = (await getQuickJS()).createVm();
+    const arena = new Arena(vm, {
+      isMarshalable: (o) => o !== globalThis,
+    });
+
+    const obj = { a: 1 };
+    expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
+    expect(arena.evalCode(`s => s === undefined`)(obj)).toBe(false);
+    arena.expose({ aaa: globalThis, bbb: obj });
+    expect(arena.evalCode(`aaa`)).toBeUndefined();
+    expect(arena.evalCode(`bbb`)).toStrictEqual(obj);
+
+    arena.dispose();
+    vm.dispose();
+  });
 });
