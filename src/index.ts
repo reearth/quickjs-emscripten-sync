@@ -87,7 +87,7 @@ export class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume((err) => this._unmarshal(err));
+    throw result.error.consume(this._unmarshal);
   }
 
   /**
@@ -177,46 +177,66 @@ export class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume((err) => this._unmarshal(err));
+    throw result.error.consume(this._unmarshal);
   }
 
   _unwrapResultAndUnmarshal(
     result: VmCallResult<QuickJSHandle> | undefined
   ): any {
     if (!result) return;
-    return this._unwrapResult(result).consume((h) => this._unmarshal(h));
+    return this._unwrapResult(result).consume(this._unmarshal);
   }
 
-  _marshal(target: any): QuickJSHandle {
+  _isMarshalable = (t: unknown): boolean => {
+    return this._options?.isMarshalable?.(this._unwrap(t)) ?? true;
+  };
+
+  _marshalFind = (t: unknown) => this._registeredMap.get(t) ?? this._map.get(t);
+
+  _marshalPre = (
+    t: unknown,
+    h: QuickJSHandle
+  ): Wrapped<QuickJSHandle> | undefined => this._register(t, h, this._map)?.[1];
+
+  _marshalPreApply = (
+    target: Function,
+    that: unknown,
+    args: unknown[]
+  ): void => {
+    const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
+    // override sync mode of this object while calling the function
+    if (unwrapped) this._temporalSync.add(unwrapped);
+    try {
+      return target.apply(that, args);
+    } finally {
+      // restore sync mode
+      if (unwrapped) this._temporalSync.delete(unwrapped);
+    }
+  };
+
+  _marshal = (target: any): QuickJSHandle => {
     const registered = this._registeredMap.get(target);
     if (registered) {
       return registered;
     }
 
-    const handle = marshal(this._wrap(target) ?? target, {
+    return marshal(this._wrap(target) ?? target, {
       vm: this.vm,
-      unmarshal: (h) => this._unmarshal(h),
-      isMarshalable: (t) =>
-        this._options?.isMarshalable?.(this._unwrap(t)) ?? true,
-      find: (t) => this._registeredMap.get(t) ?? this._map.get(t),
-      pre: (t, h) => this._register(t, h, this._map)?.[1],
-      preApply: (target, that, args) => {
-        const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
-        // override sync mode of this object while calling the function
-        if (unwrapped) this._temporalSync.add(unwrapped);
-        try {
-          return target.apply(that, args);
-        } finally {
-          // restore sync mode
-          if (unwrapped) this._temporalSync.delete(unwrapped);
-        }
-      },
+      unmarshal: this._unmarshal,
+      isMarshalable: this._isMarshalable,
+      find: this._marshalFind,
+      pre: this._marshalPre,
+      preApply: this._marshalPreApply,
     });
+  };
 
-    return handle;
-  }
+  _preUnmarshal = (t: any, h: QuickJSHandle) =>
+    this._register(t, h, undefined, true)?.[0];
 
-  _unmarshal(handle: QuickJSHandle): any {
+  _unmarshalFind = (h: QuickJSHandle) =>
+    this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h);
+
+  _unmarshal = (handle: QuickJSHandle): any => {
     const registered = this._registeredMap.getByHandle(handle);
     if (typeof registered !== "undefined") {
       return registered;
@@ -225,13 +245,11 @@ export class Arena {
     const [wrappedHandle] = this._wrapHandle(handle);
     return unmarshal(wrappedHandle ?? handle, {
       vm: this.vm,
-      marshal: (v: any) => this._marshal(v),
-      find: (h) =>
-        this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h),
-      pre: (t: any, h: QuickJSHandle) =>
-        this._register(t, h, undefined, true)?.[0],
+      marshal: this._marshal,
+      find: this._unmarshalFind,
+      pre: this._preUnmarshal,
     });
-  }
+  };
 
   _register(
     t: any,
@@ -262,12 +280,12 @@ export class Arena {
     return [wrappedT, wrappedH];
   }
 
-  _syncMode(obj: any) {
+  _syncMode = (obj: any): "both" | undefined => {
     const obj2 = this._unwrap(obj);
     return this._sync.has(obj2) || this._temporalSync.has(obj2)
       ? "both"
       : undefined;
-  }
+  };
 
   _wrap<T>(target: T): Wrapped<T> | undefined {
     return wrap(
@@ -275,8 +293,8 @@ export class Arena {
       target,
       this._symbol,
       this._symbolHandle,
-      (t) => this._marshal(t),
-      (t) => this._syncMode(t)
+      this._marshal,
+      this._syncMode
     );
   }
 
@@ -292,8 +310,8 @@ export class Arena {
       handle,
       this._symbol,
       this._symbolHandle,
-      (h) => this._unmarshal(h),
-      (t) => this._syncMode(t)
+      this._unmarshal,
+      this._syncMode
     );
   }
 
