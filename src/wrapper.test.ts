@@ -8,7 +8,7 @@ import {
   isHandleWrapped,
   SyncMode,
 } from "./wrapper";
-import { call, eq, send } from "./vmutil";
+import { call, eq, json } from "./vmutil";
 
 test("wrap, unwrap, isWrapped", async () => {
   const vm = (await getQuickJS()).createVm();
@@ -87,7 +87,7 @@ test("wrap with both sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
-    (t: any): QuickJSHandle => (t === wrapped ? handle : send(vm, t))
+    (t: any): QuickJSHandle => (t === wrapped ? handle : json(vm, t))
   );
   const syncMode = jest.fn((): SyncMode => "both");
 
@@ -130,7 +130,7 @@ test("wrap with vm sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
-    (t: any): QuickJSHandle => (t === wrapped ? handle : send(vm, t))
+    (t: any): QuickJSHandle => (t === wrapped ? handle : json(vm, t))
   );
   const syncMode = jest.fn((): SyncMode => "vm");
 
@@ -361,7 +361,7 @@ test("wrap and wrapHandle", async () => {
   const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
   const marshal = jest.fn(
     (t: any): QuickJSHandle =>
-      wrappedHandle && t === wrapped ? wrappedHandle : send(vm, t)
+      wrappedHandle && t === wrapped ? wrappedHandle : json(vm, t)
   );
   const unmarshal = jest.fn((handle: QuickJSHandle) =>
     wrappedHandle && eq(vm, handle, wrappedHandle) ? wrapped : vm.dump(handle)

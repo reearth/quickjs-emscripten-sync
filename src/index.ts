@@ -9,7 +9,7 @@ import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
-import { call, eq, isHandleObject, send, consumeAll } from "./vmutil";
+import { call, eq, isHandleObject, json, consumeAll } from "./vmutil";
 import { defaultRegisteredObjects } from "./default";
 
 export {
@@ -24,7 +24,7 @@ export {
   call,
   eq,
   isHandleObject,
-  send,
+  json,
   consumeAll,
 };
 

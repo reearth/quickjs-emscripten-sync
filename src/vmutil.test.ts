@@ -5,7 +5,7 @@ import {
   eq,
   instanceOf,
   isHandleObject,
-  send,
+  json,
 } from "./vmutil";
 
 test("call", async () => {
@@ -80,17 +80,17 @@ test("isHandleObject", async () => {
   vm.dispose();
 });
 
-test("send", async () => {
+test("json", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
 
-  const handle = send(vm, {
+  const handle = json(vm, {
     hoge: { foo: ["bar"] },
   });
   expect(
     vm.dump(call(vm, `a => a.hoge.foo[0] === "bar"`, undefined, handle))
   ).toBe(true);
-  expect(vm.typeof(send(vm, undefined))).toBe("undefined");
+  expect(vm.typeof(json(vm, undefined))).toBe("undefined");
 
   handle.dispose();
   vm.dispose();

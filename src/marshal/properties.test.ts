@@ -1,5 +1,5 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import { send } from "../vmutil";
+import { json } from "../vmutil";
 import marshalProperties from "./properties";
 
 test("works", async () => {
@@ -21,7 +21,7 @@ test("works", async () => {
 
   const disposables: QuickJSHandle[] = [];
   const marshal = jest.fn((t) => {
-    if (typeof t !== "function") return send(vm, t);
+    if (typeof t !== "function") return json(vm, t);
     const fn = vm.newFunction("", () => {});
     disposables.push(fn);
     return fn;

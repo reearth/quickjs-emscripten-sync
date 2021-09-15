@@ -1,11 +1,11 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
-import { send, eq, call } from "../vmutil";
+import { json, eq, call } from "../vmutil";
 import marshalFunction from "./function";
 
 test("normal func", async () => {
   const vm = (await getQuickJS()).createVm();
 
-  const marshal = jest.fn((v) => send(vm, v));
+  const marshal = jest.fn((v) => json(vm, v));
   const unmarshal = jest.fn((v) =>
     eq(vm, v, vm.global) ? undefined : vm.dump(v)
   );
@@ -40,7 +40,7 @@ test("normal func", async () => {
 
 test("func which has properties", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v) => send(vm, v));
+  const marshal = jest.fn((v) => json(vm, v));
 
   const fn = () => {};
   fn.hoge = "foo";

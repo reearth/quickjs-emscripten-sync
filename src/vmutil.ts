@@ -37,7 +37,7 @@ export function isHandleObject(vm: QuickJSVm, a: QuickJSHandle): boolean {
   );
 }
 
-export function send(vm: QuickJSVm, target: any): QuickJSHandle {
+export function json(vm: QuickJSVm, target: any): QuickJSHandle {
   const json = JSON.stringify(target);
   if (!json) return vm.undefined;
   return call(vm, `JSON.parse`, undefined, vm.newString(json));
