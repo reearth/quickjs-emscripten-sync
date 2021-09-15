@@ -1,5 +1,5 @@
-name: CI
-on: [push]
+name: Pull request
+on: [pull_request]
 jobs:
   build:
     name: Build, lint, and test

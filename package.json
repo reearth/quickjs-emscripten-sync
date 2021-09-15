@@ -40,7 +40,7 @@
   },
   "size-limit": [
     {
-      "path": "dist/quickjs-emscripten-sync.cjs.js",
+      "path": "dist/quickjs-emscripten-sync.cjs",
       "limit": "10 KB"
     },
     {
