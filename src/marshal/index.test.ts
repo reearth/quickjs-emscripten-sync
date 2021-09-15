@@ -126,10 +126,10 @@ test("class", async () => {
   expect(map.has(A.a)).toBe(true);
   expect(map.has(A.prototype.hoge)).toBe(true);
   expect(
-    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")!.get)
+    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.get)
   ).toBe(true);
   expect(
-    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")!.set)
+    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.set)
   ).toBe(true);
 
   expect(vm.typeof(handle)).toBe("function");
@@ -186,10 +186,34 @@ test("marshalable", async () => {
   dispose();
 });
 
+test("marshalable json", async () => {
+  const isMarshalable = jest.fn<"json", [any]>(() => "json");
+  const { vm, marshal, dispose } = await setup({
+    isMarshalable,
+  });
+
+  class Hoge {}
+  const target = {
+    a: { c: () => 1, d: new Date(), e: [() => 1, 1, new Hoge()] },
+    b: 1,
+  };
+  const handle = marshal(target);
+
+  expect(vm.dump(handle)).toEqual({
+    a: { d: target.a.d.toISOString(), e: [null, 1, {}] },
+    b: 1,
+  });
+  expect(isMarshalable).toBeCalledTimes(1);
+  expect(isMarshalable).toBeCalledWith(target);
+  expect(isMarshalable).toReturnWith("json");
+
+  dispose();
+});
+
 const setup = async ({
   isMarshalable,
 }: {
-  isMarshalable?: (target: any) => boolean;
+  isMarshalable?: (target: any) => boolean | "json";
 } = {}) => {
   const vm = (await getQuickJS()).createVm();
   const map = new VMMap(vm);
