@@ -26,7 +26,8 @@ export function wrap<T = any>(
       const sync = syncMode?.(receiver) ?? "host";
       if (
         (sync !== "vm" && !Reflect.set(obj, key, v, receiver)) ||
-        sync === "host"
+        sync === "host" ||
+        !vm.alive
       )
         return true;
 
@@ -60,7 +61,7 @@ export function wrap<T = any>(
           );
 
           if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
-            if (sync === "host") return true;
+            if (sync === "host" || !vm.alive) return true;
 
             if (unwrapped) {
               handle2.consume((h) =>

@@ -78,6 +78,9 @@ test("wrap without sync", async () => {
   proxyKeySymbolHandle.dispose();
   handle.dispose();
   vm.dispose();
+
+  wrapped.a = 3; // no error even if vm is disposed
+  expect(wrapped.a).toBe(3);
 });
 
 test("wrap with both sync", async () => {
@@ -122,6 +125,9 @@ test("wrap with both sync", async () => {
   proxyKeySymbolHandle.dispose();
   handle.dispose();
   vm.dispose();
+
+  wrapped.a = 3; // no error even if vm is disposed
+  expect(wrapped.a).toBe(3);
 });
 
 test("wrap with vm sync", async () => {
@@ -166,6 +172,9 @@ test("wrap with vm sync", async () => {
   proxyKeySymbolHandle.dispose();
   handle.dispose();
   vm.dispose();
+
+  wrapped.a = 3; // no error even after vm is disposed
+  expect(wrapped.a).toBe(1); // vm mode cannot modify obj in host
 });
 
 test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
