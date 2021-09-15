@@ -4,7 +4,7 @@ import { Arena } from ".";
 describe("evalCode", () => {
   test("simple object and function", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const result = arena.evalCode(
       `({
@@ -41,7 +41,7 @@ describe("evalCode", () => {
 
   test("Math", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const VMMath = arena.evalCode(`Math`) as Math;
     expect(VMMath.floor(1.1)).toBe(1);
@@ -52,7 +52,7 @@ describe("evalCode", () => {
 
   test("class", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const instance = arena.evalCode(`{
       globalThis.Cls = class D {
@@ -78,7 +78,7 @@ describe("evalCode", () => {
 
   test("obj", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const obj = arena.evalCode(`globalThis.AAA = { a: 1 }`);
 
@@ -96,7 +96,7 @@ describe("evalCode", () => {
 describe("expose without sync", () => {
   test("simple object and function", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     arena.expose({
       obj: {
@@ -130,7 +130,7 @@ describe("expose without sync", () => {
 
   test("Math", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     arena.expose({ Math });
     expect(arena.evalCode(`Math.floor(1.1)`)).toBe(1);
@@ -141,7 +141,7 @@ describe("expose without sync", () => {
 
   test("class", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     class D {
       a: number;
@@ -167,7 +167,7 @@ describe("expose without sync", () => {
 
   test("object and function", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -202,7 +202,7 @@ describe("expose without sync", () => {
 describe("expose with sync", () => {
   test("object and function", async () => {
     const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm);
+    const arena = new Arena(vm, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -238,7 +238,7 @@ describe("expose with sync", () => {
 
 test("evalCode -> expose", async () => {
   const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm);
+  const arena = new Arena(vm, { isMarshalable: true });
 
   const obj = arena.evalCode(`({ a: 1, b: 1 })`);
   arena.expose({ obj });
@@ -268,7 +268,7 @@ test("evalCode -> expose", async () => {
 
 test("expose -> evalCode", async () => {
   const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm);
+  const arena = new Arena(vm, { isMarshalable: true });
 
   const obj = { a: 1 };
   const obj2 = arena.sync(obj);
@@ -291,7 +291,7 @@ test("expose -> evalCode", async () => {
 
 test("evalCode -> expose -> evalCode", async () => {
   const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm);
+  const arena = new Arena(vm, { isMarshalable: true });
 
   const obj = [1];
   expect(arena.evalCode("a => a[0] + 10")(obj)).toBe(11);
@@ -304,7 +304,7 @@ test("evalCode -> expose -> evalCode", async () => {
 
 test("register and unregister", async () => {
   const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, { registeredObjects: [] });
+  const arena = new Arena(vm, { isMarshalable: true, registeredObjects: [] });
 
   arena.register(Math, `Math`);
   expect(arena.evalCode(`Math`)).toBe(Math);
@@ -325,6 +325,7 @@ test("register and unregister", async () => {
 test("registeredObjects option", async () => {
   const vm = (await getQuickJS()).createVm();
   const arena = new Arena(vm, {
+    isMarshalable: true,
     registeredObjects: [[Symbol.iterator, "Symbol.iterator"]],
   });
 

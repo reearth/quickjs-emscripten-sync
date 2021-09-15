@@ -194,7 +194,7 @@ export class Arena {
 
   _isMarshalable = (t: unknown): boolean | "json" => {
     const im = this._options?.isMarshalable;
-    return (typeof im === "function" ? im(this._unwrap(t)) : im) ?? true;
+    return (typeof im === "function" ? im(this._unwrap(t)) : im) ?? "json";
   };
 
   _marshalFind = (t: unknown) => {
