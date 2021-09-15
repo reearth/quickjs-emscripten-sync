@@ -44,7 +44,11 @@
       "limit": "10 KB"
     },
     {
-      "path": "dist/quickjs-emscripten-sync.esm.js",
+      "path": "dist/quickjs-emscripten-sync.umd.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/quickjs-emscripten-sync.module.js",
       "limit": "10 KB"
     },
     {
