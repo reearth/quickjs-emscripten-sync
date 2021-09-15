@@ -357,11 +357,10 @@ describe("isMarshalable option", () => {
     const arena = new Arena(vm, { isMarshalable: "json" });
 
     const obj = { a: () => {}, b: new Date(), c: [() => {}, 1] };
+    const objJSON = { b: obj.b.toISOString(), c: [null, 1] };
+    expect(arena.evalCode(`a => a`)(obj)).toStrictEqual(objJSON);
     arena.expose({ obj });
-    expect(arena.evalCode(`obj`)).toStrictEqual({
-      b: obj.b.toISOString(),
-      c: [null, 1],
-    });
+    expect(arena.evalCode(`obj`)).toStrictEqual(objJSON);
 
     arena.dispose();
     vm.dispose();

@@ -4,7 +4,10 @@ import unmarshalFunction from "./function";
 
 test("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v) => json(vm, v));
+  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+    json(vm, v),
+    false,
+  ]);
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
     false,
@@ -39,7 +42,10 @@ test("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
-  const marshal = jest.fn((v) => (v === that ? thatHandle : json(vm, v)));
+  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+    v === that ? thatHandle : json(vm, v),
+    false,
+  ]);
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
@@ -79,9 +85,10 @@ test("function", async () => {
 test("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((v) =>
-    typeof v === "object" ? vm.undefined : json(vm, v)
-  );
+  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+    typeof v === "object" ? vm.undefined : json(vm, v),
+    false,
+  ]);
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
@@ -126,9 +133,10 @@ test("constructor", async () => {
 
 test("class", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v) =>
-    typeof v === "object" ? vm.undefined : json(vm, v)
-  );
+  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+    typeof v === "object" ? vm.undefined : json(vm, v),
+    false,
+  ]);
   const disposables: QuickJSHandle[] = [];
   const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);

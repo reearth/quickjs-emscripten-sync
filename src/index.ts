@@ -9,7 +9,14 @@ import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
-import { call, eq, isHandleObject, json, consumeAll } from "./vmutil";
+import {
+  call,
+  eq,
+  isHandleObject,
+  json,
+  consumeAll,
+  mayConsume,
+} from "./vmutil";
 import { defaultRegisteredObjects } from "./default";
 
 export {
@@ -98,13 +105,9 @@ export class Arena {
    */
   expose(obj: { [k: string]: any }) {
     for (const [key, value] of Object.entries(obj)) {
-      const handle = this._marshal(value);
+      mayConsume(this._marshal(value), (handle) => {
       this.vm.setProp(this.vm.global, key, handle);
-
-      // if marshaling mode is json, handle will not registered so it should be disposed
-      if (!this._map.hasHandle(handle)) {
-        handle.dispose();
-      }
+      });
     }
   }
 
@@ -232,13 +235,13 @@ export class Arena {
     }
   };
 
-  _marshal = (target: any): QuickJSHandle => {
+  _marshal = (target: any): [QuickJSHandle, boolean] => {
     const registered = this._registeredMap.get(target);
     if (registered) {
-      return registered;
+      return [registered, false];
     }
 
-    return marshal(this._wrap(target) ?? target, {
+    const handle = marshal(this._wrap(target) ?? target, {
       vm: this.vm,
       unmarshal: this._unmarshal,
       isMarshalable: this._isMarshalable,
@@ -246,6 +249,8 @@ export class Arena {
       pre: this._marshalPre,
       preApply: this._marshalPreApply,
     });
+
+    return [handle, !this._map.hasHandle(handle)];
   };
 
   _preUnmarshal = (t: any, h: QuickJSHandle): Wrapped<any> => {

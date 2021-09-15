@@ -1,4 +1,4 @@
-import { getQuickJS } from "quickjs-emscripten";
+import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import {
   call,
   consumeAll,
@@ -6,6 +6,8 @@ import {
   instanceOf,
   isHandleObject,
   json,
+  mayConsume,
+  mayConsumeAll,
 } from "./vmutil";
 
 test("call", async () => {
@@ -119,5 +121,70 @@ test("consumeAll", async () => {
   ).toThrow("qes error");
   expect(handles2.every((h) => !h.alive)).toBe(true);
 
+  vm.dispose();
+});
+
+test("mayConsume", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const o = {};
+
+  const handle = vm.newArray();
+  expect(
+    mayConsume(
+      [handle, false],
+      jest.fn<any, [QuickJSHandle]>(() => o)
+    )
+  ).toBe(o);
+  expect(handle.alive).toBe(true);
+
+  mayConsume([handle, true], () => {});
+  expect(handle.alive).toBe(false);
+
+  const handle2 = vm.newArray();
+  expect(() =>
+    mayConsume([handle2, true], () => {
+      throw new Error("qes error");
+    })
+  ).toThrow("qes error");
+  expect(handle.alive).toBe(false);
+
+  vm.dispose();
+});
+
+test("mayConsumeAll", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const o = {};
+
+  const handles: [QuickJSHandle, boolean][] = [
+    [vm.newObject(), false],
+    [vm.newObject(), true],
+  ];
+  expect(
+    mayConsumeAll(
+      handles,
+      jest.fn<any, QuickJSHandle[]>(() => o)
+    )
+  ).toBe(o);
+  expect(handles[0][0].alive).toBe(true);
+  expect(handles[1][0].alive).toBe(false);
+
+  const handles2: [QuickJSHandle, boolean][] = [
+    [vm.newObject(), false],
+    [vm.newObject(), true],
+  ];
+  expect(() =>
+    mayConsumeAll(handles2, (..._args) => {
+      throw new Error("qes error");
+    })
+  ).toThrow("qes error");
+  expect(handles2[0][0].alive).toBe(true);
+  expect(handles2[1][0].alive).toBe(false);
+
+  handles[0][0].dispose();
+  handles2[0][0].dispose();
   vm.dispose();
 });

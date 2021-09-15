@@ -55,3 +55,31 @@ export function consumeAll<T extends QuickJSHandle[], K>(
     }
   }
 }
+
+export function mayConsume<T>(
+  [handle, shouldBeDisposed]: [QuickJSHandle, boolean],
+  fn: (h: QuickJSHandle) => T
+) {
+  try {
+    return fn(handle);
+  } finally {
+    if (shouldBeDisposed) {
+      handle.dispose();
+    }
+  }
+}
+
+export function mayConsumeAll<T, H extends QuickJSHandle[]>(
+  handles: { [P in keyof H]: [QuickJSHandle, boolean] },
+  fn: (...args: H) => T
+) {
+  try {
+    return fn(...(handles.map((h) => h[0]) as H));
+  } finally {
+    for (const [handle, shouldBeDisposed] of handles) {
+      if (shouldBeDisposed) {
+        handle.dispose();
+      }
+    }
+  }
+}

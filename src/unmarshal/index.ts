@@ -6,7 +6,8 @@ import unmarshalSymbol from "./symbol";
 
 export type Options = {
   vm: QuickJSVm;
-  marshal: (target: unknown) => QuickJSHandle;
+  // marshal returns handle and boolean indicates that the handle should be disposed after use
+  marshal: (target: unknown) => [QuickJSHandle, boolean];
   find: (handle: QuickJSHandle) => unknown | undefined;
   pre: <T>(target: T, handle: QuickJSHandle) => T | undefined;
 };

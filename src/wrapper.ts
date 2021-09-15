@@ -1,6 +1,6 @@
 import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
 import { isObject } from "./util";
-import { call, isHandleObject, consumeAll } from "./vmutil";
+import { call, isHandleObject, consumeAll, mayConsumeAll } from "./vmutil";
 
 export type SyncMode = "both" | "vm" | "host";
 
@@ -11,7 +11,7 @@ export function wrap<T = any>(
   target: T,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
-  marshal: (target: any) => QuickJSHandle,
+  marshal: (target: any) => [QuickJSHandle, boolean],
   syncMode?: (target: T) => SyncMode | undefined
 ): Wrapped<T> | undefined {
   if (!isObject(target)) return undefined;
@@ -24,39 +24,55 @@ export function wrap<T = any>(
     set(obj, key, value, receiver) {
       const v = unwrap(value, proxyKeySymbol);
       const sync = syncMode?.(receiver) ?? "host";
-      if (sync === "vm" || Reflect.set(obj, key, v, receiver)) {
-        if (sync === "host") return true;
-        const [handle2, unwrapped] = unwrapHandle(
-          vm,
-          marshal(receiver),
-          proxyKeySymbolHandle
-        );
-        if (unwrapped) {
-          handle2.consume((h) => vm.setProp(h, marshal(key), marshal(v)));
-        } else {
-          vm.setProp(handle2, marshal(key), marshal(v));
+      if (
+        (sync !== "vm" && !Reflect.set(obj, key, v, receiver)) ||
+        sync === "host"
+      )
+        return true;
+
+      mayConsumeAll(
+        [marshal(receiver), marshal(key), marshal(v)],
+        (receiverHandle, keyHandle, valueHandle) => {
+          const [handle2, unwrapped] = unwrapHandle(
+            vm,
+            receiverHandle,
+            proxyKeySymbolHandle
+          );
+          if (unwrapped) {
+            handle2.consume((h) => vm.setProp(h, keyHandle, valueHandle));
+          } else {
+            vm.setProp(handle2, keyHandle, valueHandle);
+          }
         }
-      }
+      );
+
       return true;
     },
     deleteProperty(obj, key) {
       const sync = syncMode?.(rec) ?? "host";
-      const [handle2, unwrapped] = unwrapHandle(
-        vm,
-        marshal(rec),
-        proxyKeySymbolHandle
-      );
-      if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
-        if (sync === "host") return true;
-        if (unwrapped) {
-          handle2.consume((h) =>
-            call(vm, `(a, b) => delete a[b]`, undefined, h, marshal(key))
+      return mayConsumeAll(
+        [marshal(rec), marshal(key)],
+        (recHandle, keyHandle) => {
+          const [handle2, unwrapped] = unwrapHandle(
+            vm,
+            recHandle,
+            proxyKeySymbolHandle
           );
-        } else {
-          call(vm, `(a, b) => delete a[b]`, undefined, handle2, marshal(key));
+
+          if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
+            if (sync === "host") return true;
+
+            if (unwrapped) {
+              handle2.consume((h) =>
+                call(vm, `(a, b) => delete a[b]`, undefined, h, keyHandle)
+              );
+            } else {
+              call(vm, `(a, b) => delete a[b]`, undefined, handle2, keyHandle);
+            }
+          }
+          return true;
         }
-      }
-      return true;
+      );
     },
   }) as Wrapped<T>;
   return rec;

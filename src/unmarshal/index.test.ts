@@ -4,7 +4,10 @@ import unmarshal from ".";
 
 test("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn(() => vm.undefined);
+  const marshal = jest.fn((): [QuickJSHandle, boolean] => [
+    vm.undefined,
+    false,
+  ]);
   const map = new VMMap(vm);
   const find = jest.fn((h) => map.getByHandle(h));
   const pre = jest.fn((t: any, h: QuickJSHandle) => {
@@ -73,7 +76,7 @@ test("object with symbol key", async () => {
     vm,
     pre,
     find: () => undefined,
-    marshal: () => vm.undefined,
+    marshal: () => [vm.undefined, false],
   });
 
   expect(target.hoge).toBe("foo");
@@ -88,7 +91,7 @@ test("func", async () => {
   const vm = (await getQuickJS()).createVm();
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((t: unknown) => {
+  const marshal = jest.fn((t: unknown): [QuickJSHandle, boolean] => {
     const h =
       t === undefined
         ? vm.undefined
@@ -101,7 +104,7 @@ test("func", async () => {
           );
     const ty = vm.typeof(h);
     if (ty === "object" || ty === "function") disposables.push(h);
-    return h;
+    return [h, false];
   });
 
   const handle = vm.unwrapResult(
@@ -134,13 +137,13 @@ test("class", async () => {
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
   const map = new VMMap(vm);
-  const marshal = jest.fn((t: unknown) => {
+  const marshal = jest.fn((t: unknown): [QuickJSHandle, boolean] => {
     const h = vm.unwrapResult(
       vm.callFunction(jsonParse, vm.undefined, vm.newString(JSON.stringify(t)))
     );
     const ty = vm.typeof(h);
     if (ty === "object" || ty === "function") disposables.push(h);
-    return h;
+    return [h, false];
   });
 
   const handle = vm.unwrapResult(
