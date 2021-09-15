@@ -7,15 +7,33 @@ describe("evalCode", () => {
     const arena = new Arena(vm);
 
     const result = arena.evalCode(
-      `({ a: 1, b: a => Math.floor(a), c: () => { throw new Error("hoge") } })`
+      `({
+        a: 1,
+        b: a => Math.floor(a),
+        c: () => { throw new Error("hoge") },
+        d: (yourFavoriteNumber) => ({
+          myFavoriteNumber: 42,
+          yourFavoriteNumber,
+        }),
+        get e() {
+          return { a: 1 };
+        }
+      })`
     );
     expect(result).toEqual({
       a: 1,
       b: expect.any(Function),
       c: expect.any(Function),
+      d: expect.any(Function),
+      e: { a: 1 },
     });
     expect(result.b(1.1)).toBe(1);
     expect(() => result.c()).toThrow("hoge");
+    expect(result.d(1)).toStrictEqual({
+      myFavoriteNumber: 42,
+      yourFavoriteNumber: 1,
+    });
+    expect(result.e).toStrictEqual({ a: 1 });
 
     arena.dispose();
     vm.dispose();
@@ -87,12 +105,24 @@ describe("expose without sync", () => {
         c: () => {
           throw new Error("hoge");
         },
+        d: (yourFavoriteNumber: number) => ({
+          myFavoriteNumber: 42,
+          yourFavoriteNumber,
+        }),
+        get e() {
+          return { a: 1 };
+        },
       },
     });
 
     expect(arena.evalCode(`obj.a`)).toBe(1);
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
     expect(() => arena.evalCode(`obj.c()`)).toThrow("hoge");
+    expect(arena.evalCode(`obj.d(1)`)).toStrictEqual({
+      myFavoriteNumber: 42,
+      yourFavoriteNumber: 1,
+    });
+    expect(arena.evalCode(`obj.e`)).toStrictEqual({ a: 1 });
 
     arena.dispose();
     vm.dispose();
@@ -259,6 +289,19 @@ test("expose -> evalCode", async () => {
   vm.dispose();
 });
 
+test("evalCode -> expose -> evalCode", async () => {
+  const vm = (await getQuickJS()).createVm();
+  const arena = new Arena(vm);
+
+  const obj = [1];
+  expect(arena.evalCode("a => a[0] + 10")(obj)).toBe(11);
+  arena.expose({ obj });
+  expect(arena.evalCode("obj")).toStrictEqual([1]);
+
+  arena.dispose();
+  vm.dispose();
+});
+
 test("register and unregister", async () => {
   const vm = (await getQuickJS()).createVm();
   const arena = new Arena(vm, { registeredObjects: [] });
@@ -301,24 +344,6 @@ test("isMarshalable option", async () => {
   });
 
   expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
-
-  arena.dispose();
-  vm.dispose();
-});
-
-test("expose function that returns object", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm);
-
-  arena.expose({
-    makeObject: () => {
-      return {
-        myFavoriteNumber: 42,
-      };
-    },
-  });
-
-  expect(arena.evalCode(`makeObject().myFavoriteNumber`)).toBe(42);
 
   arena.dispose();
   vm.dispose();

@@ -191,7 +191,15 @@ export class Arena {
     return this._options?.isMarshalable?.(this._unwrap(t)) ?? true;
   };
 
-  _marshalFind = (t: unknown) => this._registeredMap.get(t) ?? this._map.get(t);
+  _marshalFind = (t: unknown) => {
+    const unwrappedT = this._unwrap(t);
+    const handle =
+      this._registeredMap.get(t) ??
+      (unwrappedT !== t ? this._registeredMap.get(unwrappedT) : undefined) ??
+      this._map.get(t) ??
+      (unwrappedT !== t ? this._map.get(unwrappedT) : undefined);
+    return handle;
+  };
 
   _marshalPre = (
     t: unknown,
@@ -233,8 +241,9 @@ export class Arena {
   _preUnmarshal = (t: any, h: QuickJSHandle) =>
     this._register(t, h, undefined, true)?.[0];
 
-  _unmarshalFind = (h: QuickJSHandle) =>
-    this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h);
+  _unmarshalFind = (h: QuickJSHandle) => {
+    return this._registeredMap.getByHandle(h) ?? this._map.getByHandle(h);
+  };
 
   _unmarshal = (handle: QuickJSHandle): any => {
     const registered = this._registeredMap.getByHandle(handle);
