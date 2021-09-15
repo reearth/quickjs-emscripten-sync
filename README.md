@@ -31,7 +31,7 @@ class Cls {
 }
 
 const vm = (await getQuickJS()).createVm();
-const arena = new Arena(vm);
+const arena = new Arena(vm, { isMarshalable: true });
 
 // We can pass objects to the VM and run code safely
 const exposed = {
@@ -41,10 +41,10 @@ const exposed = {
 };
 arena.expose(exposed);
 
-arena.evalCode(`cls instanceof Cls`)); // returns true
-arena.evalCode(`cls.field`));          // returns 0
-arena.evalCode(`cls.method()`));       // returns 1
-arena.evalCode(`cls.field`));          // returns 1
+arena.evalCode(`cls instanceof Cls`); // returns true
+arena.evalCode(`cls.field`);          // returns 0
+arena.evalCode(`cls.method()`);       // returns 1
+arena.evalCode(`cls.field`);          // returns 1
 
 arena.evalCode(`syncedCls.field`);     // returns 0
 exposed.syncedCls.method();            // returns 1
@@ -74,7 +74,9 @@ import { Arena } from "quickjs-emscripten-sync";
   const vm = quickjs.createVm();
 
   // init Arena
-  const arena = new Arena(vm);
+  // ⚠️ Marshaling is opt-in for security reasons.
+  // ⚠️ Be careful when activating marshalling.
+  const arena = new Arena(vm, { isMarshalable: true });
 
   // expose objects as global objects in QuickJS VM
   arena.expose({
@@ -87,12 +89,12 @@ import { Arena } from "quickjs-emscripten-sync";
 
   // expose objects but also enable sync
   const data = arena.sync({ hoge: "foo" });
-  const exposed = arena.expose({ data });
+  arena.expose({ data });
 
   arena.evalCode(`data.hoge = "bar"`);
   // eval code and operations to exposed objects are automatically synced
   console.log(data.hoge); // "bar"
-  exposed.hoge = "changed!";
+  data.hoge = "changed!";
   console.log(arena.evalCode(`data.hoge`)); // "changed!"
 
   // Don't forget calling arena.dispose() before disposing QuickJS VM!

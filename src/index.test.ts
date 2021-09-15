@@ -1,6 +1,74 @@
 import { getQuickJS } from "quickjs-emscripten";
 import { Arena } from ".";
 
+describe("readme", () => {
+  test("first", async () => {
+    class Cls {
+      field = 0;
+
+      method() {
+        return ++this.field;
+      }
+    }
+
+    const vm = (await getQuickJS()).createVm();
+    const arena = new Arena(vm, { isMarshalable: true });
+
+    // We can pass objects to the VM and run code safely
+    const exposed = {
+      Cls,
+      cls: new Cls(),
+      syncedCls: arena.sync(new Cls()),
+    };
+    arena.expose(exposed);
+
+    arena.evalCode(`cls instanceof Cls`); // returns true
+    arena.evalCode(`cls.field`); // returns 0
+    arena.evalCode(`cls.method()`); // returns 1
+    arena.evalCode(`cls.field`); // returns 1
+
+    arena.evalCode(`syncedCls.field`); // returns 0
+    exposed.syncedCls.method(); // returns 1
+    arena.evalCode(`syncedCls.field`); // returns 1
+
+    arena.dispose();
+    vm.dispose();
+  });
+
+  test("usage", async () => {
+    const quickjs = await getQuickJS();
+    const vm = quickjs.createVm();
+
+    // init Arena
+    // ⚠️ Marshaling is opt-in for security reasons.
+    // ⚠️ Be careful when activating marshalling.
+    const arena = new Arena(vm, { isMarshalable: true });
+
+    // expose objects as global objects in QuickJS VM
+    arena.expose({
+      console: {
+        log: console.log,
+      },
+    });
+    arena.evalCode(`console.log("hello, world");`); // run console.log
+    arena.evalCode(`1 + 1`); // 2
+
+    // expose objects but also enable sync
+    const data = arena.sync({ hoge: "foo" });
+    arena.expose({ data });
+
+    arena.evalCode(`data.hoge = "bar"`);
+    // eval code and operations to exposed objects are automatically synced
+    console.log(data.hoge); // "bar"
+    data.hoge = "changed!";
+    console.log(arena.evalCode(`data.hoge`)); // "changed!"
+
+    // Don't forget calling arena.dispose() before disposing QuickJS VM!
+    arena.dispose();
+    vm.dispose();
+  });
+});
+
 describe("evalCode", () => {
   test("simple object and function", async () => {
     const vm = (await getQuickJS()).createVm();
