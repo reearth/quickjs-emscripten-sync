@@ -94,7 +94,7 @@ export class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume(this._unmarshal);
+    throw this._unwrapIfNotSynced(result.error.consume(this._unmarshal));
   }
 
   /**
@@ -106,7 +106,7 @@ export class Arena {
   expose(obj: { [k: string]: any }) {
     for (const [key, value] of Object.entries(obj)) {
       mayConsume(this._marshal(value), (handle) => {
-      this.vm.setProp(this.vm.global, key, handle);
+        this.vm.setProp(this.vm.global, key, handle);
       });
     }
   }
@@ -185,14 +185,16 @@ export class Arena {
     if ("value" in result) {
       return result.value;
     }
-    throw result.error.consume(this._unmarshal);
+    throw this._unwrapIfNotSynced(result.error.consume(this._unmarshal));
   }
 
   _unwrapResultAndUnmarshal(
     result: VmCallResult<QuickJSHandle> | undefined
   ): any {
     if (!result) return;
-    return this._unwrapResult(result).consume(this._unmarshal);
+    return this._unwrapIfNotSynced(
+      this._unwrapResult(result).consume(this._unmarshal)
+    );
   }
 
   _isMarshalable = (t: unknown): boolean | "json" => {
@@ -326,6 +328,11 @@ export class Arena {
   _unwrap<T>(target: T): T {
     return unwrap(target, this._symbol);
   }
+
+  _unwrapIfNotSynced = <T>(target: T): T => {
+    const unwrapped = this._unwrap(target);
+    return this._sync.has(unwrapped) ? target : unwrapped;
+  };
 
   _wrapHandle(
     handle: QuickJSHandle

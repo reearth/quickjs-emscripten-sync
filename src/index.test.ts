@@ -98,23 +98,25 @@ describe("expose without sync", () => {
     const vm = (await getQuickJS()).createVm();
     const arena = new Arena(vm, { isMarshalable: true });
 
-    arena.expose({
-      obj: {
-        a: 1,
-        b: (a: number) => Math.floor(a),
-        c: () => {
-          throw new Error("hoge");
-        },
-        d: (yourFavoriteNumber: number) => ({
-          myFavoriteNumber: 42,
-          yourFavoriteNumber,
-        }),
-        get e() {
-          return { a: 1 };
-        },
+    const obj = {
+      a: 1,
+      b: (a: number) => Math.floor(a),
+      c: () => {
+        throw new Error("hoge");
       },
+      d: (yourFavoriteNumber: number) => ({
+        myFavoriteNumber: 42,
+        yourFavoriteNumber,
+      }),
+      get e() {
+        return { a: 1 };
+      },
+    };
+    arena.expose({
+      obj,
     });
 
+    expect(arena.evalCode(`obj`)).toBe(obj);
     expect(arena.evalCode(`obj.a`)).toBe(1);
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
     expect(() => arena.evalCode(`obj.c()`)).toThrow("hoge");
@@ -132,8 +134,10 @@ describe("expose without sync", () => {
     const vm = (await getQuickJS()).createVm();
     const arena = new Arena(vm, { isMarshalable: true });
 
-    arena.expose({ Math });
-    expect(arena.evalCode(`Math.floor(1.1)`)).toBe(1);
+    arena.expose({ Math2: Math });
+    expect(arena.evalCode(`Math`)).not.toBe(Math);
+    expect(arena.evalCode(`Math2`)).toBe(Math);
+    expect(arena.evalCode(`Math2.floor(1.1)`)).toBe(1);
 
     arena.dispose();
     vm.dispose();
@@ -155,7 +159,10 @@ describe("expose without sync", () => {
       }
     }
 
-    arena.expose({ D, d: new D(100) });
+    const d = new D(100);
+    arena.expose({ D, d });
+    expect(arena.evalCode(`D`)).toBe(D);
+    expect(arena.evalCode(`d`)).toBe(d);
     expect(arena.evalCode(`d instanceof D`)).toBe(true);
     expect(arena.evalCode(`d.a`)).toBe(101);
     expect(arena.evalCode(`d.foo()`)).toBe(102);
@@ -178,7 +185,11 @@ describe("expose without sync", () => {
     };
     arena.expose({ obj });
 
+    expect(arena.evalCode(`obj`)).toBe(obj);
+    expect(arena.evalCode(`obj.a`)).toBe(1);
+    expect(arena.evalCode(`obj.b`)).toBe(obj.b);
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
+    expect(arena.evalCode(`obj.c`)).toBe(obj.c);
     expect(arena.evalCode(`obj.c()`)).toBe(1);
     expect(arena.evalCode(`obj.a`)).toBe(2);
     expect(obj.a).toBe(2);
@@ -200,7 +211,7 @@ describe("expose without sync", () => {
 });
 
 describe("expose with sync", () => {
-  test("object and function", async () => {
+  test("sync before expose", async () => {
     const vm = (await getQuickJS()).createVm();
     const arena = new Arena(vm, { isMarshalable: true });
 
@@ -214,7 +225,61 @@ describe("expose with sync", () => {
     const obj2 = arena.sync(obj);
     arena.expose({ obj: obj2 });
 
+    const obj3 = arena.evalCode(`obj`);
+    expect(obj3).toBe(obj2);
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj.c); // wrapped object
+    expect(arena.evalCode(`obj.b`)).not.toBe(obj2.b); // wrapped object
+    expect(arena.evalCode(`obj.b`)).not.toBe(obj3.b); // wrapped object
     expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
+    expect(arena.evalCode(`obj.a`)).toBe(1);
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj.c); // wrapped object
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj2.c); // wrapped object
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj3.c); // wrapped object
+    expect(arena.evalCode(`obj.c()`)).toBe(1);
+    expect(arena.evalCode(`obj.a`)).toBe(2);
+    expect(obj.a).toBe(2);
+    expect(arena.evalCode(`obj.c()`)).toBe(2);
+    expect(arena.evalCode(`obj.a`)).toBe(3);
+    expect(obj.a).toBe(3);
+
+    expect(obj).not.toBe(obj2);
+    obj2.a = 10;
+    expect(obj.a).toBe(10);
+    expect(arena.evalCode(`obj.a`)).toBe(10); // affected
+
+    arena.evalCode(`obj.a = 100`);
+    expect(obj.a).toBe(100); // affected
+    expect(arena.evalCode(`obj.a`)).toBe(100);
+
+    arena.dispose();
+    vm.dispose();
+  });
+
+  test("sync after expose", async () => {
+    const vm = (await getQuickJS()).createVm();
+    const arena = new Arena(vm, { isMarshalable: true });
+
+    const obj = {
+      a: 1,
+      b: (a: number) => Math.floor(a),
+      c() {
+        return this.a++;
+      },
+    };
+    arena.expose({ obj });
+    const obj2 = arena.sync(obj);
+
+    const obj3 = arena.evalCode(`obj`);
+    expect(obj3).not.toBe(obj); // wrapped object
+    expect(obj3).not.toBe(obj2); // wrapped object
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj.c); // wrapped object
+    expect(arena.evalCode(`obj.b`)).not.toBe(obj2.b); // wrapped object
+    expect(arena.evalCode(`obj.b`)).not.toBe(obj3.b); // wrapped object
+    expect(arena.evalCode(`obj.b(1.1)`)).toBe(1);
+    expect(arena.evalCode(`obj.a`)).toBe(1);
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj.c); // wrapped object
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj2.c); // wrapped object
+    expect(arena.evalCode(`obj.c`)).not.toBe(obj3.c); // wrapped object
     expect(arena.evalCode(`obj.c()`)).toBe(1);
     expect(arena.evalCode(`obj.a`)).toBe(2);
     expect(obj.a).toBe(2);
@@ -243,6 +308,7 @@ test("evalCode -> expose", async () => {
   const obj = arena.evalCode(`({ a: 1, b: 1 })`);
   arena.expose({ obj });
 
+  expect(obj).toBe(obj);
   expect(obj.a).toBe(1);
   expect(arena.evalCode(`obj.a`)).toBe(1);
   expect(obj.b).toBe(1);
@@ -271,19 +337,18 @@ test("expose -> evalCode", async () => {
   const arena = new Arena(vm, { isMarshalable: true });
 
   const obj = { a: 1 };
-  const obj2 = arena.sync(obj);
-  arena.expose({ obj: obj2 });
-  const obj3 = arena.evalCode(`obj`);
+  arena.expose({ obj });
+  const obj2 = arena.evalCode(`obj`);
 
-  expect(obj3).toBe(obj2);
+  expect(obj2).toBe(obj);
 
-  obj3.a = 2;
+  obj2.a = 2;
   expect(obj.a).toBe(2);
-  expect(arena.evalCode(`obj.a`)).toBe(2);
+  expect(arena.evalCode(`obj.a`)).toBe(1);
 
-  arena.evalCode("obj.a = 4");
-  expect(obj.a).toBe(4);
-  expect(arena.evalCode(`obj.a`)).toBe(4);
+  arena.evalCode("obj.a = 3");
+  expect(obj.a).toBe(2);
+  expect(arena.evalCode(`obj.a`)).toBe(3);
 
   arena.dispose();
   vm.dispose();
@@ -296,7 +361,7 @@ test("evalCode -> expose -> evalCode", async () => {
   const obj = [1];
   expect(arena.evalCode("a => a[0] + 10")(obj)).toBe(11);
   arena.expose({ obj });
-  expect(arena.evalCode("obj")).toStrictEqual([1]);
+  expect(arena.evalCode("obj")).toBe(obj);
 
   arena.dispose();
   vm.dispose();
@@ -358,9 +423,12 @@ describe("isMarshalable option", () => {
 
     const obj = { a: () => {}, b: new Date(), c: [() => {}, 1] };
     const objJSON = { b: obj.b.toISOString(), c: [null, 1] };
-    expect(arena.evalCode(`a => a`)(obj)).toStrictEqual(objJSON);
+    const objJSON2 = arena.evalCode(`a => a`)(obj);
+    expect(objJSON2).toStrictEqual(objJSON);
     arena.expose({ obj });
-    expect(arena.evalCode(`obj`)).toStrictEqual(objJSON);
+    const exposedObj = arena.evalCode(`obj`);
+    expect(exposedObj).toStrictEqual(objJSON);
+    expect(exposedObj).not.toBe(objJSON2);
 
     arena.dispose();
     vm.dispose();
@@ -377,7 +445,7 @@ describe("isMarshalable option", () => {
     expect(arena.evalCode(`s => s === undefined`)(obj)).toBe(false);
     arena.expose({ aaa: globalThis, bbb: obj });
     expect(arena.evalCode(`aaa`)).toBeUndefined();
-    expect(arena.evalCode(`bbb`)).toStrictEqual(obj);
+    expect(arena.evalCode(`bbb`)).toBe(obj);
 
     arena.dispose();
     vm.dispose();
