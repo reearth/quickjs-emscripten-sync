@@ -20,7 +20,7 @@ npm install quickjs-emscripten quickjs-emscripten-sync
 
 ```js
 import { getQuickJS } from "quickjs-emscripten";
-import Arena from "quickjs-emscripten-sync";
+import { Arena } from "quickjs-emscripten-sync";
 
 class Cls {
   field = 0;
@@ -56,7 +56,7 @@ vm.dispose();
 
 [Example code](src/index.test.ts) is available as the unit test code.
 
-## Operating environment
+## Operating Environment
 
 - Web browsers that support WebAssembly
 - Node.js
@@ -67,7 +67,7 @@ If you want to run quickjs-emscripten and quickjs-emscripten-sync in a web brows
 
 ```js
 import { getQuickJS } from "quickjs-emscripten";
-import Arena from "quickjs-emscripten-sync";
+import { Arena } from "quickjs-emscripten-sync";
 
 (async function() {
   const quickjs = await getQuickJS();
@@ -101,7 +101,7 @@ import Arena from "quickjs-emscripten-sync";
 })();
 ```
 
-## Marshaling limitations
+## Marshaling Limitations
 
 Objects are automatically converted when they cross between the host and the QuickJS VM. The conversion of a host's object to a VM handle is called marshaling, and the conversion of a VM handle to a host's object is called unmarshaling.
 
@@ -110,7 +110,7 @@ And for marshalling, it is possible to control whether the conversion is perform
 For example, exposing the host's global object to QuickJS is very heavy and dangerous. This exposure can be limited and controlled with the `isMarshalable` option. If `false` is returned, just `undefined` is passed to QuickJS.
 
 ```js
-import Arena, { complexity } from "quickjs-emscripten-sync";
+import { Arena, complexity } from "quickjs-emscripten-sync";
 
 const arena = new Arena(vm, {
   isMarshalable: (target: any) => {
@@ -129,13 +129,13 @@ arena.evalCode(`a => a === undefined`)(document); // true
 
 The `complexity` function is useful to detect whether the object is too heavy to be passed to QuickJS.
 
-## Security warning
+## Security Warning
 
 QuickJS has an environment isolated from the browser, so any code can be executed safely, but there are edge cases where some exposed objects by quickjs-emscripten-sync may break security.
 
 quickjs-emscripten-sync cannot prevent such dangerous case, so **PLEASE be very careful and deliberate about what you expose to QuickJS!**
 
-### Case 1: Prototype pollution in browser
+### Case 1: Prototype pollution
 
 ```js
 import { set } from "lodash-es";
@@ -189,12 +189,16 @@ Options accepted:
 
 ```ts
 type Options = {
-  isMarshalable?: (target: any) => boolean;
+  isMarshalable?: boolean | "json" | ((target: any) => boolean | "json");
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
 }
 ```
 
-- **`isMarshalable`**: A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled.
+- **`isMarshalable`**: Determines how marshalling will be done when sending objects from the host to the VM. **Make sure to set the marshalling to be the minimum necessary as it may reduce the security of your application.** [Please read the section on security above.](#security-warning)
+   - `"json"` (**default**, safety): Target object will be serialized as JSON in host and then parsed in VM. Functions and classes will be lost in the process.
+   - `false` (safety): Target object will not be always marshalled as `undefined`.
+   - `(target: any) => boolean | "json"` (recoomended): You can control marshalling mode for each objects. If you want to do marshalling, usually use this method. Allow partial marshalling by returning `true` only for some objects.
+   - `true` (**risky and not recommended**): Target object will be always marshaled. This setting may reduce security.
 - **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
 
 ```js
@@ -227,7 +231,7 @@ Almost same as `vm.executePendingJobs()`, but it converts and re-throws error ob
 Expose objects as global objects in the VM.
 
 By default, exposed objects are not synchronized between the host and the VM.
-If you want to sync an objects, first wrap the object with sync method, and then expose the wrapped object.
+If you want to sync an objects, first wrap the object with `sync` method, and then expose the wrapped object.
 
 #### `sync<T>(target: T): T`
 
@@ -265,7 +269,7 @@ Measure the complexity of an object as you traverse the field and prototype chai
 
 quickjs-emscripten can execute JS code safely, but it requires to deal with a lot of handles and lifetimes. Also, when destroying the VM, any un-destroyed handle will result in an error.
 
-quickjs-emscripten-sync will automatically manage all handles once generated by QuickJS VM in an Arena class. 
+quickjs-emscripten-sync will automatically manage all handles once generated by QuickJS VM in an Arena class.
 And it will automatically "marshal" objects as handles and "unmarshal" handles as objects to enable seamless data exchange between the browser and QuickJS. It recursively traverses the object properties and prototype chain to transform objects. A function is called after its arguments and this arg are automatically converted for the environment in which the function is defined. The return value will be automatically converted to match the environment of the caller.
 Most objects are wrapped by proxies during conversion, allowing "set" and "delete" operations on objects to be synchronized between the browser and QuickJS.
 
