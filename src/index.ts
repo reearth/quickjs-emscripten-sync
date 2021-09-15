@@ -193,16 +193,13 @@ export class Arena {
       return registered;
     }
 
-    const map = new VMMap(this.vm);
-    map.merge(this._map);
-
     const handle = marshal(this._wrap(target) ?? target, {
       vm: this.vm,
       unmarshal: (h) => this._unmarshal(h),
       isMarshalable: (t) =>
         this._options?.isMarshalable?.(this._unwrap(t)) ?? true,
-      find: (t) => this._registeredMap.get(t) ?? map.get(t),
-      pre: (t, h) => this._register(t, h, map)?.[1],
+      find: (t) => this._registeredMap.get(t) ?? this._map.get(t),
+      pre: (t, h) => this._register(t, h, this._map)?.[1],
       preApply: (target, that, args) => {
         const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
         // override sync mode of this object while calling the function
@@ -216,9 +213,6 @@ export class Arena {
       },
     });
 
-    this._map.merge(map);
-    map.clear();
-    map.dispose();
     return handle;
   }
 
