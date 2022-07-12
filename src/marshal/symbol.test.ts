@@ -1,9 +1,11 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import marshalSymbol from "./symbol";
 
 test("works", async () => {
   const vm = (await getQuickJS()).createVm();
-  const pre = jest.fn();
+  const pre = vi.fn();
   const sym = Symbol("foobar");
 
   expect(marshalSymbol(vm, {}, pre)).toBe(undefined);

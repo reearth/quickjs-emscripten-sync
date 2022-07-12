@@ -1,4 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { expect, test } from "vitest";
+
 import { eq } from "../vmutil";
 import marshalPrimitive from "./primitive";
 

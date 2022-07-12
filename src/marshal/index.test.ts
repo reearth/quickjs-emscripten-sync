@@ -1,4 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import VMMap from "../vmmap";
 import { instanceOf, call } from "../vmutil";
 import marshal from ".";
@@ -117,6 +119,7 @@ test("class", async () => {
     }
   }
 
+  expect(A.name).toBe("_A"); // class A's name is _A in vitest
   const handle = marshal(A);
   if (!map) throw new Error("map is undefined");
 
@@ -134,7 +137,7 @@ test("class", async () => {
 
   expect(vm.typeof(handle)).toBe("function");
   expect(vm.dump(vm.getProp(handle, "length"))).toBe(1);
-  expect(vm.dump(vm.getProp(handle, "name"))).toBe("A");
+  expect(vm.dump(vm.getProp(handle, "name"))).toBe("_A");
   const staticA = vm.getProp(handle, "a");
   expect(instanceOf(vm, staticA, handle)).toBe(true);
   expect(vm.dump(vm.getProp(staticA, "a"))).toBe(100);
@@ -172,7 +175,7 @@ test("class", async () => {
 });
 
 test("marshalable", async () => {
-  const isMarshalable = jest.fn((a: any) => a !== globalThis);
+  const isMarshalable = vi.fn((a: any) => a !== globalThis);
   const { vm, marshal, dispose } = await setup({
     isMarshalable,
   });
@@ -187,7 +190,7 @@ test("marshalable", async () => {
 });
 
 test("marshalable json", async () => {
-  const isMarshalable = jest.fn<"json", [any]>(() => "json");
+  const isMarshalable = vi.fn(() => "json" as const);
   const { vm, marshal, dispose } = await setup({
     isMarshalable,
   });

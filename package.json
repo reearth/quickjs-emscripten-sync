@@ -3,14 +3,18 @@
   "author": "rot1024",
   "version": "1.2.0",
   "license": "MIT",
-  "type": "module",
   "source": "./src/index.ts",
-  "main": "./dist/quickjs-emscripten-sync.cjs",
-  "module": "./dist/quickjs-emscripten-sync.module.js",
-  "exports": "./dist/quickjs-emscripten-sync.modern.js",
+  "main": "./dist/quickjs-emscripten-sync.umd.js",
+  "module": "./dist/quickjs-emscripten-sync.es.js",
   "unpkg": "./dist/quickjs-emscripten-sync.umd.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/quickjs-emscripten-sync.es.js",
+      "require": "./dist/quickjs-emscripten-sync.umd.js"
+    }
+  },
   "files": [
     "dist",
     "src"
@@ -19,18 +23,12 @@
     "node": ">=10"
   },
   "scripts": {
-    "start": "microbundle watch --tsconfig tsconfig.build.json",
-    "build": "microbundle --tsconfig tsconfig.build.json",
-    "test": "jest",
-    "lint": "tsc && eslint --ext '.ts,.tsx,.js' .",
-    "size": "size-limit",
-    "analyze": "size-limit --why"
+    "build": "tsc && vite build",
+    "test": "vitest",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "quickjs-emscripten": "*"
-  },
-  "jest": {
-    "preset": "ts-jest"
   },
   "prettier": {
     "printWidth": 80,
@@ -38,38 +36,17 @@
     "singleQuote": false,
     "trailingComma": "es5"
   },
-  "size-limit": [
-    {
-      "path": "dist/quickjs-emscripten-sync.cjs",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/quickjs-emscripten-sync.umd.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/quickjs-emscripten-sync.module.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/quickjs-emscripten-sync.modern.js",
-      "limit": "10 KB"
-    }
-  ],
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^5.0.3",
-    "@types/jest": "^27.0.1",
     "@typescript-eslint/eslint-plugin": "^4.31.1",
     "@typescript-eslint/parser": "^4.31.1",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^27.2.0",
-    "microbundle": "^0.13.3",
     "prettier": "^2.4.0",
     "quickjs-emscripten": "^0.13.0",
-    "size-limit": "^5.0.3",
-    "ts-jest": "^27.0.5",
-    "typescript": "^4.4.3"
+    "typescript": "^4.4.3",
+    "vite": "^2.9.14",
+    "vite-plugin-dts": "^1.2.1",
+    "vitest": "^0.18.0"
   }
 }

@@ -1,16 +1,17 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { json, eq, call } from "../vmutil";
 import marshalFunction from "./function";
+import { expect, test, vi } from "vitest";
 
 test("normal func", async () => {
   const vm = (await getQuickJS()).createVm();
 
-  const marshal = jest.fn((v) => json(vm, v));
-  const unmarshal = jest.fn((v) =>
+  const marshal = vi.fn((v) => json(vm, v));
+  const unmarshal = vi.fn((v) =>
     eq(vm, v, vm.global) ? undefined : vm.dump(v)
   );
-  const preMarshal = jest.fn((_, a) => a);
-  const innerfn = jest.fn((..._args: any[]) => "hoge");
+  const preMarshal = vi.fn((_, a) => a);
+  const innerfn = vi.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
 
   const handle = marshalFunction(vm, fn, marshal, unmarshal, preMarshal);
@@ -40,7 +41,7 @@ test("normal func", async () => {
 
 test("func which has properties", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v) => json(vm, v));
+  const marshal = vi.fn((v) => json(vm, v));
 
   const fn = () => {};
   fn.hoge = "foo";
@@ -118,7 +119,7 @@ test("preApply", async () => {
   };
   const unmarshal = (v: QuickJSHandle) =>
     vm.typeof(v) === "object" ? that : vm.dump(v);
-  const preApply = jest.fn(
+  const preApply = vi.fn(
     (a: Function, b: any, c: any[]) => a.apply(b, c) + "!"
   );
   const that = {};
@@ -152,7 +153,7 @@ test("preApply", async () => {
 
 test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
-  const f = jest.fn();
+  const f = vi.fn();
 
   expect(marshalFunction(vm, undefined, f, f, f)).toBe(undefined);
   expect(marshalFunction(vm, null, f, f, f)).toBe(undefined);

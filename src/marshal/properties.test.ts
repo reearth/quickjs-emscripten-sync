@@ -1,4 +1,6 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import { json } from "../vmutil";
 import marshalProperties from "./properties";
 
@@ -20,7 +22,7 @@ test("works", async () => {
   );
 
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((t) => {
+  const marshal = vi.fn((t) => {
     if (typeof t !== "function") return json(vm, t);
     const fn = vm.newFunction("", () => {});
     disposables.push(fn);
@@ -73,7 +75,7 @@ test("works", async () => {
 
 test("empty", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn();
+  const marshal = vi.fn();
   const handle = vm.newObject();
   const obj = {};
 

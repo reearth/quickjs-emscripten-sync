@@ -1,16 +1,15 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import VMMap from "../vmmap";
 import unmarshal from ".";
 
 test("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((): [QuickJSHandle, boolean] => [
-    vm.undefined,
-    false,
-  ]);
+  const marshal = vi.fn((): [QuickJSHandle, boolean] => [vm.undefined, false]);
   const map = new VMMap(vm);
-  const find = jest.fn((h) => map.getByHandle(h));
-  const pre = jest.fn((t: any, h: QuickJSHandle) => {
+  const find = vi.fn((h) => map.getByHandle(h));
+  const pre = vi.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
   });
@@ -91,7 +90,7 @@ test("func", async () => {
   const vm = (await getQuickJS()).createVm();
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((t: unknown): [QuickJSHandle, boolean] => {
+  const marshal = vi.fn((t: unknown): [QuickJSHandle, boolean] => {
     const h =
       t === undefined
         ? vm.undefined
@@ -111,8 +110,8 @@ test("func", async () => {
     vm.evalCode(`(function(a) { return a.a + "!"; })`)
   );
   const map = new VMMap(vm);
-  const find = jest.fn((h) => map.getByHandle(h));
-  const pre = jest.fn((t: any, h: QuickJSHandle) => {
+  const find = vi.fn((h) => map.getByHandle(h));
+  const pre = vi.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
   });
@@ -137,7 +136,7 @@ test("class", async () => {
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
   const map = new VMMap(vm);
-  const marshal = jest.fn((t: unknown): [QuickJSHandle, boolean] => {
+  const marshal = vi.fn((t: unknown): [QuickJSHandle, boolean] => {
     const h = vm.unwrapResult(
       vm.callFunction(jsonParse, vm.undefined, vm.newString(JSON.stringify(t)))
     );
@@ -160,8 +159,8 @@ test("class", async () => {
       Cls
     }`)
   );
-  const find = jest.fn((h) => map.getByHandle(h));
-  const pre = jest.fn((t: any, h: QuickJSHandle) => {
+  const find = vi.fn((h) => map.getByHandle(h));
+  const pre = vi.fn((t: any, h: QuickJSHandle) => {
     map.set(t, h);
     return t;
   });

@@ -1,4 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import { call } from "../vmutil";
 import marshalObject from "./object";
 
@@ -9,8 +11,8 @@ test("empty object", async () => {
   );
 
   const obj = {};
-  const marshal = jest.fn();
-  const preMarshal = jest.fn((_, a) => a);
+  const marshal = vi.fn();
+  const preMarshal = vi.fn((_, a) => a);
 
   const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -39,14 +41,14 @@ test("normal object", async () => {
   const entries = vm.unwrapResult(vm.evalCode(`Object.entries`));
 
   const obj = { a: 100, b: "hoge" };
-  const marshal = jest.fn((v) =>
+  const marshal = vi.fn((v) =>
     typeof v === "number"
       ? vm.newNumber(v)
       : typeof v === "string"
       ? vm.newString(v)
       : vm.null
   );
-  const preMarshal = jest.fn((_, a) => a);
+  const preMarshal = vi.fn((_, a) => a);
 
   const handle = marshalObject(vm, obj, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -81,14 +83,14 @@ test("array", async () => {
   const isArray = vm.unwrapResult(vm.evalCode(`Array.isArray`));
 
   const array = [1, "aa"];
-  const marshal = jest.fn((v) =>
+  const marshal = vi.fn((v) =>
     typeof v === "number"
       ? vm.newNumber(v)
       : typeof v === "string"
       ? vm.newString(v)
       : vm.null
   );
-  const preMarshal = jest.fn((_, a) => a);
+  const preMarshal = vi.fn((_, a) => a);
 
   const handle = marshalObject(vm, array, marshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
@@ -123,7 +125,7 @@ test("prototype", async () => {
   const proto = { a: 100 };
   const protoHandle = vm.newObject();
   vm.setProp(protoHandle, "a", vm.newNumber(100));
-  const preMarshal = jest.fn((_, a) => a);
+  const preMarshal = vi.fn((_, a) => a);
 
   const obj = Object.create(proto);
   obj.b = "hoge";

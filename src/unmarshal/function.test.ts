@@ -1,18 +1,17 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import { json } from "../vmutil";
 import unmarshalFunction from "./function";
 
 test("arrow function", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
-    json(vm, v),
-    false,
-  ]);
-  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => [
+  const marshal = vi.fn((v): [QuickJSHandle, boolean] => [json(vm, v), false]);
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [
     vm.dump(v),
     false,
   ]);
-  const preUnmarshal = jest.fn((a) => a);
+  const preUnmarshal = vi.fn((a) => a);
 
   const handle = vm.unwrapResult(vm.evalCode(`(a, b) => a + b`));
   const func = unmarshalFunction(vm, handle, marshal, unmarshal, preUnmarshal);
@@ -42,17 +41,17 @@ test("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const that = { a: 1 };
   const thatHandle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
-  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+  const marshal = vi.fn((v): [QuickJSHandle, boolean] => [
     v === that ? thatHandle : json(vm, v),
     false,
   ]);
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn((a) => a);
+  const preUnmarshal = vi.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (a) { return this.a + a; })`)
@@ -85,16 +84,16 @@ test("function", async () => {
 test("constructor", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+  const marshal = vi.fn((v): [QuickJSHandle, boolean] => [
     typeof v === "object" ? vm.undefined : json(vm, v),
     false,
   ]);
-  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn((a) => a);
+  const preUnmarshal = vi.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function (b) { this.a = b + 2; })`)
@@ -133,17 +132,17 @@ test("constructor", async () => {
 
 test("class", async () => {
   const vm = (await getQuickJS()).createVm();
-  const marshal = jest.fn((v): [QuickJSHandle, boolean] => [
+  const marshal = vi.fn((v): [QuickJSHandle, boolean] => [
     typeof v === "object" ? vm.undefined : json(vm, v),
     false,
   ]);
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => {
     const ty = vm.typeof(v);
     if (ty === "object" || ty === "function") disposables.push(v);
     return [vm.dump(v), false];
   });
-  const preUnmarshal = jest.fn((a) => a);
+  const preUnmarshal = vi.fn((a) => a);
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`)
@@ -182,7 +181,7 @@ test("class", async () => {
 
 test("undefined", async () => {
   const vm = (await getQuickJS()).createVm();
-  const f = jest.fn();
+  const f = vi.fn();
 
   expect(unmarshalFunction(vm, vm.undefined, f, f, f)).toEqual(undefined);
   expect(unmarshalFunction(vm, vm.true, f, f, f)).toEqual(undefined);

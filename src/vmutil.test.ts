@@ -1,4 +1,6 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import {
   call,
   consumeAll,
@@ -108,7 +110,7 @@ test("consumeAll", async () => {
   expect(
     consumeAll(
       handles,
-      jest.fn(() => o)
+      vi.fn(() => o)
     )
   ).toBe(o);
   expect(handles.every((h) => !h.alive)).toBe(true);
@@ -134,7 +136,7 @@ test("mayConsume", async () => {
   expect(
     mayConsume(
       [handle, false],
-      jest.fn<any, [QuickJSHandle]>(() => o)
+      vi.fn(() => o)
     )
   ).toBe(o);
   expect(handle.alive).toBe(true);
@@ -166,7 +168,7 @@ test("mayConsumeAll", async () => {
   expect(
     mayConsumeAll(
       handles,
-      jest.fn<any, QuickJSHandle[]>(() => o)
+      vi.fn((..._: any[]) => o)
     )
   ).toBe(o);
   expect(handles[0][0].alive).toBe(true);

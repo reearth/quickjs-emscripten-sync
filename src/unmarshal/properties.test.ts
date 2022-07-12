@@ -1,10 +1,12 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { expect, test, vi } from "vitest";
+
 import unmarshalProperties from "./properties";
 
 test("works", async () => {
   const vm = (await getQuickJS()).createVm();
   const disposables: QuickJSHandle[] = [];
-  const unmarshal = jest.fn((v: QuickJSHandle): [unknown, boolean] => {
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => {
     disposables.push(v);
     return [vm.typeof(v) === "function" ? () => {} : vm.dump(v), false];
   });

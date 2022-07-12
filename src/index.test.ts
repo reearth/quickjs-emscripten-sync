@@ -1,4 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
+import { describe, expect, test } from "vitest";
+
 import { Arena } from ".";
 
 describe("readme", () => {

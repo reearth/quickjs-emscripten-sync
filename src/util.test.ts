@@ -1,3 +1,4 @@
+import { expect, test, vi } from "vitest";
 import { isES2015Class, isObject, walkObject, complexity } from "./util";
 
 test("isES2015Class", () => {
@@ -25,7 +26,7 @@ test("isObject", () => {
 });
 
 test("walkObject", () => {
-  const cb = jest.fn();
+  const cb = vi.fn();
   const obj = { a: { b: 1, c: () => {} } };
   const set = new Set<any>([obj, obj.a, obj.a.c]);
   expect(walkObject(obj, cb)).toEqual(set);
