@@ -15,7 +15,7 @@ export function wrap<T = any>(
   marshal: (target: any) => [QuickJSHandle, boolean],
   syncMode?: (target: T) => SyncMode | undefined
 ): Wrapped<T> | undefined {
-  if (!isObject(target)) return undefined;
+  if (!isObject(target) || target instanceof Promise) return undefined;
   if (isWrapped(target, proxyKeySymbol)) return target;
 
   const rec = new Proxy(target as any, {

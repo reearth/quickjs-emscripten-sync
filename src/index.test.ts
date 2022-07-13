@@ -2,6 +2,7 @@ import { getQuickJS } from "quickjs-emscripten";
 import { describe, expect, test, vi } from "vitest";
 
 import { Arena } from ".";
+import { isWrapped } from "./wrapper";
 
 describe("readme", () => {
   test("first", async () => {
@@ -160,6 +161,52 @@ describe("evalCode", () => {
 
     arena.dispose();
     ctx.dispose();
+  });
+
+  test("promise", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const [promise, resolve] = arena.evalCode<
+      [Promise<string>, (d: string) => void]
+    >(`
+      let resolve;
+      const promise = new Promise(r => {
+        resolve = r;
+      }).then(d => d + "!");
+      [promise, resolve]
+    `);
+    expect(promise).instanceOf(Promise);
+    expect(isWrapped(arena._unwrapIfNotSynced(promise), arena._symbol)).toBe(
+      false
+    );
+
+    resolve("hoge");
+    expect(arena.executePendingJobs()).toBe(2);
+    expect(await promise).toBe("hoge!");
+
+    arena.dispose();
+    // ctx.dispose(); // reports an error
+  });
+
+  test("promise2", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const deferred: { resolve?: (s: string) => void } = {};
+    const promise = new Promise((resolve) => {
+      deferred.resolve = resolve;
+    });
+    const res = vi.fn();
+    arena.evalCode(`(p, r) => { p.then(d => r(d + "!")); }`)(promise, res);
+
+    deferred.resolve?.("hoge");
+    await promise;
+    expect(arena.executePendingJobs()).toBe(1);
+    expect(res).toBeCalledWith("hoge!");
+
+    arena.dispose();
+    // ctx.dispose(); // reports an error
   });
 });
 

@@ -42,6 +42,18 @@ test("wrap, unwrap, isWrapped", async () => {
     wrap(ctx, wrapped, proxyKeySymbol, proxyKeySymbolHandle, marshal, syncMode)
   ).toBe(wrapped);
 
+  // promise cannot be wrapped
+  expect(
+    wrap(
+      ctx,
+      Promise.resolve(1),
+      proxyKeySymbol,
+      proxyKeySymbolHandle,
+      marshal,
+      syncMode
+    )
+  ).toBeUndefined();
+
   proxyKeySymbolHandle.dispose();
   handle.dispose();
   ctx.dispose();

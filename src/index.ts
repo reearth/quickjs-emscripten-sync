@@ -63,12 +63,12 @@ export class Arena {
   _options?: Options;
 
   /** Constructs a new Arena instance. It requires a quickjs-emscripten context initialized with `quickjs.newContext()`. */
-  constructor(vm: QuickJSContext, options?: Options) {
-    this.context = vm;
+  constructor(ctx: QuickJSContext, options?: Options) {
+    this.context = ctx;
     this._options = options;
-    this._symbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
-    this._map = new VMMap(vm);
-    this._registeredMap = new VMMap(vm);
+    this._symbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
+    this._map = new VMMap(ctx);
+    this._registeredMap = new VMMap(ctx);
     this.registerAll(options?.registeredObjects ?? defaultRegisteredObjects);
   }
 
@@ -123,7 +123,8 @@ export class Arena {
     const wrapped = this._wrap(target);
     if (typeof wrapped === "undefined") return target;
     walkObject(wrapped, (v) => {
-      this._sync.add(this._unwrap(v));
+      const u = this._unwrap(v);
+      this._sync.add(u);
     });
     return wrapped;
   }
@@ -177,7 +178,8 @@ export class Arena {
 
   startSync(target: any) {
     if (!isObject(target)) return;
-    this._sync.add(this._unwrap(target));
+    const u = this._unwrap(target);
+    this._sync.add(u);
   }
 
   endSync(target: any) {
@@ -291,9 +293,11 @@ export class Arena {
       return;
     }
 
-    const wrappedT = this._wrap(t);
+    let wrappedT = this._wrap(t);
     const [wrappedH] = this._wrapHandle(h);
-    if (!wrappedT || !wrappedH) return; // t or h is not an object
+    const isPromise = wrappedT instanceof Promise;
+    if (!wrappedH || (!wrappedT && !isPromise)) return; // t or h is not an object
+    if (isPromise) wrappedT = t;
 
     const unwrappedT = this._unwrap(t);
     const [unwrappedH, unwrapped] = this._unwrapHandle(h);
@@ -334,7 +338,9 @@ export class Arena {
 
   _unwrapIfNotSynced = <T>(target: T): T => {
     const unwrapped = this._unwrap(target);
-    return this._sync.has(unwrapped) ? target : unwrapped;
+    return unwrapped instanceof Promise || !this._sync.has(unwrapped)
+      ? unwrapped
+      : target;
   };
 
   _wrapHandle(
