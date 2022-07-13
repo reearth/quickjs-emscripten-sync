@@ -1,6 +1,8 @@
 # quickjs-emscripten-sync
 
-We can build a plugin system that works safely in the web browser!
+[![CI](https://github.com/reearth/quickjs-emscripten-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/reearth/quickjs-emscripten-sync/actions/workflows/main.yml) [![codecov](https://codecov.io/gh/reearth/quickjs-emscripten-sync/branch/main/graph/badge.svg)](https://codecov.io/gh/reearth/quickjs-emscripten-sync)
+
+Build a secure plugin system in web browsers
 
 This library wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) and provides a way to sync object state between the browser and sandboxed QuickJS.
 
