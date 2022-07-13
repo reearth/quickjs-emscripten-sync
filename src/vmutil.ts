@@ -1,4 +1,34 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type {
+  Disposable,
+  QuickJSVm,
+  QuickJSHandle,
+  QuickJSDeferredPromise,
+} from "quickjs-emscripten";
+
+export function fn(
+  vm: QuickJSVm,
+  code: string
+): ((
+  thisArg: QuickJSHandle | undefined,
+  ...args: QuickJSHandle[]
+) => QuickJSHandle) &
+  Disposable {
+  const handle = vm.unwrapResult(vm.evalCode(code));
+  const f = (
+    thisArg: QuickJSHandle | undefined,
+    ...args: QuickJSHandle[]
+  ): any => {
+    return vm.unwrapResult(
+      vm.callFunction(handle, thisArg ?? vm.undefined, ...args)
+    );
+  };
+  f.dispose = () => handle.dispose();
+  f.alive = true;
+  Object.defineProperty(f, "alive", {
+    get: () => handle.alive,
+  });
+  return f;
+}
 
 export function call(
   vm: QuickJSVm,
@@ -6,12 +36,12 @@ export function call(
   thisArg?: QuickJSHandle,
   ...args: QuickJSHandle[]
 ): QuickJSHandle {
-  return vm.unwrapResult(vm.evalCode(code)).consume((f) => {
-    if (typeof thisArg === "undefined" && args.length === 0) return f;
-    return vm.unwrapResult(
-      vm.callFunction(f, thisArg ?? vm.undefined, ...args)
-    );
-  });
+  const f = fn(vm, code);
+  try {
+    return f(thisArg, ...args);
+  } finally {
+    f.dispose();
+  }
 }
 
 export function eq(vm: QuickJSVm, a: QuickJSHandle, b: QuickJSHandle): boolean {
@@ -82,4 +112,14 @@ export function mayConsumeAll<T, H extends QuickJSHandle[]>(
       }
     }
   }
+}
+
+function isQuickJSDeferredPromise(d: Disposable): d is QuickJSDeferredPromise {
+  return "handle" in d;
+}
+
+export function handleFrom(
+  d: QuickJSDeferredPromise | QuickJSHandle
+): QuickJSHandle {
+  return isQuickJSDeferredPromise(d) ? d.handle : d;
 }

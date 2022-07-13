@@ -2,6 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import {
+  fn,
   call,
   consumeAll,
   eq,
@@ -10,7 +11,30 @@ import {
   json,
   mayConsume,
   mayConsumeAll,
+  handleFrom,
 } from "./vmutil";
+
+test("fn", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const f = fn(vm, "(a, b) => a + b");
+  expect(vm.getNumber(f(undefined, vm.newNumber(1), vm.newNumber(2)))).toBe(3);
+
+  const obj = vm.newObject();
+  vm.setProp(obj, "a", vm.newNumber(2));
+  const f2 = fn(vm, "(function() { return this.a + 1; })");
+  expect(vm.getNumber(f2(obj))).toBe(3);
+
+  obj.dispose();
+  expect(f.alive).toBe(true);
+  expect(f2.alive).toBe(true);
+  f2.dispose();
+  f.dispose();
+  expect(f.alive).toBe(false);
+  expect(f2.alive).toBe(false);
+  vm.dispose();
+});
 
 test("call", async () => {
   const quickjs = await getQuickJS();
@@ -188,5 +212,20 @@ test("mayConsumeAll", async () => {
 
   handles[0][0].dispose();
   handles2[0][0].dispose();
+  vm.dispose();
+});
+
+test("handleFrom", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const handle = vm.newObject();
+  const promise = vm.newPromise();
+
+  expect(handleFrom(handle) === handle).toBe(true);
+  expect(handleFrom(promise) === promise.handle).toBe(true);
+
+  handle.dispose();
+  promise.dispose();
   vm.dispose();
 });

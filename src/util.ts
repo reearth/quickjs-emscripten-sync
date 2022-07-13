@@ -51,3 +51,18 @@ export function walkObject(
 export function complexity(value: any, max?: number): number {
   return walkObject(value, max ? (_, set) => set.size < max : undefined).size;
 }
+
+export function newDeferred<T = unknown>() {
+  let res: (v: T | PromiseLike<T>) => void = () => {};
+  let rej: (v: T | PromiseLike<T>) => void = () => {};
+  const promise = new Promise<T>((resolve, reject) => {
+    res = resolve;
+    rej = reject;
+  });
+
+  return {
+    promise,
+    resolve: res,
+    reject: rej,
+  };
+}

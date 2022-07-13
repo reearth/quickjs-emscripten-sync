@@ -1,8 +1,9 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { Disposable, getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import VMMap from "../vmmap";
 import unmarshal from ".";
+import { call, handleFrom, json } from "../vmutil";
 
 test("primitive, array, object", async () => {
   const vm = (await getQuickJS()).createVm();
@@ -86,7 +87,7 @@ test("object with symbol key", async () => {
   vm.dispose();
 });
 
-test("func", async () => {
+test("function", async () => {
   const vm = (await getQuickJS()).createVm();
   const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
   const disposables: QuickJSHandle[] = [];
@@ -129,6 +130,26 @@ test("func", async () => {
   disposables.forEach((d) => d.dispose());
   jsonParse.dispose();
   vm.dispose();
+});
+
+test("promise", async () => {
+  const { vm, unmarshal, dispose } = await setup();
+
+  const deferred = vm.newPromise();
+  const promise = unmarshal(deferred.handle);
+  deferred.resolve(vm.newString("resolved!"));
+  vm.executePendingJobs();
+  await expect(promise).resolves.toBe("resolved!");
+
+  const deferred2 = vm.newPromise();
+  const promise2 = unmarshal(deferred2.handle);
+  deferred2.reject(vm.newString("rejected!"));
+  vm.executePendingJobs();
+  await expect(promise2).rejects.toBe("rejected!");
+
+  deferred.dispose();
+  deferred2.dispose();
+  dispose();
 });
 
 test("class", async () => {
@@ -179,3 +200,41 @@ test("class", async () => {
   jsonParse.dispose();
   vm.dispose();
 });
+
+const setup = async () => {
+  const vm = (await getQuickJS()).createVm();
+  const map = new VMMap(vm);
+  const disposables: QuickJSHandle[] = [];
+
+  return {
+    vm,
+    map,
+    unmarshal: (handle: QuickJSHandle) =>
+      unmarshal(handle, {
+        find: (h) => map.getByHandle(h),
+        marshal: (target) => {
+          const handle = map.get(target);
+          if (handle) return [handle, false];
+
+          const handle2 =
+            typeof target === "function"
+              ? vm.newFunction(target.name, (...handles) => {
+                  target(...handles.map((h) => vm.dump(h)));
+                })
+              : json(vm, target);
+          map.set(target, handle2);
+          return [handle2, false];
+        },
+        pre: (t, h) => {
+          map.set(t, h);
+          return t;
+        },
+        vm,
+      }),
+    dispose: () => {
+      disposables.forEach((d) => d.dispose());
+      map.dispose();
+      vm.dispose();
+    },
+  };
+};

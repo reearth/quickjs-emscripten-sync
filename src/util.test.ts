@@ -1,5 +1,11 @@
 import { expect, test, vi } from "vitest";
-import { isES2015Class, isObject, walkObject, complexity } from "./util";
+import {
+  isES2015Class,
+  isObject,
+  walkObject,
+  complexity,
+  newDeferred,
+} from "./util";
 
 test("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);
@@ -52,4 +58,14 @@ test("complexity", () => {
   expect(complexity(class {})).toBe(2);
   expect(complexity({ a: {} })).toBe(2);
   expect(complexity({ a: {} }, 1)).toBe(1);
+});
+
+test("newDeferred", () => {
+  const deferred = newDeferred();
+  deferred.resolve("foo");
+  expect(deferred.promise).resolves.toBe("foo");
+
+  const deferred2 = newDeferred();
+  deferred2.reject("bar");
+  expect(deferred2.promise).rejects.toBe("bar");
 });

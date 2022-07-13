@@ -1,5 +1,9 @@
-import { QuickJSHandle, QuickJSVm } from "quickjs-emscripten";
-import {
+import type {
+  QuickJSDeferredPromise,
+  QuickJSHandle,
+  QuickJSVm,
+} from "quickjs-emscripten";
+import type {
   SuccessOrFail,
   VmCallResult,
 } from "quickjs-emscripten/dist/vm-interface";
@@ -16,6 +20,7 @@ import {
   json,
   consumeAll,
   mayConsume,
+  handleFrom,
 } from "./vmutil";
 import { defaultRegisteredObjects } from "./default";
 
@@ -214,11 +219,11 @@ export class Arena {
 
   _marshalPre = (
     t: unknown,
-    h: QuickJSHandle,
+    h: QuickJSHandle | QuickJSDeferredPromise,
     mode: true | "json" | undefined
   ): Wrapped<QuickJSHandle> | undefined => {
     if (mode === "json") return;
-    return this._register(t, h, this._map)?.[1];
+    return this._register(t, handleFrom(h), this._map)?.[1];
   };
 
   _marshalPreApply = (

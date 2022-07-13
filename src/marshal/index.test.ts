@@ -2,8 +2,9 @@ import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import VMMap from "../vmmap";
-import { instanceOf, call } from "../vmutil";
+import { instanceOf, call, handleFrom, fn } from "../vmutil";
 import marshal from ".";
+import { newDeferred } from "../util";
 
 test("primitive, array, object", async () => {
   const { vm, map, marshal, dispose } = await setup();
@@ -89,6 +90,42 @@ test("function", async () => {
   ).toBe(3);
 
   b.dispose();
+  dispose();
+});
+
+test("promise", async () => {
+  const { vm, marshal, dispose } = await setup();
+  const register = fn(
+    vm,
+    `promise => { promise.then(d => notify("resolve", d), d => notify("reject", d)); }`
+  );
+
+  let notified: any;
+  vm.newFunction("notify", (...handles) => {
+    notified = handles.map((h) => vm.dump(h));
+  }).consume((h) => {
+    vm.setProp(vm.global, "notify", h);
+  });
+
+  const deferred = newDeferred();
+  const handle = marshal(deferred.promise);
+  register(undefined, handle);
+
+  deferred.resolve("foo");
+  await deferred.promise;
+  expect(vm.unwrapResult(vm.executePendingJobs())).toBe(1);
+  expect(notified).toEqual(["resolve", "foo"]);
+
+  const deferred2 = newDeferred();
+  const handle2 = marshal(deferred2.promise);
+  register(undefined, handle2);
+
+  deferred2.reject("bar");
+  await expect(deferred2.promise).rejects.toBe("bar");
+  expect(vm.unwrapResult(vm.executePendingJobs())).toBe(1);
+  expect(notified).toEqual(["reject", "bar"]);
+
+  register.dispose();
   dispose();
 });
 
@@ -228,7 +265,8 @@ const setup = async ({
         vm,
         unmarshal: (h) => map.getByHandle(h) ?? vm.dump(h),
         isMarshalable,
-        pre: (t, h) => {
+        pre: (t, d) => {
+          const h = handleFrom(d);
           map.set(t, h);
           return h;
         },
