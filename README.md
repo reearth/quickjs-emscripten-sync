@@ -12,6 +12,7 @@ This library wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emsc
   - Functions
   - Classes and instances
   - Objects with prototypes and any property descriptors
+  - Promises
 - Expose objects as a global object in QuickJS
 - Marshaling limitation for specific objects
 - Register a pair of objects that will be considered the same between the browser and QuickJS
@@ -194,6 +195,7 @@ Options accepted:
 type Options = {
   isMarshalable?: boolean | "json" | ((target: any) => boolean | "json");
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
+  compat?: boolean;
 }
 ```
 
@@ -203,6 +205,7 @@ type Options = {
    - `(target: any) => boolean | "json"` (recoomended): You can control marshalling mode for each objects. If you want to do marshalling, usually use this method. Allow partial marshalling by returning `true` only for some objects.
    - `true` (**risky and not recommended**): Target object will be always marshaled. This setting may reduce security.
 - **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS context. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
+- **`compat`**: If you want to use quickjs-emscripten v0.15 or older, enable this option to automatically inject code to the VM for compatibility.
 
 ```js
 import { defaultRegisteredObjects } from "quickjs-emscripten-sync";

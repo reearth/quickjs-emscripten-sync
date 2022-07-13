@@ -46,6 +46,8 @@ export type Options = {
    * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
    */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
+  /** Compatibility with quickjs-emscripten prior to v0.15. Inject code for compatibility into context at Arena class initialization time. */
+  compat?: boolean;
 };
 
 /**
@@ -64,6 +66,14 @@ export class Arena {
 
   /** Constructs a new Arena instance. It requires a quickjs-emscripten context initialized with `quickjs.newContext()`. */
   constructor(ctx: QuickJSContext, options?: Options) {
+    if (options?.compat && !("runtime" in ctx)) {
+      (ctx as any).runtime = {
+        hasPendingJob: () => (ctx as any).hasPendingJob(),
+        executePendingJobs: (maxJobsToExecute?: number | void) =>
+          (ctx as any).executePendingJobs(maxJobsToExecute),
+      };
+    }
+
     this.context = ctx;
     this._options = options;
     this._symbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
