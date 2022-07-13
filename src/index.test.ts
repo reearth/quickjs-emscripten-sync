@@ -186,7 +186,7 @@ describe("evalCode", () => {
     expect(await promise).toBe("hoge!");
 
     arena.dispose();
-    // ctx.dispose(); // reports an error
+    ctx.dispose();
   });
 
   test("promise2", async () => {
@@ -198,7 +198,7 @@ describe("evalCode", () => {
       deferred.resolve = resolve;
     });
     const res = vi.fn();
-    arena.evalCode(`(p, r) => { p.then(d => r(d + "!")); }`)(promise, res);
+    arena.evalCode(`(p, r) => { p.then(d => { r(d + "!"); }); }`)(promise, res);
 
     deferred.resolve?.("hoge");
     await promise;
@@ -206,7 +206,7 @@ describe("evalCode", () => {
     expect(res).toBeCalledWith("hoge!");
 
     arena.dispose();
-    // ctx.dispose(); // reports an error
+    ctx.dispose();
   });
 });
 

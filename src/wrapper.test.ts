@@ -240,6 +240,13 @@ test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   );
   expect(wrapped2 === wrapped).toBe(true);
 
+  // promise cannot be wrapped
+  const deferred = ctx.newPromise();
+  expect(isHandleWrapped(ctx, deferred.handle, proxyKeySymbolHandle)).toBe(
+    true
+  );
+
+  deferred.dispose();
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();

@@ -15,6 +15,7 @@ export function wrap<T = any>(
   marshal: (target: any) => [QuickJSHandle, boolean],
   syncMode?: (target: T) => SyncMode | undefined
 ): Wrapped<T> | undefined {
+  // promise cannot be wrapped
   if (!isObject(target) || target instanceof Promise) return undefined;
   if (isWrapped(target, proxyKeySymbol)) return target;
 
@@ -181,7 +182,8 @@ export function isHandleWrapped(
   return !!ctx.dump(
     call(
       ctx,
-      `(a, s) => (typeof a === "object" && a !== null || typeof a === "function") && !!a[s]`,
+      // promise cannot be wrapped
+      `(a, s) => (a instanceof Promise) || (typeof a === "object" && a !== null || typeof a === "function") && !!a[s]`,
       undefined,
       handle,
       key

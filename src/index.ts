@@ -305,7 +305,7 @@ export class Arena {
 
     let wrappedT = this._wrap(t);
     const [wrappedH] = this._wrapHandle(h);
-    const isPromise = wrappedT instanceof Promise;
+    const isPromise = t instanceof Promise;
     if (!wrappedH || (!wrappedT && !isPromise)) return; // t or h is not an object
     if (isPromise) wrappedT = t;
 
