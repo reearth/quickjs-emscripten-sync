@@ -144,6 +144,10 @@ export default class VMMap {
     return typeof this.getByHandle(handle) !== "undefined";
   }
 
+  keys() {
+    return this._map1.keys();
+  }
+
   delete(key: any, dispose?: boolean) {
     const num = this._map1.get(key) ?? this._map2.get(key);
     if (typeof num === "undefined") return;

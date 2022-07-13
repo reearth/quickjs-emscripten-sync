@@ -3,17 +3,10 @@ import { expect, test, vi } from "vitest";
 
 import VMMap from "../vmmap";
 import unmarshal from ".";
-import { call, handleFrom, json } from "../vmutil";
+import { json } from "../vmutil";
 
 test("primitive, array, object", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const marshal = vi.fn((): [QuickJSHandle, boolean] => [vm.undefined, false]);
-  const map = new VMMap(vm);
-  const find = vi.fn((h) => map.getByHandle(h));
-  const pre = vi.fn((t: any, h: QuickJSHandle) => {
-    map.set(t, h);
-    return t;
-  });
+  const { vm, unmarshal, marshal, map, dispose } = await setup();
 
   const handle = vm.unwrapResult(
     vm.evalCode(`({
@@ -24,7 +17,7 @@ test("primitive, array, object", async () => {
       bbb: () => "bar"
     })`)
   );
-  const target = unmarshal(handle, { vm, pre, find, marshal });
+  const target = unmarshal(handle);
 
   expect(target).toEqual({
     hoge: "foo",
@@ -53,18 +46,11 @@ test("primitive, array, object", async () => {
   expect(marshal).toBeCalledTimes(1);
   expect(marshal).toBeCalledWith(target); // thisArg of target.bbb()
 
-  handle.dispose();
-  map.dispose();
-  vm.dispose();
+  dispose();
 });
 
 test("object with symbol key", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const map = new VMMap(vm);
-  const pre = (t: any, h: QuickJSHandle) => {
-    map.set(t, h);
-    return t;
-  };
+  const { vm, unmarshal, dispose } = await setup();
 
   const handle = vm.unwrapResult(
     vm.evalCode(`({
@@ -72,64 +58,33 @@ test("object with symbol key", async () => {
       [Symbol("a")]: "bar"
     })`)
   );
-  const target = unmarshal(handle, {
-    vm,
-    pre,
-    find: () => undefined,
-    marshal: () => [vm.undefined, false],
-  });
+  const target = unmarshal(handle);
 
   expect(target.hoge).toBe("foo");
   expect(target[Object.getOwnPropertySymbols(target)[0]]).toBe("bar");
 
-  handle.dispose();
-  map.dispose();
-  vm.dispose();
+  dispose();
 });
 
 test("function", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
-  const disposables: QuickJSHandle[] = [];
-  const marshal = vi.fn((t: unknown): [QuickJSHandle, boolean] => {
-    const h =
-      t === undefined
-        ? vm.undefined
-        : vm.unwrapResult(
-            vm.callFunction(
-              jsonParse,
-              vm.undefined,
-              vm.newString(JSON.stringify(t))
-            )
-          );
-    const ty = vm.typeof(h);
-    if (ty === "object" || ty === "function") disposables.push(h);
-    return [h, false];
-  });
+  const { vm, unmarshal, marshal, map, dispose } = await setup();
 
   const handle = vm.unwrapResult(
     vm.evalCode(`(function(a) { return a.a + "!"; })`)
   );
-  const map = new VMMap(vm);
-  const find = vi.fn((h) => map.getByHandle(h));
-  const pre = vi.fn((t: any, h: QuickJSHandle) => {
-    map.set(t, h);
-    return t;
-  });
-  const func = unmarshal(handle, { vm, find, pre, marshal });
+  const func = unmarshal(handle);
   const arg = { a: "hoge" };
   expect(func(arg)).toBe("hoge!");
   expect(marshal).toBeCalledTimes(2);
   expect(marshal).toBeCalledWith(undefined); // this
   expect(marshal).toBeCalledWith(arg); // arg
-  expect(map.size).toBe(2);
+  expect(map.size).toBe(3);
   expect(map.getByHandle(handle)).toBe(func);
+  expect(map.has(func)).toBe(true);
   expect(map.has(func.prototype)).toBe(true);
+  expect(map.has(arg)).toBe(true);
 
-  map.dispose();
-  disposables.forEach((d) => d.dispose());
-  jsonParse.dispose();
-  vm.dispose();
+  dispose();
 });
 
 test("promise", async () => {
@@ -153,18 +108,7 @@ test("promise", async () => {
 });
 
 test("class", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const jsonParse = vm.unwrapResult(vm.evalCode(`JSON.parse`));
-  const disposables: QuickJSHandle[] = [];
-  const map = new VMMap(vm);
-  const marshal = vi.fn((t: unknown): [QuickJSHandle, boolean] => {
-    const h = vm.unwrapResult(
-      vm.callFunction(jsonParse, vm.undefined, vm.newString(JSON.stringify(t)))
-    );
-    const ty = vm.typeof(h);
-    if (ty === "object" || ty === "function") disposables.push(h);
-    return [h, false];
-  });
+  const { vm, unmarshal, dispose } = await setup();
 
   const handle = vm.unwrapResult(
     vm.evalCode(`{
@@ -180,12 +124,7 @@ test("class", async () => {
       Cls
     }`)
   );
-  const find = vi.fn((h) => map.getByHandle(h));
-  const pre = vi.fn((t: any, h: QuickJSHandle) => {
-    map.set(t, h);
-    return t;
-  });
-  const Cls = unmarshal(handle, { vm, find, pre, marshal });
+  const Cls = unmarshal(handle);
 
   expect(Cls.hoge).toBe("foo");
   expect(Cls.foo instanceof Cls).toBe(true);
@@ -195,16 +134,27 @@ test("class", async () => {
   expect(cls.foo).toBe(4);
 
   handle.dispose();
-  map.dispose();
-  disposables.forEach((d) => d.dispose());
-  jsonParse.dispose();
-  vm.dispose();
+  dispose();
 });
 
 const setup = async () => {
   const vm = (await getQuickJS()).createVm();
   const map = new VMMap(vm);
   const disposables: QuickJSHandle[] = [];
+  const marshal = vi.fn((target: unknown): [QuickJSHandle, boolean] => {
+    const handle = map.get(target);
+    if (handle) return [handle, false];
+
+    const handle2 =
+      typeof target === "function"
+        ? vm.newFunction(target.name, (...handles) => {
+            target(...handles.map((h) => vm.dump(h)));
+          })
+        : json(vm, target);
+    const ty = vm.typeof(handle2);
+    if (ty === "object" || ty === "function") map.set(target, handle2);
+    return [handle2, false];
+  });
 
   return {
     vm,
@@ -212,25 +162,14 @@ const setup = async () => {
     unmarshal: (handle: QuickJSHandle) =>
       unmarshal(handle, {
         find: (h) => map.getByHandle(h),
-        marshal: (target) => {
-          const handle = map.get(target);
-          if (handle) return [handle, false];
-
-          const handle2 =
-            typeof target === "function"
-              ? vm.newFunction(target.name, (...handles) => {
-                  target(...handles.map((h) => vm.dump(h)));
-                })
-              : json(vm, target);
-          map.set(target, handle2);
-          return [handle2, false];
-        },
+        marshal,
         pre: (t, h) => {
           map.set(t, h);
           return t;
         },
         vm,
       }),
+    marshal,
     dispose: () => {
       disposables.forEach((d) => d.dispose());
       map.dispose();

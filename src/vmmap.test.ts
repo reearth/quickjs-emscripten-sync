@@ -57,6 +57,26 @@ test("getByHandle", async () => {
   vm.dispose();
 });
 
+test("keys", async () => {
+  const quickjs = await getQuickJS();
+  const vm = quickjs.createVm();
+
+  const target = {};
+  const handle = vm.newObject();
+  const handle2 = vm.newObject();
+
+  const map = new VMMap(vm);
+  expect(Array.from(map.keys())).toEqual([]);
+  map.set(target, handle);
+  expect(Array.from(map.keys())).toEqual([target]);
+  handle.dispose();
+  expect(Array.from(map.keys())).toEqual([target]);
+
+  handle2.dispose();
+  map.dispose();
+  vm.dispose();
+});
+
 test("delete", async () => {
   const quickjs = await getQuickJS();
   const vm = quickjs.createVm();
