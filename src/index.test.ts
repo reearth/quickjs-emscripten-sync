@@ -1,5 +1,5 @@
 import { getQuickJS } from "quickjs-emscripten";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { Arena } from ".";
 
@@ -24,14 +24,14 @@ describe("readme", () => {
     };
     arena.expose(exposed);
 
-    arena.evalCode(`cls instanceof Cls`); // returns true
-    arena.evalCode(`cls.field`); // returns 0
-    arena.evalCode(`cls.method()`); // returns 1
-    arena.evalCode(`cls.field`); // returns 1
+    expect(arena.evalCode(`cls instanceof Cls`)).toBe(true);
+    expect(arena.evalCode(`cls.field`)).toBe(0);
+    expect(arena.evalCode(`cls.method()`)).toBe(1);
+    expect(arena.evalCode(`cls.field`)).toBe(1);
 
-    arena.evalCode(`syncedCls.field`); // returns 0
-    exposed.syncedCls.method(); // returns 1
-    arena.evalCode(`syncedCls.field`); // returns 1
+    expect(arena.evalCode(`syncedCls.field`)).toBe(0);
+    expect(exposed.syncedCls.method()).toBe(1);
+    expect(arena.evalCode(`syncedCls.field`)).toBe(1);
 
     arena.dispose();
     vm.dispose();
@@ -47,12 +47,12 @@ describe("readme", () => {
     const arena = new Arena(vm, { isMarshalable: true });
 
     // expose objects as global objects in QuickJS VM
+    const log = vi.fn();
     arena.expose({
-      console: {
-        log: console.log,
-      },
+      console: { log },
     });
     arena.evalCode(`console.log("hello, world");`); // run console.log
+    expect(log).toBeCalledWith("hello, world");
     arena.evalCode(`1 + 1`); // 2
 
     // expose objects but also enable sync
@@ -61,9 +61,9 @@ describe("readme", () => {
 
     arena.evalCode(`data.hoge = "bar"`);
     // eval code and operations to exposed objects are automatically synced
-    console.log(data.hoge); // "bar"
+    expect(data.hoge).toBe("bar");
     data.hoge = "changed!";
-    console.log(arena.evalCode(`data.hoge`)); // "changed!"
+    expect(arena.evalCode(`data.hoge`)).toBe("changed!");
 
     // Don't forget calling arena.dispose() before disposing QuickJS VM!
     arena.dispose();
