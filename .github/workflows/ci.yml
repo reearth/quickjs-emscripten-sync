@@ -24,8 +24,14 @@ jobs:
       - name: Test
         run: yarn test --coverage
 
+      - name: codecov
+        uses: codecov/codecov-action@v2
+
       - name: Build
         run: yarn run build
 
-      - name: codecov
-        uses: codecov/codecov-action@v2
+      - name: Upload artifacts
+        uses: actions/upload-artifacts@v3
+        with:
+          name: dist
+          path: dist/**/*
