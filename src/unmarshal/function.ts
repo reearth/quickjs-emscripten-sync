@@ -1,16 +1,17 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import { call, mayConsumeAll } from "../vmutil";
 import unmarshalProperties from "./properties";
 
 export default function unmarshalFunction(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle,
-  // marshal returns handle and boolean indicates that the handle should be disposed after use
+  /** marshal returns handle and boolean indicates that the handle should be disposed after use */
   marshal: (value: unknown) => [QuickJSHandle, boolean],
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
   preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined
 ): Function | undefined {
-  if (vm.typeof(handle) !== "function") return;
+  if (ctx.typeof(handle) !== "function") return;
 
   const raw = function (this: any, ...args: any[]) {
     return mayConsumeAll(
@@ -19,7 +20,7 @@ export default function unmarshalFunction(
         if (new.target) {
           const [instance] = unmarshal(
             call(
-              vm,
+              ctx,
               `(Cls, ...args) => new Cls(...args)`,
               thisHandle,
               handle,
@@ -33,8 +34,8 @@ export default function unmarshalFunction(
           return this;
         }
 
-        const resultHandle = vm.unwrapResult(
-          vm.callFunction(handle, thisHandle, ...argHandles)
+        const resultHandle = ctx.unwrapResult(
+          ctx.callFunction(handle, thisHandle, ...argHandles)
         );
 
         const [result, alreadyExists] = unmarshal(resultHandle);
@@ -46,7 +47,7 @@ export default function unmarshalFunction(
   };
 
   const func = preUnmarshal(raw, handle) ?? raw;
-  unmarshalProperties(vm, handle, raw, unmarshal);
+  unmarshalProperties(ctx, handle, raw, unmarshal);
 
   return func;
 }

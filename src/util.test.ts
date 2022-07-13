@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+
 import {
   isES2015Class,
   isObject,

@@ -1,33 +1,34 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+
 import { json, eq, call } from "../vmutil";
 import marshalFunction from "./function";
 import { expect, test, vi } from "vitest";
 
 test("normal func", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const marshal = vi.fn((v) => json(vm, v));
+  const marshal = vi.fn((v) => json(ctx, v));
   const unmarshal = vi.fn((v) =>
-    eq(vm, v, vm.global) ? undefined : vm.dump(v)
+    eq(ctx, v, ctx.global) ? undefined : ctx.dump(v)
   );
   const preMarshal = vi.fn((_, a) => a);
   const innerfn = vi.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
 
-  const handle = marshalFunction(vm, fn, marshal, unmarshal, preMarshal);
+  const handle = marshalFunction(ctx, fn, marshal, unmarshal, preMarshal);
   if (!handle) throw new Error("handle is undefined");
 
   expect(marshal.mock.calls).toEqual([["length"], [0], ["name"], ["fn"]]); // fn.length, fn.name
   expect(preMarshal.mock.calls).toEqual([[fn, handle]]); // fn.length, fn.name
-  expect(vm.typeof(handle)).toBe("function");
-  expect(vm.dump(vm.getProp(handle, "length"))).toBe(0);
-  expect(vm.dump(vm.getProp(handle, "name"))).toBe("fn");
+  expect(ctx.typeof(handle)).toBe("function");
+  expect(ctx.dump(ctx.getProp(handle, "length"))).toBe(0);
+  expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("fn");
 
-  const result = vm.unwrapResult(
-    vm.callFunction(handle, vm.undefined, vm.newNumber(1), vm.true)
+  const result = ctx.unwrapResult(
+    ctx.callFunction(handle, ctx.undefined, ctx.newNumber(1), ctx.true)
   );
 
-  expect(vm.dump(result)).toBe("hoge");
+  expect(ctx.dump(result)).toBe("hoge");
   expect(innerfn).toBeCalledWith(1, true);
   expect(marshal).toHaveBeenLastCalledWith("hoge");
   expect(unmarshal).toBeCalledTimes(3);
@@ -36,48 +37,48 @@ test("normal func", async () => {
   expect(unmarshal.mock.results[2].value).toBe(true);
 
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("func which has properties", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const marshal = vi.fn((v) => json(vm, v));
+  const ctx = (await getQuickJS()).newContext();
+  const marshal = vi.fn((v) => json(ctx, v));
 
   const fn = () => {};
   fn.hoge = "foo";
 
   const handle = marshalFunction(
-    vm,
+    ctx,
     fn,
     marshal,
-    (v) => vm.dump(v),
+    (v) => ctx.dump(v),
     (_, a) => a
   );
   if (!handle) throw new Error("handle is undefined");
 
-  expect(vm.typeof(handle)).toBe("function");
-  expect(vm.dump(vm.getProp(handle, "hoge"))).toBe("foo");
+  expect(ctx.typeof(handle)).toBe("function");
+  expect(ctx.dump(ctx.getProp(handle, "hoge"))).toBe("foo");
   expect(marshal).toBeCalledWith("foo");
 
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("class", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const disposables: QuickJSHandle[] = [];
   const marshal = (v: any) => {
-    if (typeof v === "string") return vm.newString(v);
-    if (typeof v === "number") return vm.newNumber(v);
+    if (typeof v === "string") return ctx.newString(v);
+    if (typeof v === "number") return ctx.newNumber(v);
     if (typeof v === "object") {
-      const obj = vm.newObject();
+      const obj = ctx.newObject();
       disposables.push(obj);
       return obj;
     }
-    return vm.null;
+    return ctx.null;
   };
-  const unmarshal = (v: QuickJSHandle) => vm.dump(v);
+  const unmarshal = (v: QuickJSHandle) => ctx.dump(v);
 
   class A {
     a: number;
@@ -87,47 +88,49 @@ test("class", async () => {
     }
   }
 
-  const handle = marshalFunction(vm, A, marshal, unmarshal, (_, a) => a);
+  const handle = marshalFunction(ctx, A, marshal, unmarshal, (_, a) => a);
   if (!handle) throw new Error("handle is undefined");
 
-  const newA = vm.unwrapResult(vm.evalCode(`A => new A(100)`));
-  const instance = vm.unwrapResult(vm.callFunction(newA, vm.undefined, handle));
+  const newA = ctx.unwrapResult(ctx.evalCode(`A => new A(100)`));
+  const instance = ctx.unwrapResult(
+    ctx.callFunction(newA, ctx.undefined, handle)
+  );
 
-  expect(vm.dump(vm.getProp(handle, "name"))).toBe("A");
-  expect(vm.dump(vm.getProp(handle, "length"))).toBe(1);
+  expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("A");
+  expect(ctx.dump(ctx.getProp(handle, "length"))).toBe(1);
   expect(
-    vm.dump(
-      call(vm, "(cls, i) => i instanceof cls", undefined, handle, instance)
+    ctx.dump(
+      call(ctx, "(cls, i) => i instanceof cls", undefined, handle, instance)
     )
   ).toBe(true);
-  expect(vm.dump(vm.getProp(instance, "a"))).toBe(100);
+  expect(ctx.dump(ctx.getProp(instance, "a"))).toBe(100);
 
   disposables.forEach((d) => d.dispose());
   instance.dispose();
   newA.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("preApply", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const marshal = (v: any) => {
-    if (typeof v === "string") return vm.newString(v);
-    if (typeof v === "number") return vm.newNumber(v);
-    return vm.null;
+    if (typeof v === "string") return ctx.newString(v);
+    if (typeof v === "number") return ctx.newNumber(v);
+    return ctx.null;
   };
   const unmarshal = (v: QuickJSHandle) =>
-    vm.typeof(v) === "object" ? that : vm.dump(v);
+    ctx.typeof(v) === "object" ? that : ctx.dump(v);
   const preApply = vi.fn(
     (a: Function, b: any, c: any[]) => a.apply(b, c) + "!"
   );
   const that = {};
-  const thatHandle = vm.newObject();
+  const thatHandle = ctx.newObject();
 
   const fn = () => "foo";
   const handle = marshalFunction(
-    vm,
+    ctx,
     fn,
     marshal,
     unmarshal,
@@ -138,31 +141,36 @@ test("preApply", async () => {
 
   expect(preApply).toBeCalledTimes(0);
 
-  const res = vm.unwrapResult(
-    vm.callFunction(handle, thatHandle, vm.newNumber(100), vm.newString("hoge"))
+  const res = ctx.unwrapResult(
+    ctx.callFunction(
+      handle,
+      thatHandle,
+      ctx.newNumber(100),
+      ctx.newString("hoge")
+    )
   );
 
   expect(preApply).toBeCalledTimes(1);
   expect(preApply).toBeCalledWith(fn, that, [100, "hoge"]);
-  expect(vm.dump(res)).toBe("foo!");
+  expect(ctx.dump(res)).toBe("foo!");
 
   thatHandle.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("undefined", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const f = vi.fn();
 
-  expect(marshalFunction(vm, undefined, f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, null, f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, false, f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, true, f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, 1, f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, [1], f, f, f)).toBe(undefined);
-  expect(marshalFunction(vm, { a: 1 }, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, undefined, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, null, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, false, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, true, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, 1, f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, [1], f, f, f)).toBe(undefined);
+  expect(marshalFunction(ctx, { a: 1 }, f, f, f)).toBe(undefined);
   expect(f).toBeCalledTimes(0);
 
-  vm.dispose();
+  ctx.dispose();
 });

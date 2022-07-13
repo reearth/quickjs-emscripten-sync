@@ -4,16 +4,16 @@ import { expect, test, vi } from "vitest";
 import unmarshalProperties from "./properties";
 
 test("works", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const disposables: QuickJSHandle[] = [];
   const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => {
     disposables.push(v);
-    return [vm.typeof(v) === "function" ? () => {} : vm.dump(v), false];
+    return [ctx.typeof(v) === "function" ? () => {} : ctx.dump(v), false];
   });
   const obj = {};
 
-  const handle = vm.unwrapResult(
-    vm.evalCode(`{
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`{
       const obj = {};
       Object.defineProperties(obj, {
         a: { value: 1, writable: true, configurable: true, enumerable: true },
@@ -24,7 +24,7 @@ test("works", async () => {
     }`)
   );
 
-  unmarshalProperties(vm, handle, obj, unmarshal);
+  unmarshalProperties(ctx, handle, obj, unmarshal);
 
   expect(obj).toEqual({
     a: 1,
@@ -49,5 +49,5 @@ test("works", async () => {
 
   disposables.forEach((d) => d.dispose());
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });

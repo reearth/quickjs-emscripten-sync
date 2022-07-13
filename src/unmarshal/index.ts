@@ -1,4 +1,5 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import unmarshalFunction from "./function";
 import unmarshalObject from "./object";
 import unmarshalPrimitive from "./primitive";
@@ -6,7 +7,7 @@ import unmarshalPromise from "./promise";
 import unmarshalSymbol from "./symbol";
 
 export type Options = {
-  vm: QuickJSVm;
+  ctx: QuickJSContext;
   /** marshal returns handle and boolean indicates that the handle should be disposed after use */
   marshal: (target: unknown) => [QuickJSHandle, boolean];
   find: (handle: QuickJSHandle) => unknown | undefined;
@@ -22,10 +23,10 @@ function unmarshalInner(
   handle: QuickJSHandle,
   options: Options
 ): [any, boolean] {
-  const { vm, marshal, find, pre } = options;
+  const { ctx, marshal, find, pre } = options;
 
   {
-    const [target, ok] = unmarshalPrimitive(vm, handle);
+    const [target, ok] = unmarshalPrimitive(ctx, handle);
     if (ok) return [target, false];
   }
 
@@ -39,10 +40,10 @@ function unmarshalInner(
   const unmarshal2 = (h: QuickJSHandle) => unmarshalInner(h, options);
 
   const result =
-    unmarshalSymbol(vm, handle, pre) ??
-    unmarshalPromise(vm, handle, marshal, pre) ??
-    unmarshalFunction(vm, handle, marshal, unmarshal2, pre) ??
-    unmarshalObject(vm, handle, unmarshal2, pre);
+    unmarshalSymbol(ctx, handle, pre) ??
+    unmarshalPromise(ctx, handle, marshal, pre) ??
+    unmarshalFunction(ctx, handle, marshal, unmarshal2, pre) ??
+    unmarshalObject(ctx, handle, unmarshal2, pre);
 
   return [result, false];
 }

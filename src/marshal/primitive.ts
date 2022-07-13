@@ -1,29 +1,30 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 // import { call } from "../vmutil";
 
 export default function marshalPrimitive(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: unknown
 ): QuickJSHandle | undefined {
   switch (typeof target) {
     case "undefined":
-      return vm.undefined;
+      return ctx.undefined;
     case "number":
-      return vm.newNumber(target);
+      return ctx.newNumber(target);
     case "string":
-      return vm.newString(target);
+      return ctx.newString(target);
     case "boolean":
-      return target ? vm.true : vm.false;
+      return target ? ctx.true : ctx.false;
     case "object":
-      return target === null ? vm.null : undefined;
+      return target === null ? ctx.null : undefined;
 
     // BigInt is not supported by quickjs-emscripten
     // case "bigint":
     //   return call(
-    //     vm,
+    //     ctx,
     //     `s => BigInt(s)`,
     //     undefined,
-    //     vm.newString(target.toString())
+    //     ctx.newString(target.toString())
     //   );
   }
 

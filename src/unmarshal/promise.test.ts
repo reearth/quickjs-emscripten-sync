@@ -4,32 +4,32 @@ import { expect, test, vi } from "vitest";
 import unmarshalPromise from "./promise";
 
 const testPromise = (reject: boolean) => async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const disposables: Disposable[] = [];
   const marshal = vi.fn((v): [QuickJSHandle, boolean] => {
-    const f = vm.newFunction(v.name, (h) => {
-      v(vm.dump(h));
+    const f = ctx.newFunction(v.name, (h) => {
+      v(ctx.dump(h));
     });
     disposables.push(f);
     return [f, false];
   });
   const preUnmarshal = vi.fn((a) => a);
 
-  const deferred = vm.newPromise();
+  const deferred = ctx.newPromise();
   disposables.push(deferred);
-  const promise = unmarshalPromise(vm, deferred.handle, marshal, preUnmarshal);
+  const promise = unmarshalPromise(ctx, deferred.handle, marshal, preUnmarshal);
 
   expect(marshal).toBeCalledTimes(2);
   expect(preUnmarshal).toBeCalledTimes(1);
-  expect(vm.hasPendingJob()).toBe(false);
+  expect(ctx.runtime.hasPendingJob()).toBe(false);
 
   if (reject) {
-    deferred.reject(vm.newString("hoge"));
+    deferred.reject(ctx.newString("hoge"));
   } else {
-    deferred.resolve(vm.newString("hoge"));
+    deferred.resolve(ctx.newString("hoge"));
   }
-  expect(vm.hasPendingJob()).toBe(true);
-  expect(vm.unwrapResult(vm.executePendingJobs())).toBe(1);
+  expect(ctx.runtime.hasPendingJob()).toBe(true);
+  expect(ctx.unwrapResult(ctx.runtime.executePendingJobs())).toBe(1);
   if (reject) {
     expect(promise).rejects.toThrow("hoge");
   } else {
@@ -37,7 +37,7 @@ const testPromise = (reject: boolean) => async () => {
   }
 
   disposables.forEach((d) => d.dispose());
-  vm.dispose();
+  ctx.dispose();
 };
 
 test("resolve", testPromise(false));

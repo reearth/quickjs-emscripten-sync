@@ -1,22 +1,22 @@
-import type { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 import { newDeferred } from "../util";
 import { call, instanceOf } from "../vmutil";
 
 export default function unmarshalPromise<T = unknown>(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle,
   /** marshal returns handle and boolean indicates that the handle should be disposed after use */
   marshal: (value: unknown) => [QuickJSHandle, boolean],
   preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined
 ): Promise<T> | undefined {
-  if (!isPromiseHandle(handle)) return;
+  if (!isPromiseHandle(ctx, handle)) return;
 
   const deferred = newDeferred<T>();
   const [resHandle, resShouldBeDisposed] = marshal(deferred.resolve);
   const [rejHandle, rejShouldBeDisposed] = marshal(deferred.reject);
   call(
-    vm,
+    ctx,
     "(p, res, rej) => { p.then(res, rej); }",
     undefined,
     handle,
@@ -29,12 +29,10 @@ export default function unmarshalPromise<T = unknown>(
   return preUnmarshal(deferred.promise, handle) ?? deferred.promise;
 }
 
-function isPromiseHandle(handle: QuickJSHandle): boolean {
+function isPromiseHandle(ctx: QuickJSContext, handle: QuickJSHandle): boolean {
   if (!handle.owner) return false;
-  return handle.owner
-    .unwrapResult(handle.owner.evalCode("Promise"))
-    .consume((promise) => {
-      if (!handle.owner) return false;
-      return instanceOf(handle.owner, handle, promise);
-    });
+  return ctx.unwrapResult(ctx.evalCode("Promise")).consume((promise) => {
+    if (!handle.owner) return false;
+    return instanceOf(ctx, handle, promise);
+  });
 }

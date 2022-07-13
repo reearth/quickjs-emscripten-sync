@@ -1,12 +1,10 @@
 import type {
   QuickJSDeferredPromise,
   QuickJSHandle,
-  QuickJSVm,
-} from "quickjs-emscripten";
-import type {
+  QuickJSContext,
   SuccessOrFail,
   VmCallResult,
-} from "quickjs-emscripten/dist/vm-interface";
+} from "quickjs-emscripten";
 
 import VMMap from "./vmmap";
 import marshal from "./marshal";
@@ -54,7 +52,7 @@ export type Options = {
  * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
  */
 export class Arena {
-  vm: QuickJSVm;
+  context: QuickJSContext;
   _map: VMMap;
   _registeredMap: VMMap;
   _registeredMapDispose: Set<any> = new Set();
@@ -64,9 +62,9 @@ export class Arena {
   _symbolHandle: QuickJSHandle;
   _options?: Options;
 
-  /** Constructs a new Arena instance. It requires a quickjs-emscripten VM initialized with `quickjs.createVM()`. */
-  constructor(vm: QuickJSVm, options?: Options) {
-    this.vm = vm;
+  /** Constructs a new Arena instance. It requires a quickjs-emscripten context initialized with `quickjs.newContext()`. */
+  constructor(vm: QuickJSContext, options?: Options) {
+    this.context = vm;
     this._options = options;
     this._symbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
     this._map = new VMMap(vm);
@@ -87,7 +85,7 @@ export class Arena {
    * Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
    */
   evalCode<T = any>(code: string): T {
-    const handle = this.vm.evalCode(code);
+    const handle = this.context.evalCode(code);
     return this._unwrapResultAndUnmarshal(handle);
   }
 
@@ -95,7 +93,7 @@ export class Arena {
    * Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
    */
   executePendingJobs(maxJobsToExecute?: number): number {
-    const result = this.vm.executePendingJobs(maxJobsToExecute);
+    const result = this.context.runtime.executePendingJobs(maxJobsToExecute);
     if ("value" in result) {
       return result.value;
     }
@@ -111,7 +109,7 @@ export class Arena {
   expose(obj: { [k: string]: any }) {
     for (const [key, value] of Object.entries(obj)) {
       mayConsume(this._marshal(value), (handle) => {
-        this.vm.setProp(this.vm.global, key, handle);
+        this.context.setProp(this.context.global, key, handle);
       });
     }
   }
@@ -139,9 +137,9 @@ export class Arena {
     if (this._registeredMap.has(target)) return;
     const handle =
       typeof handleOrCode === "string"
-        ? this._unwrapResult(this.vm.evalCode(handleOrCode))
+        ? this._unwrapResult(this.context.evalCode(handleOrCode))
         : handleOrCode;
-    if (eq(this.vm, handle, this.vm.undefined)) return;
+    if (eq(this.context, handle, this.context.undefined)) return;
     if (typeof handleOrCode === "string") {
       this._registeredMapDispose.add(target);
     }
@@ -249,7 +247,7 @@ export class Arena {
     }
 
     const handle = marshal(this._wrap(target) ?? target, {
-      vm: this.vm,
+      ctx: this.context,
       unmarshal: this._unmarshal,
       isMarshalable: this._isMarshalable,
       find: this._marshalFind,
@@ -276,7 +274,7 @@ export class Arena {
 
     const [wrappedHandle] = this._wrapHandle(handle);
     return unmarshal(wrappedHandle ?? handle, {
-      vm: this.vm,
+      ctx: this.context,
       marshal: this._marshal,
       find: this._unmarshalFind,
       pre: this._preUnmarshal,
@@ -321,7 +319,7 @@ export class Arena {
 
   _wrap<T>(target: T): Wrapped<T> | undefined {
     return wrap(
-      this.vm,
+      this.context,
       target,
       this._symbol,
       this._symbolHandle,
@@ -343,7 +341,7 @@ export class Arena {
     handle: QuickJSHandle
   ): [Wrapped<QuickJSHandle> | undefined, boolean] {
     return wrapHandle(
-      this.vm,
+      this.context,
       handle,
       this._symbol,
       this._symbolHandle,
@@ -353,6 +351,6 @@ export class Arena {
   }
 
   _unwrapHandle(target: QuickJSHandle): [QuickJSHandle, boolean] {
-    return unwrapHandle(this.vm, target, this._symbolHandle);
+    return unwrapHandle(this.context, target, this._symbolHandle);
   }
 }

@@ -1,9 +1,10 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import { call } from "../vmutil";
 import marshalProperties from "./properties";
 
 export default function marshalObject(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: unknown,
   marshal: (target: unknown) => QuickJSHandle,
   preMarshal: (
@@ -13,7 +14,7 @@ export default function marshalObject(
 ): QuickJSHandle | undefined {
   if (typeof target !== "object" || target === null) return;
 
-  const raw = Array.isArray(target) ? vm.newArray() : vm.newObject();
+  const raw = Array.isArray(target) ? ctx.newArray() : ctx.newObject();
   const handle = preMarshal(target, raw) ?? raw;
 
   // prototype
@@ -24,7 +25,7 @@ export default function marshalObject(
       : undefined;
   if (prototypeHandle) {
     call(
-      vm,
+      ctx,
       "Object.setPrototypeOf",
       undefined,
       handle,
@@ -32,7 +33,7 @@ export default function marshalObject(
     ).dispose();
   }
 
-  marshalProperties(vm, target, raw, marshal);
+  marshalProperties(ctx, target, raw, marshal);
 
   return handle;
 }

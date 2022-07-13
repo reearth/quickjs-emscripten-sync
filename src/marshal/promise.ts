@@ -1,11 +1,11 @@
 import type {
   QuickJSDeferredPromise,
   QuickJSHandle,
-  QuickJSVm,
+  QuickJSContext,
 } from "quickjs-emscripten";
 
 export default function marshalPromise(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: unknown,
   marshal: (target: unknown) => QuickJSHandle,
   preMarshal: (
@@ -15,7 +15,7 @@ export default function marshalPromise(
 ) {
   if (!(target instanceof Promise)) return;
 
-  const promise = vm.newPromise();
+  const promise = ctx.newPromise();
 
   target.then(
     (d) => promise.resolve(marshal(d)),

@@ -4,15 +4,15 @@ import { expect, test, vi } from "vitest";
 import unmarshalSymbol from "./symbol";
 
 test("works", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const pre = vi.fn();
-  const obj = vm.newObject();
-  const handle = vm.unwrapResult(vm.evalCode(`Symbol("foobar")`));
+  const obj = ctx.newObject();
+  const handle = ctx.unwrapResult(ctx.evalCode(`Symbol("foobar")`));
 
-  expect(unmarshalSymbol(vm, obj, pre)).toBe(undefined);
+  expect(unmarshalSymbol(ctx, obj, pre)).toBe(undefined);
   expect(pre).toBeCalledTimes(0);
 
-  const sym = unmarshalSymbol(vm, handle, pre);
+  const sym = unmarshalSymbol(ctx, handle, pre);
   expect(typeof sym).toBe("symbol");
   expect((sym as any).description).toBe("foobar");
   expect(pre).toReturnTimes(1);
@@ -21,5 +21,5 @@ test("works", async () => {
 
   handle.dispose();
   obj.dispose();
-  vm.dispose();
+  ctx.dispose();
 });

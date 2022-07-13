@@ -13,8 +13,8 @@ describe("readme", () => {
       }
     }
 
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     // We can pass objects to the VM and run code safely
     const exposed = {
@@ -34,17 +34,17 @@ describe("readme", () => {
     expect(arena.evalCode(`syncedCls.field`)).toBe(1);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("usage", async () => {
     const quickjs = await getQuickJS();
-    const vm = quickjs.createVm();
+    const ctx = quickjs.newContext();
 
     // init Arena
     // ⚠️ Marshaling is opt-in for security reasons.
     // ⚠️ Be careful when activating marshalling.
-    const arena = new Arena(vm, { isMarshalable: true });
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     // expose objects as global objects in QuickJS VM
     const log = vi.fn();
@@ -67,14 +67,14 @@ describe("readme", () => {
 
     // Don't forget calling arena.dispose() before disposing QuickJS VM!
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 });
 
 describe("evalCode", () => {
   test("simple object and function", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const result = arena.evalCode(
       `({
@@ -106,23 +106,23 @@ describe("evalCode", () => {
     expect(result.e).toStrictEqual({ a: 1 });
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("Math", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const VMMath = arena.evalCode(`Math`) as Math;
     expect(VMMath.floor(1.1)).toBe(1);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("class", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const instance = arena.evalCode(`{
       globalThis.Cls = class D {
@@ -143,12 +143,12 @@ describe("evalCode", () => {
     expect(instance.a).toBe(102);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("obj", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const obj = arena.evalCode(`globalThis.AAA = { a: 1 }`);
 
@@ -159,14 +159,14 @@ describe("evalCode", () => {
     expect(arena.evalCode(`AAA.a`)).toBe(2);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 });
 
 describe("expose without sync", () => {
   test("simple object and function", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -197,12 +197,12 @@ describe("expose without sync", () => {
     expect(arena.evalCode(`obj.e`)).toStrictEqual({ a: 1 });
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("Math", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     arena.expose({ Math2: Math });
     expect(arena.evalCode(`Math`)).not.toBe(Math);
@@ -210,12 +210,12 @@ describe("expose without sync", () => {
     expect(arena.evalCode(`Math2.floor(1.1)`)).toBe(1);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("class", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     class D {
       a: number;
@@ -239,12 +239,12 @@ describe("expose without sync", () => {
     expect(arena.evalCode(`d.a`)).toBe(102);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("object and function", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -276,14 +276,14 @@ describe("expose without sync", () => {
     expect(arena.evalCode(`obj.a`)).toBe(100);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 });
 
 describe("expose with sync", () => {
   test("sync before expose", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -322,12 +322,12 @@ describe("expose with sync", () => {
     expect(arena.evalCode(`obj.a`)).toBe(100);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("sync after expose", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: true });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
 
     const obj = {
       a: 1,
@@ -367,13 +367,13 @@ describe("expose with sync", () => {
     expect(arena.evalCode(`obj.a`)).toBe(100);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 });
 
 test("evalCode -> expose", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, { isMarshalable: true });
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, { isMarshalable: true });
 
   const obj = arena.evalCode(`({ a: 1, b: 1 })`);
   arena.expose({ obj });
@@ -399,12 +399,12 @@ test("evalCode -> expose", async () => {
   expect(arena.evalCode(`obj.b`)).toBe(2);
 
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("expose -> evalCode", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, { isMarshalable: true });
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, { isMarshalable: true });
 
   const obj = { a: 1 };
   arena.expose({ obj });
@@ -421,12 +421,12 @@ test("expose -> evalCode", async () => {
   expect(arena.evalCode(`obj.a`)).toBe(3);
 
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("evalCode -> expose -> evalCode", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, { isMarshalable: true });
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, { isMarshalable: true });
 
   const obj = [1];
   expect(arena.evalCode("a => a[0] + 10")(obj)).toBe(11);
@@ -434,12 +434,12 @@ test("evalCode -> expose -> evalCode", async () => {
   expect(arena.evalCode("obj")).toBe(obj);
 
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("register and unregister", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, { isMarshalable: true, registeredObjects: [] });
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, { isMarshalable: true, registeredObjects: [] });
 
   arena.register(Math, `Math`);
   expect(arena.evalCode(`Math`)).toBe(Math);
@@ -454,12 +454,12 @@ test("register and unregister", async () => {
   expect(arena.evalCode(`new Error()`)).toBeInstanceOf(Error);
 
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("registeredObjects option", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const arena = new Arena(vm, {
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, {
     isMarshalable: true,
     registeredObjects: [[Symbol.iterator, "Symbol.iterator"]],
   });
@@ -470,13 +470,13 @@ test("registeredObjects option", async () => {
   );
 
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 describe("isMarshalable option", () => {
   test("false", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: false });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: false });
 
     expect(arena.evalCode(`s => s === undefined`)(globalThis)).toBe(true);
     expect(arena.evalCode(`s => s === undefined`)({})).toBe(true);
@@ -484,12 +484,12 @@ describe("isMarshalable option", () => {
     expect(arena.evalCode(`aaa`)).toBeUndefined();
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("json", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, { isMarshalable: "json" });
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: "json" });
 
     const obj = { a: () => {}, b: new Date(), c: [() => {}, 1] };
     const objJSON = { b: obj.b.toISOString(), c: [null, 1] };
@@ -501,12 +501,12 @@ describe("isMarshalable option", () => {
     expect(exposedObj).not.toBe(objJSON2);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 
   test("conditional", async () => {
-    const vm = (await getQuickJS()).createVm();
-    const arena = new Arena(vm, {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, {
       isMarshalable: (o) => o !== globalThis,
     });
 
@@ -518,6 +518,6 @@ describe("isMarshalable option", () => {
     expect(arena.evalCode(`bbb`)).toBe(obj);
 
     arena.dispose();
-    vm.dispose();
+    ctx.dispose();
   });
 });

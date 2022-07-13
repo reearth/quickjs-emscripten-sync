@@ -5,9 +5,9 @@ import { json } from "../vmutil";
 import marshalProperties from "./properties";
 
 test("works", async () => {
-  const vm = (await getQuickJS()).createVm();
-  const descTester = vm.unwrapResult(
-    vm.evalCode(`(obj, expected) => {
+  const ctx = (await getQuickJS()).newContext();
+  const descTester = ctx.unwrapResult(
+    ctx.evalCode(`(obj, expected) => {
       const descs = Object.getOwnPropertyDescriptors(obj);
       for (const [k, v] of Object.entries(expected)) {
         const d = descs[k];
@@ -23,13 +23,13 @@ test("works", async () => {
 
   const disposables: QuickJSHandle[] = [];
   const marshal = vi.fn((t) => {
-    if (typeof t !== "function") return json(vm, t);
-    const fn = vm.newFunction("", () => {});
+    if (typeof t !== "function") return json(ctx, t);
+    const fn = ctx.newFunction("", () => {});
     disposables.push(fn);
     return fn;
   });
 
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
   const obj = {};
   const bar = () => {};
   const fooGet = () => {};
@@ -49,7 +49,7 @@ test("works", async () => {
     },
   });
 
-  marshalProperties(vm, obj, handle, marshal);
+  marshalProperties(ctx, obj, handle, marshal);
   expect(marshal.mock.calls).toEqual([
     ["bar"],
     [bar],
@@ -58,30 +58,32 @@ test("works", async () => {
     [fooSet],
   ]);
 
-  const expected = vm.unwrapResult(
-    vm.evalCode(`({
+  const expected = ctx.unwrapResult(
+    ctx.evalCode(`({
       bar: { valueType: "function", getType: "undefined", setType: "undefined", enumerable: true, configurable: true, writable: true },
       foo: { valueType: "undefined", getType: "function", setType: "function", enumerable: false, configurable: true }
     })`)
   );
-  vm.unwrapResult(vm.callFunction(descTester, vm.undefined, handle, expected));
+  ctx.unwrapResult(
+    ctx.callFunction(descTester, ctx.undefined, handle, expected)
+  );
 
   expected.dispose();
   disposables.forEach((d) => d.dispose());
   handle.dispose();
   descTester.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("empty", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const marshal = vi.fn();
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
   const obj = {};
 
-  marshalProperties(vm, obj, handle, marshal);
+  marshalProperties(ctx, obj, handle, marshal);
   expect(marshal).toHaveBeenCalledTimes(0);
 
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });

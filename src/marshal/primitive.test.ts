@@ -5,32 +5,36 @@ import { eq } from "../vmutil";
 import marshalPrimitive from "./primitive";
 
 test("works", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  expect(marshalPrimitive(vm, undefined)).toBe(vm.undefined);
-  expect(marshalPrimitive(vm, null)).toBe(vm.null);
-  expect(marshalPrimitive(vm, false)).toBe(vm.false);
-  expect(marshalPrimitive(vm, true)).toBe(vm.true);
-  expect(eq(vm, marshalPrimitive(vm, 1) ?? vm.undefined, vm.newNumber(1))).toBe(
-    true
-  );
+  expect(marshalPrimitive(ctx, undefined)).toBe(ctx.undefined);
+  expect(marshalPrimitive(ctx, null)).toBe(ctx.null);
+  expect(marshalPrimitive(ctx, false)).toBe(ctx.false);
+  expect(marshalPrimitive(ctx, true)).toBe(ctx.true);
   expect(
-    eq(vm, marshalPrimitive(vm, -100) ?? vm.undefined, vm.newNumber(-100))
+    eq(ctx, marshalPrimitive(ctx, 1) ?? ctx.undefined, ctx.newNumber(1))
   ).toBe(true);
   expect(
-    eq(vm, marshalPrimitive(vm, "hoge") ?? vm.undefined, vm.newString("hoge"))
+    eq(ctx, marshalPrimitive(ctx, -100) ?? ctx.undefined, ctx.newNumber(-100))
+  ).toBe(true);
+  expect(
+    eq(
+      ctx,
+      marshalPrimitive(ctx, "hoge") ?? ctx.undefined,
+      ctx.newString("hoge")
+    )
   ).toBe(true);
   // expect(
   //   eq(
-  //     vm,
-  //     marshalPrimitive(vm, BigInt(1)) ?? vm.undefined,
-  //     vm.unwrapResult(vm.evalCode("BigInt(1)"))
+  //     ctx,
+  //     marshalPrimitive(ctx, BigInt(1)) ?? ctx.undefined,
+  //     ctx.unwrapResult(ctx.evalCode("BigInt(1)"))
   //   )
   // ).toBe(true);
 
-  expect(marshalPrimitive(vm, () => {})).toBe(undefined);
-  expect(marshalPrimitive(vm, [])).toBe(undefined);
-  expect(marshalPrimitive(vm, {})).toBe(undefined);
+  expect(marshalPrimitive(ctx, () => {})).toBe(undefined);
+  expect(marshalPrimitive(ctx, [])).toBe(undefined);
+  expect(marshalPrimitive(ctx, {})).toBe(undefined);
 
-  vm.dispose();
+  ctx.dispose();
 });

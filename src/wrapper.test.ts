@@ -13,11 +13,11 @@ import {
 import { call, eq, json } from "./vmutil";
 
 test("wrap, unwrap, isWrapped", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const marshal = vi.fn();
   const syncMode = vi.fn();
 
@@ -25,7 +25,7 @@ test("wrap, unwrap, isWrapped", async () => {
   expect(unwrap(target, proxyKeySymbol)).toBe(target);
 
   const wrapped = wrap(
-    vm,
+    ctx,
     target,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -39,25 +39,25 @@ test("wrap, unwrap, isWrapped", async () => {
   expect(unwrap(wrapped, proxyKeySymbol)).toBe(target);
 
   expect(
-    wrap(vm, wrapped, proxyKeySymbol, proxyKeySymbolHandle, marshal, syncMode)
+    wrap(ctx, wrapped, proxyKeySymbol, proxyKeySymbolHandle, marshal, syncMode)
   ).toBe(wrapped);
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("wrap without sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const marshal = vi.fn();
   const syncMode = vi.fn();
 
   const wrapped = wrap(
-    vm,
+    ctx,
     target,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -72,33 +72,33 @@ test("wrap without sync", async () => {
   wrapped.a = 2;
 
   expect(target.a).toBe(2);
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not synced
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(1); // not synced
   expect(marshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(1);
   expect(syncMode).toBeCalledWith(wrapped);
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 
   wrapped.a = 3; // no error even if vm is disposed
   expect(wrapped.a).toBe(3);
 });
 
 test("wrap with both sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 } as { a?: number };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const marshal = vi.fn((t: any): [QuickJSHandle, boolean] => [
-    t === wrapped ? handle : json(vm, t),
+    t === wrapped ? handle : json(ctx, t),
     false,
   ]);
   const syncMode = vi.fn((): SyncMode => "both");
 
   const wrapped = wrap(
-    vm,
+    ctx,
     target,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -113,7 +113,7 @@ test("wrap with both sync", async () => {
   wrapped.a = 2;
 
   expect(target.a).toBe(2);
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // synced
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(2); // synced
   expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(2);
   expect(marshal).toBeCalledWith("a");
@@ -122,30 +122,30 @@ test("wrap with both sync", async () => {
 
   delete wrapped.a;
   expect(target.a).toBe(undefined);
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(undefined); // synced
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(undefined); // synced
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 
   wrapped.a = 3; // no error even if vm is disposed
   expect(wrapped.a).toBe(3);
 });
 
 test("wrap with vm sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 } as { a?: number };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const marshal = vi.fn((t: any): [QuickJSHandle, boolean] => [
-    t === wrapped ? handle : json(vm, t),
+    t === wrapped ? handle : json(ctx, t),
     false,
   ]);
   const syncMode = vi.fn((): SyncMode => "vm");
 
   const wrapped = wrap(
-    vm,
+    ctx,
     target,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -160,7 +160,7 @@ test("wrap with vm sync", async () => {
   wrapped.a = 2;
 
   expect(target.a).toBe(1); // not set
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2); // synced
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(2); // synced
   expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(2);
   expect(marshal).toBeCalledWith("a");
@@ -169,33 +169,33 @@ test("wrap with vm sync", async () => {
 
   delete wrapped.a;
   expect(target.a).toBe(1); // not deleted
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(undefined); // synced
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(undefined); // synced
 
   proxyKeySymbolHandle.dispose();
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 
   wrapped.a = 3; // no error even after vm is disposed
   expect(wrapped.a).toBe(1); // vm mode cannot modify obj in host
 });
 
 test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn();
   const syncMode = vi.fn();
 
-  expect(isHandleWrapped(vm, handle, proxyKeySymbolHandle)).toBe(false);
-  expect(unwrapHandle(vm, handle, proxyKeySymbolHandle)).toEqual([
+  expect(isHandleWrapped(ctx, handle, proxyKeySymbolHandle)).toBe(false);
+  expect(unwrapHandle(ctx, handle, proxyKeySymbolHandle)).toEqual([
     handle,
     false,
   ]);
 
   const [wrapped, w] = wrapHandle(
-    vm,
+    ctx,
     handle,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -204,18 +204,22 @@ test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   );
   if (!wrapped || !w) throw new Error("wrapped is undefined");
 
-  expect(vm.dump(wrapped)).toEqual(target); // vm.dump does not support proxies
-  expect(vm.dump(vm.getProp(wrapped, "a"))).toBe(1);
-  expect(isHandleWrapped(vm, wrapped, proxyKeySymbolHandle)).toBe(true);
+  expect(ctx.dump(wrapped)).toEqual(target); // vm.dump does not support proxies
+  expect(ctx.dump(ctx.getProp(wrapped, "a"))).toBe(1);
+  expect(isHandleWrapped(ctx, wrapped, proxyKeySymbolHandle)).toBe(true);
 
-  const [handle2, unwrapped2] = unwrapHandle(vm, wrapped, proxyKeySymbolHandle);
+  const [handle2, unwrapped2] = unwrapHandle(
+    ctx,
+    wrapped,
+    proxyKeySymbolHandle
+  );
   expect(unwrapped2).toBe(true);
   handle2.consume((h) => {
-    expect(eq(vm, handle, h)).toBe(true);
+    expect(eq(ctx, handle, h)).toBe(true);
   });
 
   const [wrapped2] = wrapHandle(
-    vm,
+    ctx,
     wrapped,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -227,22 +231,22 @@ test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("wrapHandle without sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((h: QuickJSHandle) =>
-    wrapped && eq(vm, h, wrapped) ? target : vm.dump(h)
+    wrapped && eq(ctx, h, wrapped) ? target : ctx.dump(h)
   );
   const syncMode = vi.fn();
 
   const [wrapped, w] = wrapHandle(
-    vm,
+    ctx,
     handle,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -254,9 +258,9 @@ test("wrapHandle without sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  call(vm, `a => a.a = 2`, undefined, wrapped);
+  call(ctx, `a => a.a = 2`, undefined, wrapped);
 
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(1); // not synced
   expect(unmarshal).toBeCalledTimes(1);
   expect(unmarshal).toReturnWith(target);
@@ -266,22 +270,22 @@ test("wrapHandle without sync", async () => {
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("wrapHandle with both sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((h: QuickJSHandle) => {
-    return wrapped && eq(vm, h, wrapped) ? target : vm.dump(h);
+    return wrapped && eq(ctx, h, wrapped) ? target : ctx.dump(h);
   });
   const syncMode = vi.fn((): SyncMode => "both");
 
   const [wrapped, w] = wrapHandle(
-    vm,
+    ctx,
     handle,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -293,9 +297,9 @@ test("wrapHandle with both sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  call(vm, `a => a.a = 2`, undefined, wrapped);
+  call(ctx, `a => a.a = 2`, undefined, wrapped);
 
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2); // synced
   expect(unmarshal).toBeCalledTimes(4);
   expect(unmarshal).toReturnWith(target); // twice
@@ -304,13 +308,13 @@ test("wrapHandle with both sync", async () => {
   expect(syncMode).toBeCalledTimes(1);
   expect(syncMode).toBeCalledWith(target);
 
-  call(vm, `a => { delete a.a; }`, undefined, wrapped);
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(undefined);
+  call(ctx, `a => { delete a.a; }`, undefined, wrapped);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(undefined);
   expect(target.a).toBe(undefined); // synced
 
   // changing __proto__ will be blocked
-  call(vm, `a => { a.__proto__ = null; }`, undefined, wrapped);
-  expect(vm.dump(call(vm, `Object.getPrototypeOf`, undefined, handle))).toBe(
+  call(ctx, `a => { a.__proto__ = null; }`, undefined, wrapped);
+  expect(ctx.dump(call(ctx, `Object.getPrototypeOf`, undefined, handle))).toBe(
     null
   );
   expect(Object.getPrototypeOf(target)).toBe(Object.prototype); // not changed
@@ -318,22 +322,22 @@ test("wrapHandle with both sync", async () => {
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("wrapHandle with host sync", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((handle: QuickJSHandle) =>
-    wrapped && eq(vm, handle, wrapped) ? target : vm.dump(handle)
+    wrapped && eq(ctx, handle, wrapped) ? target : ctx.dump(handle)
   );
   const syncMode = vi.fn((): SyncMode => "host");
 
   const [wrapped, w] = wrapHandle(
-    vm,
+    ctx,
     handle,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -345,9 +349,9 @@ test("wrapHandle with host sync", async () => {
   expect(unmarshal).toBeCalledTimes(0);
   expect(syncMode).toBeCalledTimes(0);
 
-  call(vm, `a => a.a = 2`, undefined, wrapped);
+  call(ctx, `a => a.a = 2`, undefined, wrapped);
 
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(1); // not set
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(1); // not set
   expect(target.a).toBe(2); // synced
   expect(unmarshal).toBeCalledTimes(4);
   expect(unmarshal).toReturnWith(target); // twice
@@ -356,33 +360,33 @@ test("wrapHandle with host sync", async () => {
   expect(syncMode).toBeCalledTimes(1);
   expect(syncMode).toBeCalledWith(target);
 
-  call(vm, `a => delete a.a`, undefined, handle);
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(undefined);
+  call(ctx, `a => delete a.a`, undefined, handle);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(undefined);
   expect(target.a).toBe(2); // not synced
 
   wrapped.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("wrap and wrapHandle", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = { a: 1 };
-  const handle = vm.unwrapResult(vm.evalCode(`({ a: 1 })`));
+  const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1 })`));
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const marshal = vi.fn((t: any): [QuickJSHandle, boolean] => [
-    wrappedHandle && t === wrapped ? wrappedHandle : json(vm, t),
+    wrappedHandle && t === wrapped ? wrappedHandle : json(ctx, t),
     false,
   ]);
   const unmarshal = vi.fn((handle: QuickJSHandle) =>
-    wrappedHandle && eq(vm, handle, wrappedHandle) ? wrapped : vm.dump(handle)
+    wrappedHandle && eq(ctx, handle, wrappedHandle) ? wrapped : ctx.dump(handle)
   );
   const syncMode = vi.fn((): SyncMode => "both");
 
   const wrapped = wrap(
-    vm,
+    ctx,
     target,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -391,7 +395,7 @@ test("wrap and wrapHandle", async () => {
   );
   if (!wrapped) throw new Error("wrapped is undefined");
   const [wrappedHandle, w] = wrapHandle(
-    vm,
+    ctx,
     handle,
     proxyKeySymbol,
     proxyKeySymbolHandle,
@@ -400,9 +404,9 @@ test("wrap and wrapHandle", async () => {
   );
   if (!wrappedHandle || !w) throw new Error("wrappedHandle is undefined");
 
-  call(vm, `a => a.a = 2`, undefined, wrappedHandle);
+  call(ctx, `a => a.a = 2`, undefined, wrappedHandle);
 
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(2);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(2);
   expect(target.a).toBe(2);
   expect(marshal).toBeCalledTimes(0);
   expect(unmarshal).toBeCalledTimes(4);
@@ -415,7 +419,7 @@ test("wrap and wrapHandle", async () => {
 
   wrapped.a = 3;
 
-  expect(vm.dump(vm.getProp(handle, "a"))).toBe(3);
+  expect(ctx.dump(ctx.getProp(handle, "a"))).toBe(3);
   expect(target.a).toBe(3);
   expect(marshal).toBeCalledTimes(3);
   expect(marshal).toBeCalledWith(wrapped);
@@ -426,23 +430,23 @@ test("wrap and wrapHandle", async () => {
   wrappedHandle.dispose();
   handle.dispose();
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("non object", async () => {
-  const vm = (await getQuickJS()).createVm();
+  const ctx = (await getQuickJS()).newContext();
   const target = 1;
-  const handle = vm.newNumber(1);
+  const handle = ctx.newNumber(1);
   const proxyKeySymbol = Symbol();
-  const proxyKeySymbolHandle = vm.unwrapResult(vm.evalCode(`Symbol()`));
+  const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
 
   expect(
-    wrap(vm, target, proxyKeySymbol, proxyKeySymbolHandle, vi.fn(), vi.fn())
+    wrap(ctx, target, proxyKeySymbol, proxyKeySymbolHandle, vi.fn(), vi.fn())
   ).toBe(undefined);
 
   expect(
     wrapHandle(
-      vm,
+      ctx,
       handle,
       proxyKeySymbol,
       proxyKeySymbolHandle,
@@ -452,5 +456,5 @@ test("non object", async () => {
   ).toEqual([undefined, false]);
 
   proxyKeySymbolHandle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });

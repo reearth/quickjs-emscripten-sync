@@ -1,22 +1,22 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 export default function unmarshalPrimitive(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle
 ): [any, boolean] {
-  const ty = vm.typeof(handle);
+  const ty = ctx.typeof(handle);
   if (
     ty === "undefined" ||
     ty === "number" ||
     ty === "string" ||
     ty === "boolean"
   ) {
-    return [vm.dump(handle), true];
+    return [ctx.dump(handle), true];
   } else if (ty === "object") {
-    const isNull = vm
-      .unwrapResult(vm.evalCode("a => a === null"))
+    const isNull = ctx
+      .unwrapResult(ctx.evalCode("a => a === null"))
       .consume((n) =>
-        vm.dump(vm.unwrapResult(vm.callFunction(n, vm.undefined, handle)))
+        ctx.dump(ctx.unwrapResult(ctx.callFunction(n, ctx.undefined, handle)))
       );
     if (isNull) {
       return [null, true];
@@ -25,10 +25,10 @@ export default function unmarshalPrimitive(
 
   // BigInt is not supported by quickjs-emscripten
   // if (ty === "bigint") {
-  //   const str = vm
+  //   const str = ctx
   //     .getProp(handle, "toString")
   //     .consume(toString => vm.unwrapResult(vm.callFunction(toString, handle)))
-  //     .consume(str => vm.getString(str));
+  //     .consume(str => ctx.getString(str));
   //   const bi = BigInt(str);
   //   return [bi, true];
   // }

@@ -32,10 +32,10 @@ class Cls {
   }
 }
 
-const vm = (await getQuickJS()).createVm();
-const arena = new Arena(vm, { isMarshalable: true });
+const ctx = (await getQuickJS()).newContext();
+const arena = new Arena(ctx, { isMarshalable: true });
 
-// We can pass objects to the VM and run code safely
+// We can pass objects to the context and run code safely
 const exposed = {
   Cls,
   cls: new Cls(),
@@ -48,12 +48,12 @@ arena.evalCode(`cls.field`);          // returns 0
 arena.evalCode(`cls.method()`);       // returns 1
 arena.evalCode(`cls.field`);          // returns 1
 
-arena.evalCode(`syncedCls.field`);     // returns 0
-exposed.syncedCls.method();            // returns 1
-arena.evalCode(`syncedCls.field`);     // returns 1
+arena.evalCode(`syncedCls.field`);    // returns 0
+exposed.syncedCls.method();           // returns 1
+arena.evalCode(`syncedCls.field`);    // returns 1
 
 arena.dispose();
-vm.dispose();
+ctx.dispose();
 ```
 
 [Example code](src/index.test.ts) is available as the unit test code.
@@ -72,15 +72,14 @@ import { getQuickJS } from "quickjs-emscripten";
 import { Arena } from "quickjs-emscripten-sync";
 
 (async function() {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   // init Arena
   // ⚠️ Marshaling is opt-in for security reasons.
   // ⚠️ Be careful when activating marshalling.
-  const arena = new Arena(vm, { isMarshalable: true });
+  const arena = new Arena(ctx, { isMarshalable: true });
 
-  // expose objects as global objects in QuickJS VM
+  // expose objects as global objects in QuickJS context
   arena.expose({
     console: {
       log: console.log
@@ -99,15 +98,15 @@ import { Arena } from "quickjs-emscripten-sync";
   data.hoge = "changed!";
   console.log(arena.evalCode(`data.hoge`)); // "changed!"
 
-  // Don't forget calling arena.dispose() before disposing QuickJS VM!
+  // Don't forget calling arena.dispose() before disposing QuickJS context!
   arena.dispose();
-  vm.dispose();
+  ctx.dispose();
 })();
 ```
 
 ## Marshaling Limitations
 
-Objects are automatically converted when they cross between the host and the QuickJS VM. The conversion of a host's object to a VM handle is called marshaling, and the conversion of a VM handle to a host's object is called unmarshaling.
+Objects are automatically converted when they cross between the host and the QuickJS context. The conversion of a host's object to a handle is called marshaling, and the conversion of a handle to a host's object is called unmarshaling.
 
 And for marshalling, it is possible to control whether the conversion is performed or not.
 
@@ -116,7 +115,7 @@ For example, exposing the host's global object to QuickJS is very heavy and dang
 ```js
 import { Arena, complexity } from "quickjs-emscripten-sync";
 
-const arena = new Arena(vm, {
+const arena = new Arena(ctx, {
   isMarshalable: (target: any) => {
     // prevent passing globalThis to QuickJS
     if (target === window) return false;
@@ -183,11 +182,11 @@ By default, quickjs-emscripten-sync doesn't prevent any marshaling, even in such
 
 ### `Arena`
 
-The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
+The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS context.
 
-#### `new Arena(vm: QuickJSVm, options?: Options)`
+#### `new Arena(ctx: QuickJSContext, options?: Options)`
 
-Constructs a new Arena instance. It requires a quickjs-emscripten VM initialized with `quickjs.createVM()`.
+Constructs a new Arena instance. It requires a quickjs-emscripten context initialized with `quickjs.newContext()`.
 
 Options accepted:
 
@@ -198,17 +197,17 @@ type Options = {
 }
 ```
 
-- **`isMarshalable`**: Determines how marshalling will be done when sending objects from the host to the VM. **Make sure to set the marshalling to be the minimum necessary as it may reduce the security of your application.** [Please read the section on security above.](#security-warning)
-   - `"json"` (**default**, safety): Target object will be serialized as JSON in host and then parsed in VM. Functions and classes will be lost in the process.
+- **`isMarshalable`**: Determines how marshalling will be done when sending objects from the host to the context. **Make sure to set the marshalling to be the minimum necessary as it may reduce the security of your application.** [Please read the section on security above.](#security-warning)
+   - `"json"` (**default**, safety): Target object will be serialized as JSON in host and then parsed in context. Functions and classes will be lost in the process.
    - `false` (safety): Target object will not be always marshalled as `undefined`.
    - `(target: any) => boolean | "json"` (recoomended): You can control marshalling mode for each objects. If you want to do marshalling, usually use this method. Allow partial marshalling by returning `true` only for some objects.
    - `true` (**risky and not recommended**): Target object will be always marshaled. This setting may reduce security.
-- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
+- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS context. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
 
 ```js
 import { defaultRegisteredObjects } from "quickjs-emscripten-sync";
 
-const arena = new Arena(vm, {
+const arena = new Arena(ctx, {
   registeredObjects: [
     ...defaultRegisteredObjects,
     [Math, "Math"]
@@ -216,36 +215,36 @@ const arena = new Arena(vm, {
 });
 ```
 
-Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
+Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the context.
 
 #### `dispose()`
 
-Dispose of the arena and managed handles. This method won't dispose the VM itself, so the VM has to be disposed of manually.
+Dispose of the arena and managed handles. This method won't dispose the context itself, so the context has to be disposed of manually.
 
 #### `evalCode<T = any>(code: string): T | undefined`
 
-Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
+Evaluate JS code in the context and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
 
 #### `executePendingJobs(): number`
 
-Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
+Almost same as `ctx.runtime.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
 
 #### `expose(obj: { [k: string]: any })`
 
-Expose objects as global objects in the VM.
+Expose objects as global objects in the context.
 
-By default, exposed objects are not synchronized between the host and the VM.
+By default, exposed objects are not synchronized between the host and the context.
 If you want to sync an objects, first wrap the object with `sync` method, and then expose the wrapped object.
 
 #### `sync<T>(target: T): T`
 
-Enables sync for the object between the host and the VM and returns objects wrapped with proxies.
+Enables sync for the object between the host and the context and returns objects wrapped with proxies.
 
-The return value is necessary in order to reflect changes to the object from the host to the VM. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
+The return value is necessary in order to reflect changes to the object from the host to the context. Please note that setting a value in the field or deleting a field in the original object will not synchronize it.
 
 #### `register(target: any, code: string | QuickJSHandle)`
 
-Register a pair of objects that will be considered the same between the host and the QuickJS VM.
+Register a pair of objects that will be considered the same between the host and the QuickJS context.
 
 #### `unregisterAll(targets: Iterable<[any, string | QuickJSHandle]>)`
 
@@ -271,9 +270,9 @@ Measure the complexity of an object as you traverse the field and prototype chai
 
 ### How to work
 
-quickjs-emscripten can execute JS code safely, but it requires to deal with a lot of handles and lifetimes. Also, when destroying the VM, any un-destroyed handle will result in an error.
+quickjs-emscripten can execute JS code safely, but it requires to deal with a lot of handles and lifetimes. Also, when destroying the context, any un-destroyed handle will result in an error.
 
-quickjs-emscripten-sync will automatically manage all handles once generated by QuickJS VM in an Arena class.
+quickjs-emscripten-sync will automatically manage all handles once generated by QuickJS context in an Arena class.
 And it will automatically "marshal" objects as handles and "unmarshal" handles as objects to enable seamless data exchange between the browser and QuickJS. It recursively traverses the object properties and prototype chain to transform objects. A function is called after its arguments and this arg are automatically converted for the environment in which the function is defined. The return value will be automatically converted to match the environment of the caller.
 Most objects are wrapped by proxies during conversion, allowing "set" and "delete" operations on objects to be synchronized between the browser and QuickJS.
 
@@ -281,7 +280,7 @@ Most objects are wrapped by proxies during conversion, allowing "set" and "delet
 
 #### Class constructor
 
-When initializing a new instance, it is not possible to fully proxy this arg (a.k.a. `new.target`) inside the class constructor. Therefore, after the constructor call, the fields set for this are re-set to this on the VM side. Therefore, there may be some edge cases where the constructor may not work properly.
+When initializing a new instance, it is not possible to fully proxy this arg (a.k.a. `new.target`) inside the class constructor. Therefore, after the constructor call, the fields set for this are re-set to this on the context side. Therefore, there may be some edge cases where the constructor may not work properly.
 
 ```js
 class Cls {

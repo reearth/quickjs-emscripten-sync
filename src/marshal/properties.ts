@@ -1,13 +1,14 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import { call } from "../vmutil";
 
 export default function marshalProperties(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: object | Function,
   handle: QuickJSHandle,
   marshal: (target: unknown) => QuickJSHandle
 ): void {
-  const descs = vm.newObject();
+  const descs = ctx.newObject();
   const cb = (key: string | number | symbol, desc: PropertyDescriptor) => {
     const keyHandle = marshal(key);
     const valueHandle =
@@ -17,7 +18,7 @@ export default function marshalProperties(
     const setHandle =
       typeof desc.set === "undefined" ? undefined : marshal(desc.set);
 
-    vm.newObject().consume((descObj) => {
+    ctx.newObject().consume((descObj) => {
       Object.entries(desc).forEach(([k, v]) => {
         const v2 =
           k === "value"
@@ -27,13 +28,13 @@ export default function marshalProperties(
             : k === "set"
             ? setHandle
             : v
-            ? vm.true
-            : vm.false;
+            ? ctx.true
+            : ctx.false;
         if (v2) {
-          vm.setProp(descObj, k, v2);
+          ctx.setProp(descObj, k, v2);
         }
       });
-      vm.setProp(descs, keyHandle, descObj);
+      ctx.setProp(descs, keyHandle, descObj);
     });
   };
 
@@ -41,7 +42,7 @@ export default function marshalProperties(
   Object.entries(desc).forEach(([k, v]) => cb(k, v));
   Object.getOwnPropertySymbols(desc).forEach((k) => cb(k, (desc as any)[k]));
 
-  call(vm, `Object.defineProperties`, undefined, handle, descs).dispose();
+  call(ctx, `Object.defineProperties`, undefined, handle, descs).dispose();
 
   descs.dispose();
 }

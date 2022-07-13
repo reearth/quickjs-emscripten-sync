@@ -1,7 +1,7 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 export default class VMMap {
-  vm: QuickJSVm;
+  ctx: QuickJSContext;
   _map1: Map<any, number> = new Map();
   _map2: Map<any, number> = new Map();
   _map3: Map<number, QuickJSHandle> = new Map();
@@ -14,12 +14,12 @@ export default class VMMap {
   _mapClear: QuickJSHandle;
   _counter = 0;
 
-  constructor(vm: QuickJSVm) {
-    this.vm = vm;
+  constructor(ctx: QuickJSContext) {
+    this.ctx = ctx;
 
-    const result = vm
+    const result = ctx
       .unwrapResult(
-        vm.evalCode(`() => {
+        ctx.evalCode(`() => {
         const mapSym = new Map();
         let map = new WeakMap();
         let map2 = new WeakMap();
@@ -46,10 +46,10 @@ export default class VMMap {
       )
       .consume((fn) => this._call(fn, undefined));
 
-    this._mapGet = vm.getProp(result, "get");
-    this._mapSet = vm.getProp(result, "set");
-    this._mapDelete = vm.getProp(result, "delete");
-    this._mapClear = vm.getProp(result, "clear");
+    this._mapGet = ctx.getProp(result, "get");
+    this._mapSet = ctx.getProp(result, "set");
+    this._mapDelete = ctx.getProp(result, "delete");
+    this._mapClear = ctx.getProp(result, "clear");
 
     result.dispose();
 
@@ -84,13 +84,13 @@ export default class VMMap {
       }
     }
 
-    this.vm.newNumber(counter).consume((c) => {
+    this.ctx.newNumber(counter).consume((c) => {
       this._call(
         this._mapSet,
         undefined,
         handle,
         c,
-        handle2 ?? this.vm.undefined
+        handle2 ?? this.ctx.undefined
       );
     });
 
@@ -132,7 +132,7 @@ export default class VMMap {
       return;
     }
     return this._counterMap.get(
-      this.vm.getNumber(this._call(this._mapGet, undefined, handle))
+      this.ctx.getNumber(this._call(this._mapGet, undefined, handle))
     );
   }
 
@@ -267,10 +267,10 @@ export default class VMMap {
     thisArg: QuickJSHandle | undefined,
     ...args: QuickJSHandle[]
   ) {
-    return this.vm.unwrapResult(
-      this.vm.callFunction(
+    return this.ctx.unwrapResult(
+      this.ctx.callFunction(
         fn,
-        typeof thisArg === "undefined" ? this.vm.undefined : thisArg,
+        typeof thisArg === "undefined" ? this.ctx.undefined : thisArg,
         ...args
       )
     );

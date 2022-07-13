@@ -1,4 +1,5 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle, QuickJSContext } from "quickjs-emscripten";
+
 import { isObject } from "./util";
 import { call, isHandleObject, consumeAll, mayConsumeAll } from "./vmutil";
 
@@ -7,7 +8,7 @@ export type SyncMode = "both" | "vm" | "host";
 export type Wrapped<T> = T & { __qes_wrapped: never };
 
 export function wrap<T = any>(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: T,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
@@ -27,7 +28,7 @@ export function wrap<T = any>(
       if (
         (sync !== "vm" && !Reflect.set(obj, key, v, receiver)) ||
         sync === "host" ||
-        !vm.alive
+        !ctx.alive
       )
         return true;
 
@@ -35,14 +36,14 @@ export function wrap<T = any>(
         [marshal(receiver), marshal(key), marshal(v)],
         (receiverHandle, keyHandle, valueHandle) => {
           const [handle2, unwrapped] = unwrapHandle(
-            vm,
+            ctx,
             receiverHandle,
             proxyKeySymbolHandle
           );
           if (unwrapped) {
-            handle2.consume((h) => vm.setProp(h, keyHandle, valueHandle));
+            handle2.consume((h) => ctx.setProp(h, keyHandle, valueHandle));
           } else {
-            vm.setProp(handle2, keyHandle, valueHandle);
+            ctx.setProp(handle2, keyHandle, valueHandle);
           }
         }
       );
@@ -55,20 +56,20 @@ export function wrap<T = any>(
         [marshal(rec), marshal(key)],
         (recHandle, keyHandle) => {
           const [handle2, unwrapped] = unwrapHandle(
-            vm,
+            ctx,
             recHandle,
             proxyKeySymbolHandle
           );
 
           if (sync === "vm" || Reflect.deleteProperty(obj, key)) {
-            if (sync === "host" || !vm.alive) return true;
+            if (sync === "host" || !ctx.alive) return true;
 
             if (unwrapped) {
               handle2.consume((h) =>
-                call(vm, `(a, b) => delete a[b]`, undefined, h, keyHandle)
+                call(ctx, `(a, b) => delete a[b]`, undefined, h, keyHandle)
               );
             } else {
-              call(vm, `(a, b) => delete a[b]`, undefined, handle2, keyHandle);
+              call(ctx, `(a, b) => delete a[b]`, undefined, handle2, keyHandle);
             }
           }
           return true;
@@ -80,24 +81,25 @@ export function wrap<T = any>(
 }
 
 export function wrapHandle(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => any,
   syncMode?: (target: QuickJSHandle) => SyncMode | undefined
 ): [Wrapped<QuickJSHandle> | undefined, boolean] {
-  if (!isHandleObject(vm, handle)) return [undefined, false];
-  if (isHandleWrapped(vm, handle, proxyKeySymbolHandle)) return [handle, false];
+  if (!isHandleObject(ctx, handle)) return [undefined, false];
+  if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle))
+    return [handle, false];
 
   return consumeAll(
     [
-      vm.newFunction("getSyncMode", (h) => {
+      ctx.newFunction("getSyncMode", (h) => {
         const res = syncMode?.(unmarshal(h));
-        if (typeof res === "string") return vm.newString(res);
-        return vm.undefined;
+        if (typeof res === "string") return ctx.newString(res);
+        return ctx.undefined;
       }),
-      vm.newFunction("setter", (h, keyHandle, valueHandle) => {
+      ctx.newFunction("setter", (h, keyHandle, valueHandle) => {
         const target = unmarshal(h);
         if (!target) return;
         const key = unmarshal(keyHandle);
@@ -105,7 +107,7 @@ export function wrapHandle(
         const value = unmarshal(valueHandle);
         unwrap(target, proxyKeySymbol)[key] = value;
       }),
-      vm.newFunction("deleter", (h, keyHandle) => {
+      ctx.newFunction("deleter", (h, keyHandle) => {
         const target = unmarshal(h);
         if (!target) return;
         const key = unmarshal(keyHandle);
@@ -114,7 +116,7 @@ export function wrapHandle(
     ],
     (args) => [
       call(
-        vm,
+        ctx,
         `(target, sym, getSyncMode, setter, deleter) => {
           const rec =  new Proxy(target, {
             get(obj, key, receiver) {
@@ -159,12 +161,12 @@ export function unwrap<T>(obj: T, key: string | symbol): T {
 }
 
 export function unwrapHandle(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle,
   key: QuickJSHandle
 ): [QuickJSHandle, boolean] {
-  if (!isHandleWrapped(vm, handle, key)) return [handle, false];
-  return [vm.getProp(handle, key), true];
+  if (!isHandleWrapped(ctx, handle, key)) return [handle, false];
+  return [ctx.getProp(handle, key), true];
 }
 
 export function isWrapped<T>(obj: T, key: string | symbol): obj is Wrapped<T> {
@@ -172,13 +174,13 @@ export function isWrapped<T>(obj: T, key: string | symbol): obj is Wrapped<T> {
 }
 
 export function isHandleWrapped(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   handle: QuickJSHandle,
   key: QuickJSHandle
 ): handle is Wrapped<QuickJSHandle> {
-  return !!vm.dump(
+  return !!ctx.dump(
     call(
-      vm,
+      ctx,
       `(a, s) => (typeof a === "object" && a !== null || typeof a === "function") && !!a[s]`,
       undefined,
       handle,

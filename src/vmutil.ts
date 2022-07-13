@@ -1,25 +1,25 @@
 import type {
   Disposable,
-  QuickJSVm,
+  QuickJSContext,
   QuickJSHandle,
   QuickJSDeferredPromise,
 } from "quickjs-emscripten";
 
 export function fn(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   code: string
 ): ((
   thisArg: QuickJSHandle | undefined,
   ...args: QuickJSHandle[]
 ) => QuickJSHandle) &
   Disposable {
-  const handle = vm.unwrapResult(vm.evalCode(code));
+  const handle = ctx.unwrapResult(ctx.evalCode(code));
   const f = (
     thisArg: QuickJSHandle | undefined,
     ...args: QuickJSHandle[]
   ): any => {
-    return vm.unwrapResult(
-      vm.callFunction(handle, thisArg ?? vm.undefined, ...args)
+    return ctx.unwrapResult(
+      ctx.callFunction(handle, thisArg ?? ctx.undefined, ...args)
     );
   };
   f.dispose = () => handle.dispose();
@@ -31,12 +31,12 @@ export function fn(
 }
 
 export function call(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   code: string,
   thisArg?: QuickJSHandle,
   ...args: QuickJSHandle[]
 ): QuickJSHandle {
-  const f = fn(vm, code);
+  const f = fn(ctx, code);
   try {
     return f(thisArg, ...args);
   } finally {
@@ -44,22 +44,26 @@ export function call(
   }
 }
 
-export function eq(vm: QuickJSVm, a: QuickJSHandle, b: QuickJSHandle): boolean {
-  return vm.dump(call(vm, "Object.is", undefined, a, b));
-}
-
-export function instanceOf(
-  vm: QuickJSVm,
+export function eq(
+  ctx: QuickJSContext,
   a: QuickJSHandle,
   b: QuickJSHandle
 ): boolean {
-  return vm.dump(call(vm, "(a, b) => a instanceof b", undefined, a, b));
+  return ctx.dump(call(ctx, "Object.is", undefined, a, b));
 }
 
-export function isHandleObject(vm: QuickJSVm, a: QuickJSHandle): boolean {
-  return vm.dump(
+export function instanceOf(
+  ctx: QuickJSContext,
+  a: QuickJSHandle,
+  b: QuickJSHandle
+): boolean {
+  return ctx.dump(call(ctx, "(a, b) => a instanceof b", undefined, a, b));
+}
+
+export function isHandleObject(ctx: QuickJSContext, a: QuickJSHandle): boolean {
+  return ctx.dump(
     call(
-      vm,
+      ctx,
       `a => typeof a === "object" && a !== null || typeof a === "function"`,
       undefined,
       a
@@ -67,10 +71,10 @@ export function isHandleObject(vm: QuickJSVm, a: QuickJSHandle): boolean {
   );
 }
 
-export function json(vm: QuickJSVm, target: any): QuickJSHandle {
+export function json(ctx: QuickJSContext, target: any): QuickJSHandle {
   const json = JSON.stringify(target);
-  if (!json) return vm.undefined;
-  return call(vm, `JSON.parse`, undefined, vm.newString(json));
+  if (!json) return ctx.undefined;
+  return call(ctx, `JSON.parse`, undefined, ctx.newString(json));
 }
 
 export function consumeAll<T extends QuickJSHandle[], K>(

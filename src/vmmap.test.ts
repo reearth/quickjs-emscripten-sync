@@ -5,27 +5,24 @@ import VMMap from "./vmmap";
 import { call } from "./vmutil";
 
 test("init and dispose", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
-
-  const map = new VMMap(vm);
+  const ctx = (await getQuickJS()).newContext();
+  const map = new VMMap(ctx);
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("get and set", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   expect(map.get(target)).toBe(undefined);
   expect(map.set(target, handle)).toBe(true);
   expect(map.get(target)).toBe(handle);
   // a new handle that points to the same value
-  const handle2 = call(vm, `a => a`, undefined, handle);
+  const handle2 = call(ctx, `a => a`, undefined, handle);
   expect(map.set(target, handle2)).toBe(false);
 
   handle2.dispose();
@@ -33,18 +30,17 @@ test("get and set", async () => {
   expect(map.get(target)).toBe(undefined);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("getByHandle", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   expect(map.getByHandle(handle)).toBe(undefined);
   map.set(target, handle);
   expect(map.getByHandle(handle)).toBe(target);
@@ -54,18 +50,17 @@ test("getByHandle", async () => {
 
   handle2.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("keys", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   expect(Array.from(map.keys())).toEqual([]);
   map.set(target, handle);
   expect(Array.from(map.keys())).toEqual([target]);
@@ -74,17 +69,16 @@ test("keys", async () => {
 
   handle2.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("delete", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle);
   expect(map.get(target)).toBe(handle);
   map.delete({});
@@ -94,17 +88,16 @@ test("delete", async () => {
 
   handle.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("size", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   expect(map.size).toBe(0);
   map.set(target, handle);
   expect(map.size).toBe(1);
@@ -112,17 +105,16 @@ test("size", async () => {
   expect(map.size).toBe(1);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("clear", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
-  const handle = vm.newObject();
+  const handle = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle);
   expect(map.size).toBe(1);
   expect(map.get(target)).toBe(handle);
@@ -132,20 +124,19 @@ test("clear", async () => {
 
   handle.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("merge", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
-  const map2 = new VMMap(vm);
+  const map = new VMMap(ctx);
+  const map2 = new VMMap(ctx);
   map.set(target, handle, target2, handle2);
   expect(map.size).toBe(1);
   expect(map.get(target)).toBe(handle);
@@ -159,19 +150,18 @@ test("merge", async () => {
   map.clear();
   map.dispose();
   map2.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("iterator", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle, target2, handle2);
 
   const iter = map[Symbol.iterator]();
@@ -196,20 +186,19 @@ test("iterator", async () => {
   expect(i).toBe(1);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("get and set 2", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
-  const handle3 = call(vm, `a => a`, undefined, handle);
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
+  const handle3 = call(ctx, `a => a`, undefined, handle);
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
 
   map.set(target, handle, target2, handle2);
   expect(map.get(target)).toBe(handle);
@@ -228,19 +217,18 @@ test("get and set 2", async () => {
   expect(map.getByHandle(handle2)).toBe(undefined);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("delete 2", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
 
   map.set(target, handle, target2, handle2);
   expect(map.get(target)).toBe(handle);
@@ -258,19 +246,18 @@ test("delete 2", async () => {
   handle.dispose();
   handle2.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("delete 3", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
 
   map.set(target, handle, target2, handle2);
   expect(map.get(target)).toBe(handle);
@@ -288,19 +275,18 @@ test("delete 3", async () => {
   handle.dispose();
   handle2.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("delete with dispose", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle, target2, handle2);
   map.delete(target, true);
 
@@ -308,19 +294,18 @@ test("delete with dispose", async () => {
   expect(handle2.alive).toBe(false);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("deleteByHandle", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle, target2, handle2);
 
   expect(map.getByHandle(handle)).toBe(target);
@@ -334,19 +319,18 @@ test("deleteByHandle", async () => {
   handle.dispose();
   handle2.dispose();
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("deleteByHandle with dispose", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const target = {};
   const target2 = {};
-  const handle = vm.newObject();
-  const handle2 = vm.newObject();
+  const handle = ctx.newObject();
+  const handle2 = ctx.newObject();
 
-  const map = new VMMap(vm);
+  const map = new VMMap(ctx);
   map.set(target, handle, target2, handle2);
   map.deleteByHandle(handle, true);
 
@@ -354,5 +338,5 @@ test("deleteByHandle with dispose", async () => {
   expect(handle2.alive).toBe(false);
 
   map.dispose();
-  vm.dispose();
+  ctx.dispose();
 });

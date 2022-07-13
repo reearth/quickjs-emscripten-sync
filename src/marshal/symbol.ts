@@ -1,8 +1,9 @@
-import { QuickJSVm, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import { call } from "../vmutil";
 
 export default function marshalSymbol(
-  vm: QuickJSVm,
+  ctx: QuickJSContext,
   target: unknown,
   preMarshal: (
     target: unknown,
@@ -11,10 +12,10 @@ export default function marshalSymbol(
 ): QuickJSHandle | undefined {
   if (typeof target !== "symbol") return;
   const handle = call(
-    vm,
+    ctx,
     "d => Symbol(d)",
     undefined,
-    target.description ? vm.newString(target.description) : vm.undefined
+    target.description ? ctx.newString(target.description) : ctx.undefined
   );
   return preMarshal(target, handle) ?? handle;
 }

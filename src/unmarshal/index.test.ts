@@ -1,4 +1,4 @@
-import { Disposable, getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import VMMap from "../vmmap";
@@ -6,10 +6,10 @@ import unmarshal from ".";
 import { json } from "../vmutil";
 
 test("primitive, array, object", async () => {
-  const { vm, unmarshal, marshal, map, dispose } = await setup();
+  const { ctx, unmarshal, marshal, map, dispose } = await setup();
 
-  const handle = vm.unwrapResult(
-    vm.evalCode(`({
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`({
       hoge: "foo",
       foo: 1,
       aaa: [1, true, {}],
@@ -28,18 +28,19 @@ test("primitive, array, object", async () => {
   });
   expect(map.size).toBe(5);
   expect(map.getByHandle(handle)).toBe(target);
-  vm.getProp(handle, "aaa").consume((h) =>
-    expect(map.getByHandle(h)).toBe(target.aaa)
-  );
-  vm.getProp(handle, "aaa")
-    .consume((h) => vm.getProp(h, 2))
+  ctx
+    .getProp(handle, "aaa")
+    .consume((h) => expect(map.getByHandle(h)).toBe(target.aaa));
+  ctx
+    .getProp(handle, "aaa")
+    .consume((h) => ctx.getProp(h, 2))
     .consume((h) => expect(map.getByHandle(h)).toBe(target.aaa[2]));
-  vm.getProp(handle, "nested").consume((h) =>
-    expect(map.getByHandle(h)).toBe(target.nested)
-  );
-  vm.getProp(handle, "bbb").consume((h) =>
-    expect(map.getByHandle(h)).toBe(target.bbb)
-  );
+  ctx
+    .getProp(handle, "nested")
+    .consume((h) => expect(map.getByHandle(h)).toBe(target.nested));
+  ctx
+    .getProp(handle, "bbb")
+    .consume((h) => expect(map.getByHandle(h)).toBe(target.bbb));
 
   expect(marshal).toBeCalledTimes(0);
   expect(target.bbb()).toBe("bar");
@@ -50,10 +51,10 @@ test("primitive, array, object", async () => {
 });
 
 test("object with symbol key", async () => {
-  const { vm, unmarshal, dispose } = await setup();
+  const { ctx, unmarshal, dispose } = await setup();
 
-  const handle = vm.unwrapResult(
-    vm.evalCode(`({
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`({
       hoge: "foo",
       [Symbol("a")]: "bar"
     })`)
@@ -67,10 +68,10 @@ test("object with symbol key", async () => {
 });
 
 test("function", async () => {
-  const { vm, unmarshal, marshal, map, dispose } = await setup();
+  const { ctx, unmarshal, marshal, map, dispose } = await setup();
 
-  const handle = vm.unwrapResult(
-    vm.evalCode(`(function(a) { return a.a + "!"; })`)
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`(function(a) { return a.a + "!"; })`)
   );
   const func = unmarshal(handle);
   const arg = { a: "hoge" };
@@ -88,18 +89,18 @@ test("function", async () => {
 });
 
 test("promise", async () => {
-  const { vm, unmarshal, dispose } = await setup();
+  const { ctx, unmarshal, dispose } = await setup();
 
-  const deferred = vm.newPromise();
+  const deferred = ctx.newPromise();
   const promise = unmarshal(deferred.handle);
-  deferred.resolve(vm.newString("resolved!"));
-  vm.executePendingJobs();
+  deferred.resolve(ctx.newString("resolved!"));
+  ctx.runtime.executePendingJobs();
   await expect(promise).resolves.toBe("resolved!");
 
-  const deferred2 = vm.newPromise();
+  const deferred2 = ctx.newPromise();
   const promise2 = unmarshal(deferred2.handle);
-  deferred2.reject(vm.newString("rejected!"));
-  vm.executePendingJobs();
+  deferred2.reject(ctx.newString("rejected!"));
+  ctx.runtime.executePendingJobs();
   await expect(promise2).rejects.toBe("rejected!");
 
   deferred.dispose();
@@ -108,10 +109,10 @@ test("promise", async () => {
 });
 
 test("class", async () => {
-  const { vm, unmarshal, dispose } = await setup();
+  const { ctx, unmarshal, dispose } = await setup();
 
-  const handle = vm.unwrapResult(
-    vm.evalCode(`{
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`{
       class Cls {
         static hoge = "foo";
 
@@ -138,8 +139,8 @@ test("class", async () => {
 });
 
 const setup = async () => {
-  const vm = (await getQuickJS()).createVm();
-  const map = new VMMap(vm);
+  const ctx = (await getQuickJS()).newContext();
+  const map = new VMMap(ctx);
   const disposables: QuickJSHandle[] = [];
   const marshal = vi.fn((target: unknown): [QuickJSHandle, boolean] => {
     const handle = map.get(target);
@@ -147,17 +148,17 @@ const setup = async () => {
 
     const handle2 =
       typeof target === "function"
-        ? vm.newFunction(target.name, (...handles) => {
-            target(...handles.map((h) => vm.dump(h)));
+        ? ctx.newFunction(target.name, (...handles) => {
+            target(...handles.map((h) => ctx.dump(h)));
           })
-        : json(vm, target);
-    const ty = vm.typeof(handle2);
+        : json(ctx, target);
+    const ty = ctx.typeof(handle2);
     if (ty === "object" || ty === "function") map.set(target, handle2);
     return [handle2, false];
   });
 
   return {
-    vm,
+    ctx,
     map,
     unmarshal: (handle: QuickJSHandle) =>
       unmarshal(handle, {
@@ -167,13 +168,13 @@ const setup = async () => {
           map.set(t, h);
           return t;
         },
-        vm,
+        ctx: ctx,
       }),
     marshal,
     dispose: () => {
       disposables.forEach((d) => d.dispose());
       map.dispose();
-      vm.dispose();
+      ctx.dispose();
     },
   };
 };

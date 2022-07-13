@@ -15,16 +15,17 @@ import {
 } from "./vmutil";
 
 test("fn", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const f = fn(vm, "(a, b) => a + b");
-  expect(vm.getNumber(f(undefined, vm.newNumber(1), vm.newNumber(2)))).toBe(3);
+  const f = fn(ctx, "(a, b) => a + b");
+  expect(ctx.getNumber(f(undefined, ctx.newNumber(1), ctx.newNumber(2)))).toBe(
+    3
+  );
 
-  const obj = vm.newObject();
-  vm.setProp(obj, "a", vm.newNumber(2));
-  const f2 = fn(vm, "(function() { return this.a + 1; })");
-  expect(vm.getNumber(f2(obj))).toBe(3);
+  const obj = ctx.newObject();
+  ctx.setProp(obj, "a", ctx.newNumber(2));
+  const f2 = fn(ctx, "(function() { return this.a + 1; })");
+  expect(ctx.getNumber(f2(obj))).toBe(3);
 
   obj.dispose();
   expect(f.alive).toBe(true);
@@ -33,104 +34,104 @@ test("fn", async () => {
   f.dispose();
   expect(f.alive).toBe(false);
   expect(f2.alive).toBe(false);
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("call", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   expect(
-    vm.getNumber(
-      call(vm, "(a, b) => a + b", undefined, vm.newNumber(1), vm.newNumber(2))
+    ctx.getNumber(
+      call(
+        ctx,
+        "(a, b) => a + b",
+        undefined,
+        ctx.newNumber(1),
+        ctx.newNumber(2)
+      )
     )
   ).toBe(3);
 
-  const obj = vm.newObject();
-  vm.setProp(obj, "a", vm.newNumber(2));
+  const obj = ctx.newObject();
+  ctx.setProp(obj, "a", ctx.newNumber(2));
   expect(
-    vm.getNumber(call(vm, "(function() { return this.a + 1; })", obj))
+    ctx.getNumber(call(ctx, "(function() { return this.a + 1; })", obj))
   ).toBe(3);
 
   obj.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("eq", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const math1 = vm.unwrapResult(vm.evalCode("Math"));
-  const math2 = vm.unwrapResult(vm.evalCode("Math"));
-  const obj = vm.newObject();
+  const math1 = ctx.unwrapResult(ctx.evalCode("Math"));
+  const math2 = ctx.unwrapResult(ctx.evalCode("Math"));
+  const obj = ctx.newObject();
   expect(math1 === math2).toBe(false);
-  expect(eq(vm, math1, math2)).toBe(true);
-  expect(eq(vm, math1, obj)).toBe(false);
+  expect(eq(ctx, math1, math2)).toBe(true);
+  expect(eq(ctx, math1, obj)).toBe(false);
 
   math1.dispose();
   math2.dispose();
   obj.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("instanceOf", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const pr = vm.unwrapResult(vm.evalCode("Promise"));
-  const func = vm.unwrapResult(vm.evalCode("(function() {})"));
-  const p = vm.unwrapResult(vm.evalCode("Promise.resolve()"));
-  expect(instanceOf(vm, p, pr)).toBe(true);
-  expect(instanceOf(vm, p, func)).toBe(false);
+  const pr = ctx.unwrapResult(ctx.evalCode("Promise"));
+  const func = ctx.unwrapResult(ctx.evalCode("(function() {})"));
+  const p = ctx.unwrapResult(ctx.evalCode("Promise.resolve()"));
+  expect(instanceOf(ctx, p, pr)).toBe(true);
+  expect(instanceOf(ctx, p, func)).toBe(false);
 
   p.dispose();
   pr.dispose();
   func.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("isHandleObject", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const obj = vm.newObject();
-  expect(isHandleObject(vm, obj)).toBe(true);
-  const func = vm.newFunction("", () => {});
-  expect(isHandleObject(vm, func)).toBe(true);
-  const array = vm.newArray();
-  expect(isHandleObject(vm, array)).toBe(true);
-  const num = vm.newNumber(NaN);
-  expect(isHandleObject(vm, num)).toBe(false);
+  const obj = ctx.newObject();
+  expect(isHandleObject(ctx, obj)).toBe(true);
+  const func = ctx.newFunction("", () => {});
+  expect(isHandleObject(ctx, func)).toBe(true);
+  const array = ctx.newArray();
+  expect(isHandleObject(ctx, array)).toBe(true);
+  const num = ctx.newNumber(NaN);
+  expect(isHandleObject(ctx, num)).toBe(false);
 
   obj.dispose();
   func.dispose();
   array.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("json", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const handle = json(vm, {
+  const handle = json(ctx, {
     hoge: { foo: ["bar"] },
   });
   expect(
-    vm.dump(call(vm, `a => a.hoge.foo[0] === "bar"`, undefined, handle))
+    ctx.dump(call(ctx, `a => a.hoge.foo[0] === "bar"`, undefined, handle))
   ).toBe(true);
-  expect(vm.typeof(json(vm, undefined))).toBe("undefined");
+  expect(ctx.typeof(json(ctx, undefined))).toBe("undefined");
 
   handle.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("consumeAll", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const o = {};
 
-  const handles = [vm.newObject(), vm.newObject()];
+  const handles = [ctx.newObject(), ctx.newObject()];
   expect(
     consumeAll(
       handles,
@@ -139,7 +140,7 @@ test("consumeAll", async () => {
   ).toBe(o);
   expect(handles.every((h) => !h.alive)).toBe(true);
 
-  const handles2 = [vm.newObject(), vm.newObject()];
+  const handles2 = [ctx.newObject(), ctx.newObject()];
   expect(() =>
     consumeAll(handles2, () => {
       throw new Error("qes error");
@@ -147,16 +148,15 @@ test("consumeAll", async () => {
   ).toThrow("qes error");
   expect(handles2.every((h) => !h.alive)).toBe(true);
 
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("mayConsume", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const o = {};
 
-  const handle = vm.newArray();
+  const handle = ctx.newArray();
   expect(
     mayConsume(
       [handle, false],
@@ -168,7 +168,7 @@ test("mayConsume", async () => {
   mayConsume([handle, true], () => {});
   expect(handle.alive).toBe(false);
 
-  const handle2 = vm.newArray();
+  const handle2 = ctx.newArray();
   expect(() =>
     mayConsume([handle2, true], () => {
       throw new Error("qes error");
@@ -176,18 +176,17 @@ test("mayConsume", async () => {
   ).toThrow("qes error");
   expect(handle.alive).toBe(false);
 
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("mayConsumeAll", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
   const o = {};
 
   const handles: [QuickJSHandle, boolean][] = [
-    [vm.newObject(), false],
-    [vm.newObject(), true],
+    [ctx.newObject(), false],
+    [ctx.newObject(), true],
   ];
   expect(
     mayConsumeAll(
@@ -199,8 +198,8 @@ test("mayConsumeAll", async () => {
   expect(handles[1][0].alive).toBe(false);
 
   const handles2: [QuickJSHandle, boolean][] = [
-    [vm.newObject(), false],
-    [vm.newObject(), true],
+    [ctx.newObject(), false],
+    [ctx.newObject(), true],
   ];
   expect(() =>
     mayConsumeAll(handles2, (..._args) => {
@@ -212,20 +211,19 @@ test("mayConsumeAll", async () => {
 
   handles[0][0].dispose();
   handles2[0][0].dispose();
-  vm.dispose();
+  ctx.dispose();
 });
 
 test("handleFrom", async () => {
-  const quickjs = await getQuickJS();
-  const vm = quickjs.createVm();
+  const ctx = (await getQuickJS()).newContext();
 
-  const handle = vm.newObject();
-  const promise = vm.newPromise();
+  const handle = ctx.newObject();
+  const promise = ctx.newPromise();
 
   expect(handleFrom(handle) === handle).toBe(true);
   expect(handleFrom(promise) === promise.handle).toBe(true);
 
   handle.dispose();
   promise.dispose();
-  vm.dispose();
+  ctx.dispose();
 });
