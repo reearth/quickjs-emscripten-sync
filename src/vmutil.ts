@@ -60,13 +60,13 @@ export function instanceOf(
   return ctx.dump(call(ctx, "(a, b) => a instanceof b", undefined, a, b));
 }
 
-export function isHandleObject(ctx: QuickJSContext, a: QuickJSHandle): boolean {
+export function isHandleObject(ctx: QuickJSContext, h: QuickJSHandle): boolean {
   return ctx.dump(
     call(
       ctx,
       `a => typeof a === "object" && a !== null || typeof a === "function"`,
       undefined,
-      a
+      h
     )
   );
 }
