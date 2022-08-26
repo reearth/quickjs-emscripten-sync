@@ -128,11 +128,25 @@ test("class", async () => {
   const Cls = unmarshal(handle);
 
   expect(Cls.hoge).toBe("foo");
-  expect(Cls.foo instanceof Cls).toBe(true);
+  expect(Cls.foo).toBeInstanceOf(Cls);
   expect(Cls.foo.foo).toBe(3);
   const cls = new Cls(2);
-  expect(cls instanceof Cls).toBe(true);
+  expect(cls).toBeInstanceOf(Cls);
   expect(cls.foo).toBe(4);
+
+  handle.dispose();
+  dispose();
+});
+
+test("date", async () => {
+  const { ctx, unmarshal, dispose } = await setup();
+
+  const handle = ctx.unwrapResult(ctx.evalCode("new Date(2022, 7, 26)"));
+  const date = unmarshal(handle);
+  const expected = new Date(2022, 7, 26);
+
+  expect(date).toBeInstanceOf(Date);
+  expect(date.getTime()).toBe(expected.getTime());
 
   handle.dispose();
   dispose();

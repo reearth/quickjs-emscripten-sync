@@ -193,19 +193,40 @@ Options accepted:
 
 ```ts
 type Options = {
+  /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
   isMarshalable?: boolean | "json" | ((target: any) => boolean | "json");
+  /** Pre-registered pairs of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
+   *
+   * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
+   */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
+  /** Register functions to convert an object to a QuickJS handle. */
+  customMarshaller?: Iterable<
+    (target: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined
+  >;
+  /** Register functions to convert a QuickJS handle to an object. */
+  customUnmarshaller?: Iterable<
+    (target: QuickJSHandle, ctx: QuickJSContext) => any
+  >;
+  /** A callback that returns a boolean value that determines whether an object is wrappable by proxies. If returns false, note that the object cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
+  isWrappable?: (target: any) => boolean;
+  /** A callback that returns a boolean value that determines whether an QuickJS handle is wrappable by proxies. If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
+  isHandleWrappable?: (handle: QuickJSHandle, ctx: QuickJSContext) => boolean;
+  /** Compatibility with quickjs-emscripten prior to v0.15. Inject code for compatibility into context at Arena class initialization time. */
   compat?: boolean;
 }
 ```
 
-- **`isMarshalable`**: Determines how marshalling will be done when sending objects from the host to the context. **Make sure to set the marshalling to be the minimum necessary as it may reduce the security of your application.** [Please read the section on security above.](#security-warning)
-   - `"json"` (**default**, safety): Target object will be serialized as JSON in host and then parsed in context. Functions and classes will be lost in the process.
-   - `false` (safety): Target object will not be always marshalled as `undefined`.
-   - `(target: any) => boolean | "json"` (recoomended): You can control marshalling mode for each objects. If you want to do marshalling, usually use this method. Allow partial marshalling by returning `true` only for some objects.
-   - `true` (**risky and not recommended**): Target object will be always marshaled. This setting may reduce security.
-- **`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS context. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
-- **`compat`**: If you want to use quickjs-emscripten v0.15 or older, enable this option to automatically inject code to the VM for compatibility.
+Notes:
+
+**`isMarshalable`**: Determines how marshalling will be done when sending objects from the host to the context. **Make sure to set the marshalling to be the minimum necessary as it may reduce the security of your application.** [Please read the section on security above.](#security-warning)
+
+ - `"json"` (**default**, safety): Target object will be serialized as JSON in host and then parsed in context. Functions and classes will be lost in the process.
+ - `false` (safety): Target object will not be always marshalled as `undefined`.
+ - `(target: any) => boolean | "json"` (recoomended): You can control marshalling mode for each objects. If you want to do marshalling, usually use this method. Allow partial marshalling by returning `true` only for some objects.
+ - `true` (**risky and not recommended**): Target object will be always marshaled. This setting may reduce security.
+
+**`registeredObjects`**: You can pre-register a pair of objects that will be considered the same between the host and the QuickJS context. This will be used automatically during the conversion. By default, it will be registered automatically with [`defaultRegisteredObjects`](src/default.ts). If you want to add a new pair to this, please do the following:
 
 ```js
 import { defaultRegisteredObjects } from "quickjs-emscripten-sync";

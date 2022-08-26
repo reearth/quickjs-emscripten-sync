@@ -41,11 +41,23 @@ export {
 export type Options = {
   /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
   isMarshalable?: boolean | "json" | ((target: any) => boolean | "json");
-  /** You can pre-register a pair of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
+  /** Pre-registered pairs of objects that will be considered the same between the host and the QuickJS VM. This will be used automatically during the conversion. By default, it will be registered automatically with `defaultRegisteredObjects`.
    *
    * Instead of a string, you can also pass a QuickJSHandle directly. In that case, however, you have to dispose of them manually when destroying the VM.
    */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
+  /** Register functions to convert an object to a QuickJS handle. */
+  customMarshaller?: Iterable<
+    (target: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined
+  >;
+  /** Register functions to convert a QuickJS handle to an object. */
+  customUnmarshaller?: Iterable<
+    (target: QuickJSHandle, ctx: QuickJSContext) => any
+  >;
+  /** A callback that returns a boolean value that determines whether an object is wrappable by proxies. If returns false, note that the object cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
+  isWrappable?: (target: any) => boolean;
+  /** A callback that returns a boolean value that determines whether an QuickJS handle is wrappable by proxies. If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
+  isHandleWrappable?: (handle: QuickJSHandle, ctx: QuickJSContext) => boolean;
   /** Compatibility with quickjs-emscripten prior to v0.15. Inject code for compatibility into context at Arena class initialization time. */
   compat?: boolean;
 };
@@ -265,6 +277,7 @@ export class Arena {
       find: this._marshalFind,
       pre: this._marshalPre,
       preApply: this._marshalPreApply,
+      custom: this._options?.customMarshaller,
     });
 
     return [handle, !this._map.hasHandle(handle)];
@@ -290,6 +303,7 @@ export class Arena {
       marshal: this._marshal,
       find: this._unmarshalFind,
       pre: this._preUnmarshal,
+      custom: this._options?.customUnmarshaller,
     });
   };
 
@@ -338,7 +352,8 @@ export class Arena {
       this._symbol,
       this._symbolHandle,
       this._marshal,
-      this._syncMode
+      this._syncMode,
+      this._options?.isWrappable
     );
   }
 
@@ -362,7 +377,8 @@ export class Arena {
       this._symbol,
       this._symbolHandle,
       this._unmarshal,
-      this._syncMode
+      this._syncMode,
+      this._options?.isHandleWrappable
     );
   }
 

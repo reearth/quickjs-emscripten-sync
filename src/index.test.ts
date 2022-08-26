@@ -121,6 +121,19 @@ describe("evalCode", () => {
     ctx.dispose();
   });
 
+  test("Date", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const date = new Date(2022, 7, 26);
+    expect(arena.evalCode("new Date(2022, 7, 26)")).toEqual(date);
+    expect(arena.evalCode("d => d instanceof Date")(date)).toBe(true);
+    expect(arena.evalCode("d => d.getTime()")(date)).toBe(date.getTime());
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
   test("class", async () => {
     const ctx = (await getQuickJS()).newContext();
     const arena = new Arena(ctx, { isMarshalable: true });

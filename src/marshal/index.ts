@@ -7,7 +7,7 @@ import type {
 import marshalFunction from "./function";
 import marshalObject from "./object";
 import marshalPrimitive from "./primitive";
-import marshalSymbol from "./symbol";
+import marshalCustom, { defaultCustom } from "./custom";
 import marshalJSON from "./json";
 import marshalPromise from "./promise";
 
@@ -22,6 +22,9 @@ export type Options = {
     mode: true | "json" | undefined
   ) => QuickJSHandle | undefined;
   preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any;
+  custom?: Iterable<
+    (obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined
+  >;
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {
@@ -52,7 +55,10 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
 
   const marshal2 = (t: unknown) => marshal(t, options);
   return (
-    marshalSymbol(ctx, target, pre2) ??
+    marshalCustom(ctx, target, pre2, [
+      ...defaultCustom,
+      ...(options.custom ?? []),
+    ]) ??
     marshalPromise(ctx, target, marshal2, pre2) ??
     marshalFunction(ctx, target, marshal2, unmarshal, pre2, options.preApply) ??
     marshalObject(ctx, target, marshal2, pre2) ??
