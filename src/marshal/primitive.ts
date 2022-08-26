@@ -4,7 +4,7 @@ import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 export default function marshalPrimitive(
   ctx: QuickJSContext,
-  target: unknown
+  target: unknown,
 ): QuickJSHandle | undefined {
   switch (typeof target) {
     case "undefined":

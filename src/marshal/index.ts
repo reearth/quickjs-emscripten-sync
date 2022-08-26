@@ -1,14 +1,10 @@
-import type {
-  QuickJSDeferredPromise,
-  QuickJSHandle,
-  QuickJSContext,
-} from "quickjs-emscripten";
+import type { QuickJSDeferredPromise, QuickJSHandle, QuickJSContext } from "quickjs-emscripten";
 
+import marshalCustom, { defaultCustom } from "./custom";
 import marshalFunction from "./function";
+import marshalJSON from "./json";
 import marshalObject from "./object";
 import marshalPrimitive from "./primitive";
-import marshalCustom, { defaultCustom } from "./custom";
-import marshalJSON from "./json";
 import marshalPromise from "./promise";
 
 export type Options = {
@@ -19,12 +15,10 @@ export type Options = {
   pre: (
     target: unknown,
     handle: QuickJSHandle | QuickJSDeferredPromise,
-    mode: true | "json" | undefined
+    mode: true | "json" | undefined,
   ) => QuickJSHandle | undefined;
   preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any;
-  custom?: Iterable<
-    (obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined
-  >;
+  custom?: Iterable<(obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
 };
 
 export function marshal(target: unknown, options: Options): QuickJSHandle {
@@ -55,10 +49,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
 
   const marshal2 = (t: unknown) => marshal(t, options);
   return (
-    marshalCustom(ctx, target, pre2, [
-      ...defaultCustom,
-      ...(options.custom ?? []),
-    ]) ??
+    marshalCustom(ctx, target, pre2, [...defaultCustom, ...(options.custom ?? [])]) ??
     marshalPromise(ctx, target, marshal2, pre2) ??
     marshalFunction(ctx, target, marshal2, unmarshal, pre2, options.preApply) ??
     marshalObject(ctx, target, marshal2, pre2) ??

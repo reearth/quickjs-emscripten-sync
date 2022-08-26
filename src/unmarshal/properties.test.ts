@@ -21,7 +21,7 @@ test("works", async () => {
         c: { get: () => {}, set: () => {} },
       });
       obj
-    }`)
+    }`),
   );
 
   unmarshalProperties(ctx, handle, obj, unmarshal);
@@ -47,7 +47,7 @@ test("works", async () => {
   expect(unmarshal).toReturnWith(["c", false]);
   expect(unmarshal).toReturnWith([expect.any(Function), false]); // get, set
 
-  disposables.forEach((d) => d.dispose());
+  disposables.forEach(d => d.dispose());
   handle.dispose();
   ctx.dispose();
 });

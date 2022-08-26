@@ -1,10 +1,11 @@
 import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
+import { newDeferred } from "../util";
 import VMMap from "../vmmap";
 import { instanceOf, call, handleFrom, fn } from "../vmutil";
+
 import marshal from ".";
-import { newDeferred } from "../util";
 
 test("primitive, array, object", async () => {
   const { ctx, map, marshal, dispose } = await setup();
@@ -36,11 +37,9 @@ test("object with symbol key", async () => {
   };
   const handle = marshal(target);
   expect(ctx.dump(call(ctx, `a => a.foo`, undefined, handle))).toBe("hoge");
-  expect(
-    ctx.dump(
-      call(ctx, `a => a[Object.getOwnPropertySymbols(a)[0]]`, undefined, handle)
-    )
-  ).toBe(1);
+  expect(ctx.dump(call(ctx, `a => a[Object.getOwnPropertySymbols(a)[0]]`, undefined, handle))).toBe(
+    1,
+  );
 
   dispose();
 });
@@ -56,9 +55,7 @@ test("arrow function", async () => {
   expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("hoge");
   const foo = ctx.getProp(handle, "foo");
   expect(ctx.dump(foo)).toEqual({ bar: 1 });
-  expect(
-    ctx.dump(ctx.unwrapResult(ctx.callFunction(handle, ctx.undefined)))
-  ).toBe("foo");
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(handle, ctx.undefined)))).toBe("foo");
   expect(map.size).toBe(2);
   expect(map.get(hoge)).toBe(handle);
   expect(map.has(hoge.foo)).toBe(true);
@@ -84,11 +81,7 @@ test("function", async () => {
 
   const b = ctx.unwrapResult(ctx.evalCode(`({ hoge: 2 })`));
   expect(
-    ctx.dump(
-      ctx.unwrapResult(
-        ctx.callFunction(handle, ctx.undefined, ctx.newNumber(1), b)
-      )
-    )
+    ctx.dump(ctx.unwrapResult(ctx.callFunction(handle, ctx.undefined, ctx.newNumber(1), b))),
   ).toBe(3);
 
   b.dispose();
@@ -99,15 +92,15 @@ test("promise", async () => {
   const { ctx, marshal, dispose } = await setup();
   const register = fn(
     ctx,
-    `promise => { promise.then(d => notify("resolve", d), d => notify("reject", d)); }`
+    `promise => { promise.then(d => notify("resolve", d), d => notify("reject", d)); }`,
   );
 
   let notified: any;
   ctx
     .newFunction("notify", (...handles) => {
-      notified = handles.map((h) => ctx.dump(h));
+      notified = handles.map(h => ctx.dump(h));
     })
-    .consume((h) => {
+    .consume(h => {
       ctx.setProp(ctx.global, "notify", h);
     });
 
@@ -169,12 +162,8 @@ test("class", async () => {
   expect(map.has(A.prototype)).toBe(true);
   expect(map.has(A.a)).toBe(true);
   expect(map.has(A.prototype.hoge)).toBe(true);
-  expect(
-    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.get)
-  ).toBe(true);
-  expect(
-    map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.set)
-  ).toBe(true);
+  expect(map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.get)).toBe(true);
+  expect(map.has(Object.getOwnPropertyDescriptor(A.prototype, "foo")?.set)).toBe(true);
 
   expect(ctx.typeof(handle)).toBe("function");
   expect(ctx.dump(ctx.getProp(handle, "length"))).toBe(1);
@@ -185,28 +174,20 @@ test("class", async () => {
   expect(ctx.dump(ctx.getProp(staticA, "b"))).toBe("a!");
 
   const newA = ctx.unwrapResult(ctx.evalCode(`A => new A("foo")`));
-  const instance = ctx.unwrapResult(
-    ctx.callFunction(newA, ctx.undefined, handle)
-  );
+  const instance = ctx.unwrapResult(ctx.callFunction(newA, ctx.undefined, handle));
   expect(instanceOf(ctx, instance, handle)).toBe(true);
   expect(ctx.dump(ctx.getProp(instance, "a"))).toBe(100);
   expect(ctx.dump(ctx.getProp(instance, "b"))).toBe("foo!");
   const methodHoge = ctx.getProp(instance, "hoge");
-  expect(
-    ctx.dump(ctx.unwrapResult(ctx.callFunction(methodHoge, instance)))
-  ).toBe(101);
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(methodHoge, instance)))).toBe(101);
   expect(ctx.dump(ctx.getProp(instance, "a"))).toBe(100); // not synced
 
   const getter = ctx.unwrapResult(ctx.evalCode(`a => a.foo`));
   const setter = ctx.unwrapResult(ctx.evalCode(`(a, b) => a.foo = b`));
-  expect(
-    ctx.dump(
-      ctx.unwrapResult(ctx.callFunction(getter, ctx.undefined, instance))
-    )
-  ).toBe("foo!");
-  ctx.unwrapResult(
-    ctx.callFunction(setter, ctx.undefined, instance, ctx.newString("b"))
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(getter, ctx.undefined, instance)))).toBe(
+    "foo!",
   );
+  ctx.unwrapResult(ctx.callFunction(setter, ctx.undefined, instance, ctx.newString("b")));
   expect(ctx.dump(ctx.getProp(instance, "b"))).toBe("foo!"); // not synced
 
   staticA.dispose();
@@ -228,12 +209,8 @@ test("date", async () => {
   expect(map.size).toBe(1);
   expect(map.get(date)).toBe(handle);
 
-  expect(ctx.dump(call(ctx, "d => d instanceof Date", undefined, handle))).toBe(
-    true
-  );
-  expect(ctx.dump(call(ctx, "d => d.getTime()", undefined, handle))).toBe(
-    date.getTime()
-  );
+  expect(ctx.dump(call(ctx, "d => d instanceof Date", undefined, handle))).toBe(true);
+  expect(ctx.dump(call(ctx, "d => d.getTime()", undefined, handle))).toBe(date.getTime());
 
   dispose();
 });
@@ -290,14 +267,14 @@ const setup = async ({
     marshal: (v: any) =>
       marshal(v, {
         ctx: ctx,
-        unmarshal: (h) => map.getByHandle(h) ?? ctx.dump(h),
+        unmarshal: h => map.getByHandle(h) ?? ctx.dump(h),
         isMarshalable,
         pre: (t, d) => {
           const h = handleFrom(d);
           map.set(t, h);
           return h;
         },
-        find: (t) => map.get(t),
+        find: t => map.get(t),
       }),
     dispose: () => {
       map.dispose();

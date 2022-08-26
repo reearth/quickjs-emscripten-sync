@@ -6,19 +6,16 @@ export default function marshalProperties(
   ctx: QuickJSContext,
   target: object | Function,
   handle: QuickJSHandle,
-  marshal: (target: unknown) => QuickJSHandle
+  marshal: (target: unknown) => QuickJSHandle,
 ): void {
   const descs = ctx.newObject();
   const cb = (key: string | number | symbol, desc: PropertyDescriptor) => {
     const keyHandle = marshal(key);
-    const valueHandle =
-      typeof desc.value === "undefined" ? undefined : marshal(desc.value);
-    const getHandle =
-      typeof desc.get === "undefined" ? undefined : marshal(desc.get);
-    const setHandle =
-      typeof desc.set === "undefined" ? undefined : marshal(desc.set);
+    const valueHandle = typeof desc.value === "undefined" ? undefined : marshal(desc.value);
+    const getHandle = typeof desc.get === "undefined" ? undefined : marshal(desc.get);
+    const setHandle = typeof desc.set === "undefined" ? undefined : marshal(desc.set);
 
-    ctx.newObject().consume((descObj) => {
+    ctx.newObject().consume(descObj => {
       Object.entries(desc).forEach(([k, v]) => {
         const v2 =
           k === "value"
@@ -40,7 +37,7 @@ export default function marshalProperties(
 
   const desc = Object.getOwnPropertyDescriptors(target);
   Object.entries(desc).forEach(([k, v]) => cb(k, v));
-  Object.getOwnPropertySymbols(desc).forEach((k) => cb(k, (desc as any)[k]));
+  Object.getOwnPropertySymbols(desc).forEach(k => cb(k, (desc as any)[k]));
 
   call(ctx, `Object.defineProperties`, undefined, handle, descs).dispose();
 

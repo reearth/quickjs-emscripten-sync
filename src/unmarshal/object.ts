@@ -1,30 +1,25 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
-import unmarshalProperties from "./properties";
 import { call } from "../vmutil";
+
+import unmarshalProperties from "./properties";
 
 export default function unmarshalObject(
   ctx: QuickJSContext,
   handle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
-  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined
+  preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined,
 ): object | undefined {
   if (
     ctx.typeof(handle) !== "object" ||
     // null check
     ctx
       .unwrapResult(ctx.evalCode("o => o === null"))
-      .consume((n) =>
-        ctx.dump(ctx.unwrapResult(ctx.callFunction(n, ctx.undefined, handle)))
-      )
+      .consume(n => ctx.dump(ctx.unwrapResult(ctx.callFunction(n, ctx.undefined, handle))))
   )
     return;
 
-  const raw = call(ctx, "Array.isArray", undefined, handle).consume((r) =>
-    ctx.dump(r)
-  )
-    ? []
-    : {};
+  const raw = call(ctx, "Array.isArray", undefined, handle).consume(r => ctx.dump(r)) ? [] : {};
   const obj = preUnmarshal(raw, handle) ?? raw;
 
   const prototype = call(
@@ -34,8 +29,8 @@ export default function unmarshalObject(
       return !p || p === Object.prototype || p === Array.prototype ? undefined : p;
     }`,
     undefined,
-    handle
-  ).consume((prototype) => {
+    handle,
+  ).consume(prototype => {
     if (ctx.typeof(prototype) === "undefined") return;
     const [proto] = unmarshal(prototype);
     return proto;

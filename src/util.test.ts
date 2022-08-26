@@ -1,12 +1,6 @@
 import { expect, test, vi } from "vitest";
 
-import {
-  isES2015Class,
-  isObject,
-  walkObject,
-  complexity,
-  newDeferred,
-} from "./util";
+import { isES2015Class, isObject, walkObject, complexity, newDeferred } from "./util";
 
 test("isES2015Class", () => {
   expect(isES2015Class(class {})).toBe(true);

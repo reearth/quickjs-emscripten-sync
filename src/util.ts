@@ -1,19 +1,14 @@
 export function isES2015Class(cls: any): cls is new (...args: any[]) => any {
-  return (
-    typeof cls === "function" &&
-    /^class\s/.test(Function.prototype.toString.call(cls))
-  );
+  return typeof cls === "function" && /^class\s/.test(Function.prototype.toString.call(cls));
 }
 
 export function isObject(value: any): value is object | Function {
-  return (
-    typeof value === "function" || (typeof value === "object" && value !== null)
-  );
+  return typeof value === "function" || (typeof value === "object" && value !== null);
 }
 
 export function walkObject(
   value: any,
-  callback?: (target: any, set: Set<any>) => boolean | void
+  callback?: (target: any, set: Set<any>) => boolean | void,
 ): Set<any> {
   const set = new Set<any>();
   const walk = (v: any) => {

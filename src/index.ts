@@ -6,21 +6,13 @@ import type {
   VmCallResult,
 } from "quickjs-emscripten";
 
-import VMMap from "./vmmap";
+import { defaultRegisteredObjects } from "./default";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
-import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
-import {
-  call,
-  eq,
-  isHandleObject,
-  json,
-  consumeAll,
-  mayConsume,
-  handleFrom,
-} from "./vmutil";
-import { defaultRegisteredObjects } from "./default";
+import VMMap from "./vmmap";
+import { call, eq, isHandleObject, json, consumeAll, mayConsume, handleFrom } from "./vmutil";
+import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 
 export {
   VMMap,
@@ -47,13 +39,9 @@ export type Options = {
    */
   registeredObjects?: Iterable<[any, QuickJSHandle | string]>;
   /** Register functions to convert an object to a QuickJS handle. */
-  customMarshaller?: Iterable<
-    (target: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined
-  >;
+  customMarshaller?: Iterable<(target: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
   /** Register functions to convert a QuickJS handle to an object. */
-  customUnmarshaller?: Iterable<
-    (target: QuickJSHandle, ctx: QuickJSContext) => any
-  >;
+  customUnmarshaller?: Iterable<(target: QuickJSHandle, ctx: QuickJSContext) => any>;
   /** A callback that returns a boolean value that determines whether an object is wrappable by proxies. If returns false, note that the object cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
   isWrappable?: (target: any) => boolean;
   /** A callback that returns a boolean value that determines whether an QuickJS handle is wrappable by proxies. If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used. */
@@ -130,7 +118,7 @@ export class Arena {
    */
   expose(obj: { [k: string]: any }) {
     for (const [key, value] of Object.entries(obj)) {
-      mayConsume(this._marshal(value), (handle) => {
+      mayConsume(this._marshal(value), handle => {
         this.context.setProp(this.context.global, key, handle);
       });
     }
@@ -144,7 +132,7 @@ export class Arena {
   sync<T>(target: T): T {
     const wrapped = this._wrap(target);
     if (typeof wrapped === "undefined") return target;
-    walkObject(wrapped, (v) => {
+    walkObject(wrapped, v => {
       const u = this._unwrap(v);
       this._sync.add(u);
     });
@@ -182,10 +170,7 @@ export class Arena {
    * Unregister a pair of objects that were registered with `registeredObjects` option and `register` method.
    */
   unregister(target: any, dispose?: boolean) {
-    this._registeredMap.delete(
-      target,
-      this._registeredMapDispose.has(target) || dispose
-    );
+    this._registeredMap.delete(target, this._registeredMapDispose.has(target) || dispose);
     this._registeredMapDispose.delete(target);
   }
 
@@ -215,13 +200,9 @@ export class Arena {
     throw this._unwrapIfNotSynced(result.error.consume(this._unmarshal));
   }
 
-  _unwrapResultAndUnmarshal(
-    result: VmCallResult<QuickJSHandle> | undefined
-  ): any {
+  _unwrapResultAndUnmarshal(result: VmCallResult<QuickJSHandle> | undefined): any {
     if (!result) return;
-    return this._unwrapIfNotSynced(
-      this._unwrapResult(result).consume(this._unmarshal)
-    );
+    return this._unwrapIfNotSynced(this._unwrapResult(result).consume(this._unmarshal));
   }
 
   _isMarshalable = (t: unknown): boolean | "json" => {
@@ -242,17 +223,13 @@ export class Arena {
   _marshalPre = (
     t: unknown,
     h: QuickJSHandle | QuickJSDeferredPromise,
-    mode: true | "json" | undefined
+    mode: true | "json" | undefined,
   ): Wrapped<QuickJSHandle> | undefined => {
     if (mode === "json") return;
     return this._register(t, handleFrom(h), this._map)?.[1];
   };
 
-  _marshalPreApply = (
-    target: Function,
-    that: unknown,
-    args: unknown[]
-  ): void => {
+  _marshalPreApply = (target: Function, that: unknown, args: unknown[]): void => {
     const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
     // override sync mode of this object while calling the function
     if (unwrapped) this._temporalSync.add(unwrapped);
@@ -311,7 +288,7 @@ export class Arena {
     t: any,
     h: QuickJSHandle,
     map: VMMap = this._map,
-    sync?: boolean
+    sync?: boolean,
   ): [Wrapped<any>, Wrapped<QuickJSHandle>] | undefined {
     if (this._registeredMap.has(t) || this._registeredMap.hasHandle(h)) {
       return;
@@ -340,9 +317,7 @@ export class Arena {
 
   _syncMode = (obj: any): "both" | undefined => {
     const obj2 = this._unwrap(obj);
-    return this._sync.has(obj2) || this._temporalSync.has(obj2)
-      ? "both"
-      : undefined;
+    return this._sync.has(obj2) || this._temporalSync.has(obj2) ? "both" : undefined;
   };
 
   _wrap<T>(target: T): Wrapped<T> | undefined {
@@ -353,7 +328,7 @@ export class Arena {
       this._symbolHandle,
       this._marshal,
       this._syncMode,
-      this._options?.isWrappable
+      this._options?.isWrappable,
     );
   }
 
@@ -363,14 +338,10 @@ export class Arena {
 
   _unwrapIfNotSynced = <T>(target: T): T => {
     const unwrapped = this._unwrap(target);
-    return unwrapped instanceof Promise || !this._sync.has(unwrapped)
-      ? unwrapped
-      : target;
+    return unwrapped instanceof Promise || !this._sync.has(unwrapped) ? unwrapped : target;
   };
 
-  _wrapHandle(
-    handle: QuickJSHandle
-  ): [Wrapped<QuickJSHandle> | undefined, boolean] {
+  _wrapHandle(handle: QuickJSHandle): [Wrapped<QuickJSHandle> | undefined, boolean] {
     return wrapHandle(
       this.context,
       handle,
@@ -378,7 +349,7 @@ export class Arena {
       this._symbolHandle,
       this._unmarshal,
       this._syncMode,
-      this._options?.isHandleWrappable
+      this._options?.isHandleWrappable,
     );
   }
 

@@ -7,13 +7,13 @@ const testPromise = (reject: boolean) => async () => {
   const ctx = (await getQuickJS()).newContext();
   const disposables: Disposable[] = [];
   const marshal = vi.fn((v): [QuickJSHandle, boolean] => {
-    const f = ctx.newFunction(v.name, (h) => {
+    const f = ctx.newFunction(v.name, h => {
       v(ctx.dump(h));
     });
     disposables.push(f);
     return [f, false];
   });
-  const preUnmarshal = vi.fn((a) => a);
+  const preUnmarshal = vi.fn(a => a);
 
   const deferred = ctx.newPromise();
   disposables.push(deferred);
@@ -36,7 +36,7 @@ const testPromise = (reject: boolean) => async () => {
     expect(promise).resolves.toBe("hoge");
   }
 
-  disposables.forEach((d) => d.dispose());
+  disposables.forEach(d => d.dispose());
   ctx.dispose();
 };
 

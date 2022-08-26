@@ -2,6 +2,7 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import { json } from "../vmutil";
+
 import marshalProperties from "./properties";
 
 test("works", async () => {
@@ -18,11 +19,11 @@ test("works", async () => {
         if (typeof v.configurable === "boolean" && d.configurable !== v.configurable) throw new Error(k + " configurable invalid: " + d.configurable);
         if (typeof v.writable === "boolean" && d.writable !== v.writable) throw new Error(k + " writable invalid: " + d.writable);
       }
-    }`)
+    }`),
   );
 
   const disposables: QuickJSHandle[] = [];
-  const marshal = vi.fn((t) => {
+  const marshal = vi.fn(t => {
     if (typeof t !== "function") return json(ctx, t);
     const fn = ctx.newFunction("", () => {});
     disposables.push(fn);
@@ -50,26 +51,18 @@ test("works", async () => {
   });
 
   marshalProperties(ctx, obj, handle, marshal);
-  expect(marshal.mock.calls).toEqual([
-    ["bar"],
-    [bar],
-    ["foo"],
-    [fooGet],
-    [fooSet],
-  ]);
+  expect(marshal.mock.calls).toEqual([["bar"], [bar], ["foo"], [fooGet], [fooSet]]);
 
   const expected = ctx.unwrapResult(
     ctx.evalCode(`({
       bar: { valueType: "function", getType: "undefined", setType: "undefined", enumerable: true, configurable: true, writable: true },
       foo: { valueType: "undefined", getType: "function", setType: "function", enumerable: false, configurable: true }
-    })`)
+    })`),
   );
-  ctx.unwrapResult(
-    ctx.callFunction(descTester, ctx.undefined, handle, expected)
-  );
+  ctx.unwrapResult(ctx.callFunction(descTester, ctx.undefined, handle, expected));
 
   expected.dispose();
-  disposables.forEach((d) => d.dispose());
+  disposables.forEach(d => d.dispose());
   handle.dispose();
   descTester.dispose();
   ctx.dispose();

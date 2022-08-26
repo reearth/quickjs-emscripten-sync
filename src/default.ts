@@ -32,6 +32,6 @@ export const defaultRegisteredObjects: [any, string][] = [
   [URIError.prototype, "URIError.prototype"],
   // built-in symbols
   ...Object.getOwnPropertyNames(Symbol)
-    .filter((k) => typeof (Symbol as any)[k] === "symbol")
-    .map<[any, string]>((k) => [(Symbol as any)[k], `Symbol.${k}`]),
+    .filter(k => typeof (Symbol as any)[k] === "symbol")
+    .map<[any, string]>(k => [(Symbol as any)[k], `Symbol.${k}`]),
 ];

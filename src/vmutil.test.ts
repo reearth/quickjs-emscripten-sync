@@ -18,9 +18,7 @@ test("fn", async () => {
   const ctx = (await getQuickJS()).newContext();
 
   const f = fn(ctx, "(a, b) => a + b");
-  expect(ctx.getNumber(f(undefined, ctx.newNumber(1), ctx.newNumber(2)))).toBe(
-    3
-  );
+  expect(ctx.getNumber(f(undefined, ctx.newNumber(1), ctx.newNumber(2)))).toBe(3);
 
   const obj = ctx.newObject();
   ctx.setProp(obj, "a", ctx.newNumber(2));
@@ -41,22 +39,12 @@ test("call", async () => {
   const ctx = (await getQuickJS()).newContext();
 
   expect(
-    ctx.getNumber(
-      call(
-        ctx,
-        "(a, b) => a + b",
-        undefined,
-        ctx.newNumber(1),
-        ctx.newNumber(2)
-      )
-    )
+    ctx.getNumber(call(ctx, "(a, b) => a + b", undefined, ctx.newNumber(1), ctx.newNumber(2))),
   ).toBe(3);
 
   const obj = ctx.newObject();
   ctx.setProp(obj, "a", ctx.newNumber(2));
-  expect(
-    ctx.getNumber(call(ctx, "(function() { return this.a + 1; })", obj))
-  ).toBe(3);
+  expect(ctx.getNumber(call(ctx, "(function() { return this.a + 1; })", obj))).toBe(3);
 
   obj.dispose();
   ctx.dispose();
@@ -117,9 +105,7 @@ test("json", async () => {
   const handle = json(ctx, {
     hoge: { foo: ["bar"] },
   });
-  expect(
-    ctx.dump(call(ctx, `a => a.hoge.foo[0] === "bar"`, undefined, handle))
-  ).toBe(true);
+  expect(ctx.dump(call(ctx, `a => a.hoge.foo[0] === "bar"`, undefined, handle))).toBe(true);
   expect(ctx.typeof(json(ctx, undefined))).toBe("undefined");
 
   handle.dispose();
@@ -135,18 +121,18 @@ test("consumeAll", async () => {
   expect(
     consumeAll(
       handles,
-      vi.fn(() => o)
-    )
+      vi.fn(() => o),
+    ),
   ).toBe(o);
-  expect(handles.every((h) => !h.alive)).toBe(true);
+  expect(handles.every(h => !h.alive)).toBe(true);
 
   const handles2 = [ctx.newObject(), ctx.newObject()];
   expect(() =>
     consumeAll(handles2, () => {
       throw new Error("qes error");
-    })
+    }),
   ).toThrow("qes error");
-  expect(handles2.every((h) => !h.alive)).toBe(true);
+  expect(handles2.every(h => !h.alive)).toBe(true);
 
   ctx.dispose();
 });
@@ -160,8 +146,8 @@ test("mayConsume", async () => {
   expect(
     mayConsume(
       [handle, false],
-      vi.fn(() => o)
-    )
+      vi.fn(() => o),
+    ),
   ).toBe(o);
   expect(handle.alive).toBe(true);
 
@@ -172,7 +158,7 @@ test("mayConsume", async () => {
   expect(() =>
     mayConsume([handle2, true], () => {
       throw new Error("qes error");
-    })
+    }),
   ).toThrow("qes error");
   expect(handle.alive).toBe(false);
 
@@ -191,8 +177,8 @@ test("mayConsumeAll", async () => {
   expect(
     mayConsumeAll(
       handles,
-      vi.fn((..._: any[]) => o)
-    )
+      vi.fn((..._: any[]) => o),
+    ),
   ).toBe(o);
   expect(handles[0][0].alive).toBe(true);
   expect(handles[1][0].alive).toBe(false);
@@ -204,7 +190,7 @@ test("mayConsumeAll", async () => {
   expect(() =>
     mayConsumeAll(handles2, (..._args) => {
       throw new Error("qes error");
-    })
+    }),
   ).toThrow("qes error");
   expect(handles2[0][0].alive).toBe(true);
   expect(handles2[1][0].alive).toBe(false);

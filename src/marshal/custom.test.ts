@@ -1,5 +1,6 @@
 import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
+
 import { call } from "../vmutil";
 
 import marshalCustom, { defaultCustom } from "./custom";
@@ -38,12 +39,8 @@ test("date", async () => {
 
   const handle = marshal(date);
   if (!handle) throw new Error("handle is undefined");
-  expect(ctx.dump(call(ctx, "d => d instanceof Date", undefined, handle))).toBe(
-    true
-  );
-  expect(ctx.dump(call(ctx, "d => d.getTime()", undefined, handle))).toBe(
-    date.getTime()
-  );
+  expect(ctx.dump(call(ctx, "d => d instanceof Date", undefined, handle))).toBe(true);
+  expect(ctx.dump(call(ctx, "d => d.getTime()", undefined, handle))).toBe(date.getTime());
   expect(pre).toReturnTimes(1);
   expect(pre.mock.calls[0][0]).toBe(date);
   expect(pre.mock.calls[0][1] === handle).toBe(true);

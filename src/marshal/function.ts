@@ -2,6 +2,7 @@ import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 import { isES2015Class, isObject } from "../util";
 import { call } from "../vmutil";
+
 import marshalProperties from "./properties";
 
 export default function marshalFunction(
@@ -9,18 +10,15 @@ export default function marshalFunction(
   target: unknown,
   marshal: (target: unknown) => QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => unknown,
-  preMarshal: (
-    target: unknown,
-    handle: QuickJSHandle
-  ) => QuickJSHandle | undefined,
-  preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any
+  preMarshal: (target: unknown, handle: QuickJSHandle) => QuickJSHandle | undefined,
+  preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any,
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
   const raw = ctx
     .newFunction(target.name, function (...argHandles) {
       const that = unmarshal(this);
-      const args = argHandles.map((a) => unmarshal(a));
+      const args = argHandles.map(a => unmarshal(a));
 
       if (isES2015Class(target) && isObject(that)) {
         // Class constructors cannot be invoked without new expression, and new.target is not changed
@@ -31,11 +29,9 @@ export default function marshalFunction(
         return this;
       }
 
-      return marshal(
-        preApply ? preApply(target, that, args) : target.apply(that, args)
-      );
+      return marshal(preApply ? preApply(target, that, args) : target.apply(that, args));
     })
-    .consume((handle2) =>
+    .consume(handle2 =>
       // fucntions created by vm.newFunction are not callable as a class constrcutor
       call(
         ctx,
@@ -46,8 +42,8 @@ export default function marshalFunction(
           return fn;
         }`,
         undefined,
-        handle2
-      )
+        handle2,
+      ),
     );
 
   const handle = preMarshal(target, raw) ?? raw;

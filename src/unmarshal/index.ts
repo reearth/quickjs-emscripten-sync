@@ -1,4 +1,5 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
+
 import unmarshalCustom, { defaultCustom } from "./custom";
 import unmarshalFunction from "./function";
 import unmarshalObject from "./object";
@@ -19,10 +20,7 @@ export function unmarshal(handle: QuickJSHandle, options: Options): any {
   return result;
 }
 
-function unmarshalInner(
-  handle: QuickJSHandle,
-  options: Options
-): [any, boolean] {
+function unmarshalInner(handle: QuickJSHandle, options: Options): [any, boolean] {
   const { ctx, marshal, find, pre } = options;
 
   {
@@ -40,10 +38,7 @@ function unmarshalInner(
   const unmarshal2 = (h: QuickJSHandle) => unmarshalInner(h, options);
 
   const result =
-    unmarshalCustom(ctx, handle, pre, [
-      ...defaultCustom,
-      ...(options.custom ?? []),
-    ]) ??
+    unmarshalCustom(ctx, handle, pre, [...defaultCustom, ...(options.custom ?? [])]) ??
     unmarshalPromise(ctx, handle, marshal, pre) ??
     unmarshalFunction(ctx, handle, marshal, unmarshal2, pre) ??
     unmarshalObject(ctx, handle, unmarshal2, pre);

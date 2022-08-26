@@ -2,8 +2,9 @@ import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import VMMap from "../vmmap";
-import unmarshal from ".";
 import { json } from "../vmutil";
+
+import unmarshal from ".";
 
 test("primitive, array, object", async () => {
   const { ctx, unmarshal, marshal, map, dispose } = await setup();
@@ -15,7 +16,7 @@ test("primitive, array, object", async () => {
       aaa: [1, true, {}],
       nested: { aa: null, hoge: undefined },
       bbb: () => "bar"
-    })`)
+    })`),
   );
   const target = unmarshal(handle);
 
@@ -28,19 +29,13 @@ test("primitive, array, object", async () => {
   });
   expect(map.size).toBe(5);
   expect(map.getByHandle(handle)).toBe(target);
+  ctx.getProp(handle, "aaa").consume(h => expect(map.getByHandle(h)).toBe(target.aaa));
   ctx
     .getProp(handle, "aaa")
-    .consume((h) => expect(map.getByHandle(h)).toBe(target.aaa));
-  ctx
-    .getProp(handle, "aaa")
-    .consume((h) => ctx.getProp(h, 2))
-    .consume((h) => expect(map.getByHandle(h)).toBe(target.aaa[2]));
-  ctx
-    .getProp(handle, "nested")
-    .consume((h) => expect(map.getByHandle(h)).toBe(target.nested));
-  ctx
-    .getProp(handle, "bbb")
-    .consume((h) => expect(map.getByHandle(h)).toBe(target.bbb));
+    .consume(h => ctx.getProp(h, 2))
+    .consume(h => expect(map.getByHandle(h)).toBe(target.aaa[2]));
+  ctx.getProp(handle, "nested").consume(h => expect(map.getByHandle(h)).toBe(target.nested));
+  ctx.getProp(handle, "bbb").consume(h => expect(map.getByHandle(h)).toBe(target.bbb));
 
   expect(marshal).toBeCalledTimes(0);
   expect(target.bbb()).toBe("bar");
@@ -57,7 +52,7 @@ test("object with symbol key", async () => {
     ctx.evalCode(`({
       hoge: "foo",
       [Symbol("a")]: "bar"
-    })`)
+    })`),
   );
   const target = unmarshal(handle);
 
@@ -70,9 +65,7 @@ test("object with symbol key", async () => {
 test("function", async () => {
   const { ctx, unmarshal, marshal, map, dispose } = await setup();
 
-  const handle = ctx.unwrapResult(
-    ctx.evalCode(`(function(a) { return a.a + "!"; })`)
-  );
+  const handle = ctx.unwrapResult(ctx.evalCode(`(function(a) { return a.a + "!"; })`));
   const func = unmarshal(handle);
   const arg = { a: "hoge" };
   expect(func(arg)).toBe("hoge!");
@@ -123,7 +116,7 @@ test("class", async () => {
       Cls.foo = new Cls(1);
 
       Cls
-    }`)
+    }`),
   );
   const Cls = unmarshal(handle);
 
@@ -163,7 +156,7 @@ const setup = async () => {
     const handle2 =
       typeof target === "function"
         ? ctx.newFunction(target.name, (...handles) => {
-            target(...handles.map((h) => ctx.dump(h)));
+            target(...handles.map(h => ctx.dump(h)));
           })
         : json(ctx, target);
     const ty = ctx.typeof(handle2);
@@ -176,7 +169,7 @@ const setup = async () => {
     map,
     unmarshal: (handle: QuickJSHandle) =>
       unmarshal(handle, {
-        find: (h) => map.getByHandle(h),
+        find: h => map.getByHandle(h),
         marshal,
         pre: (t, h) => {
           map.set(t, h);
@@ -186,7 +179,7 @@ const setup = async () => {
       }),
     marshal,
     dispose: () => {
-      disposables.forEach((d) => d.dispose());
+      disposables.forEach(d => d.dispose());
       map.dispose();
       ctx.dispose();
     },

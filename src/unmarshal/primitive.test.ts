@@ -10,10 +10,7 @@ test("works", async () => {
   expect(unmarshalPrimitive(ctx, ctx.true)).toEqual([true, true]);
   expect(unmarshalPrimitive(ctx, ctx.false)).toEqual([false, true]);
   expect(unmarshalPrimitive(ctx, ctx.null)).toEqual([null, true]);
-  expect(unmarshalPrimitive(ctx, ctx.newString("hoge"))).toEqual([
-    "hoge",
-    true,
-  ]);
+  expect(unmarshalPrimitive(ctx, ctx.newString("hoge"))).toEqual(["hoge", true]);
   expect(unmarshalPrimitive(ctx, ctx.newNumber(-10))).toEqual([-10, true]);
   // expect(
   //   unmarshalPrimitive(ctx, ctx.unwrapResult(vm.evalCode(`BigInt(1)`)))

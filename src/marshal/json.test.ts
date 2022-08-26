@@ -6,7 +6,7 @@ import marshalJSON from "./json";
 test("empty object", async () => {
   const ctx = (await getQuickJS()).newContext();
   const prototypeCheck = ctx.unwrapResult(
-    ctx.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`)
+    ctx.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`),
   );
 
   const obj = {};
@@ -19,11 +19,9 @@ test("empty object", async () => {
   expect(preMarshal).toBeCalledTimes(1);
   expect(preMarshal.mock.calls[0][0]).toBe(obj);
   expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
-  expect(
-    ctx.dump(
-      ctx.unwrapResult(ctx.callFunction(prototypeCheck, ctx.undefined, handle))
-    )
-  ).toBe(true);
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(prototypeCheck, ctx.undefined, handle)))).toBe(
+    true,
+  );
 
   handle.dispose();
   prototypeCheck.dispose();
@@ -33,7 +31,7 @@ test("empty object", async () => {
 test("normal object", async () => {
   const ctx = (await getQuickJS()).newContext();
   const prototypeCheck = ctx.unwrapResult(
-    ctx.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`)
+    ctx.evalCode(`o => Object.getPrototypeOf(o) === Object.prototype`),
   );
   const entries = ctx.unwrapResult(ctx.evalCode(`Object.entries`));
 
@@ -49,11 +47,9 @@ test("normal object", async () => {
   expect(preMarshal).toBeCalledTimes(1);
   expect(preMarshal.mock.calls[0][0]).toBe(obj);
   expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
-  expect(
-    ctx.dump(
-      ctx.unwrapResult(ctx.callFunction(prototypeCheck, ctx.undefined, handle))
-    )
-  ).toBe(true);
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(prototypeCheck, ctx.undefined, handle)))).toBe(
+    true,
+  );
   const e = ctx.unwrapResult(ctx.callFunction(entries, ctx.undefined, handle));
   expect(ctx.dump(e)).toEqual([
     ["a", 100],
@@ -84,9 +80,7 @@ test("array", async () => {
   expect(preMarshal).toBeCalledTimes(1);
   expect(preMarshal.mock.calls[0][0]).toBe(array);
   expect(preMarshal.mock.calls[0][1] === handle).toBe(true); // avoid freeze
-  expect(
-    ctx.dump(ctx.unwrapResult(ctx.callFunction(isArray, ctx.undefined, handle)))
-  ).toBe(true);
+  expect(ctx.dump(ctx.unwrapResult(ctx.callFunction(isArray, ctx.undefined, handle)))).toBe(true);
 
   handle.dispose();
   isArray.dispose();

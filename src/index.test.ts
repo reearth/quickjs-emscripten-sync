@@ -1,8 +1,9 @@
 import { getQuickJS } from "quickjs-emscripten";
 import { describe, expect, test, vi } from "vitest";
 
-import { Arena } from ".";
 import { isWrapped } from "./wrapper";
+
+import { Arena } from ".";
 
 describe("readme", () => {
   test("first", async () => {
@@ -89,7 +90,7 @@ describe("evalCode", () => {
         get e() {
           return { a: 1 };
         }
-      })`
+      })`,
     );
     expect(result).toEqual({
       a: 1,
@@ -180,9 +181,7 @@ describe("evalCode", () => {
     const ctx = (await getQuickJS()).newContext();
     const arena = new Arena(ctx, { isMarshalable: true });
 
-    const [promise, resolve] = arena.evalCode<
-      [Promise<string>, (d: string) => void]
-    >(`
+    const [promise, resolve] = arena.evalCode<[Promise<string>, (d: string) => void]>(`
       let resolve;
       const promise = new Promise(r => {
         resolve = r;
@@ -190,9 +189,7 @@ describe("evalCode", () => {
       [promise, resolve]
     `);
     expect(promise).instanceOf(Promise);
-    expect(isWrapped(arena._unwrapIfNotSynced(promise), arena._symbol)).toBe(
-      false
-    );
+    expect(isWrapped(arena._unwrapIfNotSynced(promise), arena._symbol)).toBe(false);
 
     resolve("hoge");
     expect(arena.executePendingJobs()).toBe(2);
@@ -207,7 +204,7 @@ describe("evalCode", () => {
     const arena = new Arena(ctx, { isMarshalable: true });
 
     const deferred: { resolve?: (s: string) => void } = {};
-    const promise = new Promise((resolve) => {
+    const promise = new Promise(resolve => {
       deferred.resolve = resolve;
     });
     const res = vi.fn();
@@ -525,9 +522,7 @@ test("registeredObjects option", async () => {
   });
 
   expect(arena.evalCode(`Symbol.iterator`)).toBe(Symbol.iterator);
-  expect(arena.evalCode(`s => s === Symbol.iterator`)(Symbol.iterator)).toBe(
-    true
-  );
+  expect(arena.evalCode(`s => s === Symbol.iterator`)(Symbol.iterator)).toBe(true);
 
   arena.dispose();
   ctx.dispose();
@@ -567,7 +562,7 @@ describe("isMarshalable option", () => {
   test("conditional", async () => {
     const ctx = (await getQuickJS()).newContext();
     const arena = new Arena(ctx, {
-      isMarshalable: (o) => o !== globalThis,
+      isMarshalable: o => o !== globalThis,
     });
 
     const obj = { a: 1 };

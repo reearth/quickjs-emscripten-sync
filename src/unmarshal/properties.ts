@@ -6,16 +6,12 @@ export default function unmarshalProperties(
   ctx: QuickJSContext,
   handle: QuickJSHandle,
   target: object | Function,
-  unmarshal: (handle: QuickJSHandle) => [unknown, boolean]
+  unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
 ) {
   ctx
     .newFunction("", (key, value) => {
       const [keyName] = unmarshal(key);
-      if (
-        typeof keyName !== "string" &&
-        typeof keyName !== "number" &&
-        typeof keyName !== "symbol"
-      )
+      if (typeof keyName !== "string" && typeof keyName !== "number" && typeof keyName !== "symbol")
         return;
 
       const desc = (
@@ -48,7 +44,7 @@ export default function unmarshalProperties(
 
       Object.defineProperty(target, keyName, desc);
     })
-    .consume((fn) => {
+    .consume(fn => {
       call(
         ctx,
         `(o, fn) => {
@@ -58,7 +54,7 @@ export default function unmarshalProperties(
       }`,
         undefined,
         handle,
-        fn
+        fn,
       ).dispose();
     });
 }

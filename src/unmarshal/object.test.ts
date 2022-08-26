@@ -5,11 +5,8 @@ import unmarshalObject from "./object";
 
 test("normal object", async () => {
   const ctx = (await getQuickJS()).newContext();
-  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [
-    ctx.dump(v),
-    false,
-  ]);
-  const preUnmarshal = vi.fn((a) => a);
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [ctx.dump(v), false]);
+  const preUnmarshal = vi.fn(a => a);
 
   const handle = ctx.unwrapResult(ctx.evalCode(`({ a: 1, b: true })`));
   const obj = unmarshalObject(ctx, handle, unmarshal, preUnmarshal);
@@ -34,7 +31,7 @@ test("properties", async () => {
     disposables.push(v);
     return [ctx.typeof(v) === "function" ? () => {} : ctx.dump(v), false];
   });
-  const preUnmarshal = vi.fn((a) => a);
+  const preUnmarshal = vi.fn(a => a);
 
   const handle = ctx.unwrapResult(
     ctx.evalCode(`{
@@ -45,7 +42,7 @@ test("properties", async () => {
         c: { get: () => {}, set: () => {} },
       });
       obj
-    }`)
+    }`),
   );
   const obj = unmarshalObject(ctx, handle, unmarshal, preUnmarshal);
   if (!obj) throw new Error("obj is undefined");
@@ -72,18 +69,15 @@ test("properties", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(obj, handle);
 
-  disposables.forEach((d) => d.dispose());
+  disposables.forEach(d => d.dispose());
   handle.dispose();
   ctx.dispose();
 });
 
 test("array", async () => {
   const ctx = (await getQuickJS()).newContext();
-  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [
-    ctx.dump(v),
-    false,
-  ]);
-  const preUnmarshal = vi.fn((a) => a);
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [ctx.dump(v), false]);
+  const preUnmarshal = vi.fn(a => a);
 
   const handle = ctx.unwrapResult(ctx.evalCode(`[1, true, "a"]`));
   const array = unmarshalObject(ctx, handle, unmarshal, preUnmarshal);
@@ -109,11 +103,9 @@ test("prototype", async () => {
     ctx.typeof(v) === "object" ? { a: () => 1 } : ctx.dump(v),
     false,
   ]);
-  const preUnmarshal = vi.fn((a) => a);
+  const preUnmarshal = vi.fn(a => a);
 
-  const handle = ctx.unwrapResult(
-    ctx.evalCode(`Object.create({ a: () => 1 })`)
-  );
+  const handle = ctx.unwrapResult(ctx.evalCode(`Object.create({ a: () => 1 })`));
   const obj = unmarshalObject(ctx, handle, unmarshal, preUnmarshal) as any;
   if (!obj) throw new Error("obj is undefined");
   expect(Object.getPrototypeOf(obj)).toEqual({ a: expect.any(Function) });

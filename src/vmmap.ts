@@ -42,9 +42,9 @@ export default class VMMap {
             map2 = new WeakMap();
           }
         };
-      }`)
+      }`),
       )
-      .consume((fn) => this._call(fn, undefined));
+      .consume(fn => this._call(fn, undefined));
 
     this._mapGet = ctx.getProp(result, "get");
     this._mapSet = ctx.getProp(result, "set");
@@ -59,12 +59,7 @@ export default class VMMap {
     this._disposables.add(this._mapClear);
   }
 
-  set(
-    key: any,
-    handle: QuickJSHandle,
-    key2?: any,
-    handle2?: QuickJSHandle
-  ): boolean {
+  set(key: any, handle: QuickJSHandle, key2?: any, handle2?: QuickJSHandle): boolean {
     if (!handle.alive || (handle2 && !handle2.alive)) return false;
 
     const v = this.get(key) ?? this.get(key2);
@@ -84,14 +79,8 @@ export default class VMMap {
       }
     }
 
-    this.ctx.newNumber(counter).consume((c) => {
-      this._call(
-        this._mapSet,
-        undefined,
-        handle,
-        c,
-        handle2 ?? this.ctx.undefined
-      );
+    this.ctx.newNumber(counter).consume(c => {
+      this._call(this._mapSet, undefined, handle, c, handle2 ?? this.ctx.undefined);
     });
 
     return true;
@@ -103,7 +92,7 @@ export default class VMMap {
           | [any, QuickJSHandle | undefined]
           | [any, QuickJSHandle | undefined, any, QuickJSHandle | undefined]
         >
-      | undefined
+      | undefined,
   ) {
     if (!iteratable) return;
     for (const iter of iteratable) {
@@ -131,9 +120,7 @@ export default class VMMap {
     if (!handle.alive) {
       return;
     }
-    return this._counterMap.get(
-      this.ctx.getNumber(this._call(this._mapGet, undefined, handle))
-    );
+    return this._counterMap.get(this.ctx.getNumber(this._call(this._mapGet, undefined, handle)));
   }
 
   has(key: any) {
@@ -157,7 +144,7 @@ export default class VMMap {
     this._call(
       this._mapDelete,
       undefined,
-      ...[handle, handle2].filter((h): h is QuickJSHandle => !!h?.alive)
+      ...[handle, handle2].filter((h): h is QuickJSHandle => !!h?.alive),
     );
 
     this._map1.delete(key);
@@ -235,12 +222,11 @@ export default class VMMap {
     return this._map1.size;
   }
 
-  [Symbol.iterator](): Iterator<
-    [any, QuickJSHandle, any, QuickJSHandle | undefined]
-  > {
+  [Symbol.iterator](): Iterator<[any, QuickJSHandle, any, QuickJSHandle | undefined]> {
     const keys = this._map1.keys();
     return {
       next: () => {
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const k1 = keys.next();
           if (k1.done) return { value: undefined, done: true };
@@ -262,17 +248,13 @@ export default class VMMap {
     }
   }
 
-  _call(
-    fn: QuickJSHandle,
-    thisArg: QuickJSHandle | undefined,
-    ...args: QuickJSHandle[]
-  ) {
+  _call(fn: QuickJSHandle, thisArg: QuickJSHandle | undefined, ...args: QuickJSHandle[]) {
     return this.ctx.unwrapResult(
       this.ctx.callFunction(
         fn,
         typeof thisArg === "undefined" ? this.ctx.undefined : thisArg,
-        ...args
-      )
+        ...args,
+      ),
     );
   }
 }
