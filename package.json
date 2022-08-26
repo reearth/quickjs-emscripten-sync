@@ -5,13 +5,13 @@
   "license": "MIT",
   "source": "./src/index.ts",
   "main": "./dist/quickjs-emscripten-sync.umd.js",
-  "module": "./dist/quickjs-emscripten-sync.es.js",
+  "module": "./dist/quickjs-emscripten-sync.mjs",
   "unpkg": "./dist/quickjs-emscripten-sync.umd.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/quickjs-emscripten-sync.es.js",
+      "import": "./dist/quickjs-emscripten-sync.mjs",
       "require": "./dist/quickjs-emscripten-sync.umd.js"
     }
   },
