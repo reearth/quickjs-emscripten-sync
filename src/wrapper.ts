@@ -1,7 +1,7 @@
 import type { QuickJSHandle, QuickJSContext } from "quickjs-emscripten";
 
 import { isObject } from "./util";
-import { call, isHandleObject, consumeAll, mayConsumeAll } from "./vmutil";
+import { call, isHandleObject, mayConsumeAll } from "./vmutil";
 
 export type SyncMode = "both" | "vm" | "host";
 
@@ -86,32 +86,45 @@ export function wrapHandle(
 
   if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) return [handle, false];
 
-  return consumeAll(
-    [
-      ctx.newFunction("getSyncMode", h => {
-        const res = syncMode?.(unmarshal(h));
-        if (typeof res === "string") return ctx.newString(res);
-        return ctx.undefined;
-      }),
-      ctx.newFunction("setter", (h, keyHandle, valueHandle) => {
-        const target = unmarshal(h);
-        if (!target) return;
-        const key = unmarshal(keyHandle);
-        if (key === "__proto__") return; // for security
-        const value = unmarshal(valueHandle);
-        unwrap(target, proxyKeySymbol)[key] = value;
-      }),
-      ctx.newFunction("deleter", (h, keyHandle) => {
-        const target = unmarshal(h);
-        if (!target) return;
-        const key = unmarshal(keyHandle);
-        delete unwrap(target, proxyKeySymbol)[key];
-      }),
-    ],
-    args => [
+  const getSyncMode = (h: QuickJSHandle) => {
+    const res = syncMode?.(unmarshal(h));
+    if (typeof res === "string") return ctx.newString(res);
+    return ctx.undefined;
+  };
+
+  const setter = (h: QuickJSHandle, keyHandle: QuickJSHandle, valueHandle: QuickJSHandle) => {
+    const target = unmarshal(h);
+    if (!target) return;
+    const key = unmarshal(keyHandle);
+    if (key === "__proto__") return; // for security
+    const value = unmarshal(valueHandle);
+    unwrap(target, proxyKeySymbol)[key] = value;
+  };
+
+  const deleter = (h: QuickJSHandle, keyHandle: QuickJSHandle) => {
+    const target = unmarshal(h);
+    if (!target) return;
+    const key = unmarshal(keyHandle);
+    delete unwrap(target, proxyKeySymbol)[key];
+  };
+
+  return ctx
+    .newFunction("proxyFuncs", (t, ...args) => {
+      const name = ctx.getNumber(t);
+      switch (name) {
+        case 1:
+          return getSyncMode(args[0]);
+        case 2:
+          return setter(args[0], args[1], args[2]);
+        case 3:
+          return deleter(args[0], args[1]);
+      }
+      return ctx.undefined;
+    })
+    .consume(proxyFuncs => [
       call(
         ctx,
-        `(target, sym, getSyncMode, setter, deleter) => {
+        `(target, sym, proxyFuncs) => {
           const rec =  new Proxy(target, {
             get(obj, key, receiver) {
               return key === sym ? obj : Reflect.get(obj, key, receiver)
@@ -120,19 +133,19 @@ export function wrapHandle(
               const v = typeof value === "object" && value !== null || typeof value === "function"
                 ? value[sym] ?? value
                 : value;
-              const sync = getSyncMode(receiver) ?? "vm";
+              const sync = proxyFuncs(1, receiver) ?? "vm";
               if (sync === "host" || Reflect.set(obj, key, v, receiver)) {
                 if (sync !== "vm") {
-                  setter(receiver, key, v);
+                  proxyFuncs(2, receiver, key, v);
                 }
               }
               return true;
             },
             deleteProperty(obj, key) {
-              const sync = getSyncMode(rec) ?? "vm";
+              const sync = proxyFuncs(1, rec) ?? "vm";
               if (sync === "host" || Reflect.deleteProperty(obj, key)) {
                 if (sync !== "vm") {
-                  deleter(rec, key);
+                  proxyFuncs(3, rec, key);
                 }
               }
               return true;
@@ -143,11 +156,10 @@ export function wrapHandle(
         undefined,
         handle,
         proxyKeySymbolHandle,
-        ...args,
+        proxyFuncs,
       ) as Wrapped<QuickJSHandle>,
       true,
-    ],
-  );
+    ]);
 }
 
 export function unwrap<T>(obj: T, key: string | symbol): T {

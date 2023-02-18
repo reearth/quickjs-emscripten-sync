@@ -6,6 +6,7 @@ import type {
   VmCallResult,
 } from "quickjs-emscripten";
 
+import { wrapContext, QuickJSContextEx } from "./contextex";
 import { defaultRegisteredObjects } from "./default";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
@@ -48,13 +49,15 @@ export type Options = {
   isHandleWrappable?: (handle: QuickJSHandle, ctx: QuickJSContext) => boolean;
   /** Compatibility with quickjs-emscripten prior to v0.15. Inject code for compatibility into context at Arena class initialization time. */
   compat?: boolean;
+  /** Experimental: use QuickJSContextEx, which wraps existing QuickJSContext. */
+  experimentalContextEx?: boolean;
 };
 
 /**
  * The Arena class manages all generated handles at once by quickjs-emscripten and automatically converts objects between the host and the QuickJS VM.
  */
 export class Arena {
-  context: QuickJSContext;
+  context: QuickJSContextEx;
   _map: VMMap;
   _registeredMap: VMMap;
   _registeredMapDispose: Set<any> = new Set();
@@ -74,7 +77,7 @@ export class Arena {
       };
     }
 
-    this.context = ctx;
+    this.context = options?.experimentalContextEx ? wrapContext(ctx) : ctx;
     this._options = options;
     this._symbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
     this._map = new VMMap(ctx);
@@ -89,6 +92,7 @@ export class Arena {
     this._map.dispose();
     this._registeredMap.dispose();
     this._symbolHandle.dispose();
+    this.context.disposeEx?.();
   }
 
   /**
