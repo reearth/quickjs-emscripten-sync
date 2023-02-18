@@ -12,7 +12,7 @@ export default class VMMap {
   _mapSet: QuickJSHandle;
   _mapDelete: QuickJSHandle;
   _mapClear: QuickJSHandle;
-  _counter = 0;
+  _counter = Number.MIN_SAFE_INTEGER;
 
   constructor(ctx: QuickJSContext) {
     this.ctx = ctx;
