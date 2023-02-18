@@ -7,10 +7,20 @@
     ":enableVulnerabilityAlertsWithLabel(security)",
     ":semanticCommitTypeAll(chore)"
   ],
-  "enabledManagers": [
-    "npm"
-  ],
   "lockFileMaintenance": false,
   "rangeStrategy": "bump",
-  "separateMajorMinor": false
+  "separateMajorMinor": false,
+  "packageRules": [
+    {
+      "matchPackagePatterns": [
+        "*"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "all",
+      "groupSlug": "all"
+    }
+  ]
 }
