@@ -153,7 +153,7 @@ test("class", async () => {
     }
   }
 
-  expect(A.name).toBe("_A"); // class A's name is _A in vitest
+  expect(A.name).toBe("A");
   const handle = marshal(A);
   if (!map) throw new Error("map is undefined");
 
@@ -167,7 +167,7 @@ test("class", async () => {
 
   expect(ctx.typeof(handle)).toBe("function");
   expect(ctx.dump(ctx.getProp(handle, "length"))).toBe(1);
-  expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("_A");
+  expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("A");
   const staticA = ctx.getProp(handle, "a");
   expect(instanceOf(ctx, staticA, handle)).toBe(true);
   expect(ctx.dump(ctx.getProp(staticA, "a"))).toBe(100);
