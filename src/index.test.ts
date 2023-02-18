@@ -218,6 +218,42 @@ describe("evalCode", () => {
     arena.dispose();
     ctx.dispose();
   });
+
+  test("async function", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const consolelog = vi.fn();
+    arena.expose({
+      console: {
+        log: consolelog,
+      },
+    });
+
+    arena.evalCode(`
+      const someAsyncOperation = async () => "hello";
+      const execute = async () => {
+        try {
+          const res = await someAsyncOperation();
+          console.log(res);
+        } catch (e) {
+          console.log(e);
+        }
+      };
+      execute();
+    `);
+    expect(consolelog).toBeCalledTimes(0);
+    expect(arena.executePendingJobs()).toBe(2);
+
+    arena.executePendingJobs();
+
+    expect(consolelog).toBeCalledTimes(1);
+    expect(consolelog).toBeCalledWith("hello");
+    expect(arena.executePendingJobs()).toBe(0);
+
+    arena.dispose();
+    ctx.dispose();
+  });
 });
 
 describe("expose without sync", () => {
