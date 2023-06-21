@@ -20,7 +20,7 @@
     "src"
   ],
   "engines": {
-    "node": ">=12"
+    "node": ">=v18.16.1"
   },
   "scripts": {
     "build": "tsc && vite build",
