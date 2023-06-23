@@ -1,26 +1,6 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
-    ":semanticCommits",
-    ":semanticCommitScopeDisabled",
-    ":maintainLockFilesWeekly",
-    ":enableVulnerabilityAlertsWithLabel(security)",
-    ":semanticCommitTypeAll(chore)"
-  ],
-  "lockFileMaintenance": false,
-  "rangeStrategy": "bump",
-  "separateMajorMinor": false,
-  "packageRules": [
-    {
-      "matchPackagePatterns": [
-        "*"
-      ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ],
-      "groupName": "all",
-      "groupSlug": "all"
-    }
+    "github>reearth/renovate-config"
   ]
 }
