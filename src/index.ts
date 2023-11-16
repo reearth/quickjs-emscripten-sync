@@ -51,6 +51,8 @@ export type Options = {
   compat?: boolean;
   /** Experimental: use QuickJSContextEx, which wraps existing QuickJSContext. */
   experimentalContextEx?: boolean;
+  /** Globally enable syncing mode, If returns false, If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used.  */
+  syncEnabled?: boolean;
 };
 
 /**
@@ -230,7 +232,7 @@ export class Arena {
     mode: true | "json" | undefined,
   ): Wrapped<QuickJSHandle> | undefined => {
     if (mode === "json") return;
-    return this._register(t, handleFrom(h), this._map)?.[1];
+    return this._register(t, handleFrom(h), this._map, this._options?.syncEnabled)?.[1];
   };
 
   _marshalPreApply = (target: Function, that: unknown, args: unknown[]): void => {
@@ -261,11 +263,13 @@ export class Arena {
       custom: this._options?.customMarshaller,
     });
 
-    return [handle, !this._map.hasHandle(handle)];
+    const syncEnabled = this._options?.syncEnabled ?? true;
+
+    return [handle, !syncEnabled || !this._map.hasHandle(handle)];
   };
 
   _preUnmarshal = (t: any, h: QuickJSHandle): Wrapped<any> => {
-    return this._register(t, h, undefined, true)?.[0];
+    return this._register(t, h, undefined, this._options?.syncEnabled ?? true)?.[0];
   };
 
   _unmarshalFind = (h: QuickJSHandle): unknown => {
@@ -330,6 +334,7 @@ export class Arena {
       target,
       this._symbol,
       this._symbolHandle,
+      this._options?.syncEnabled ?? true,
       this._marshal,
       this._syncMode,
       this._options?.isWrappable,
@@ -351,6 +356,7 @@ export class Arena {
       handle,
       this._symbol,
       this._symbolHandle,
+      this._options?.syncEnabled ?? true,
       this._unmarshal,
       this._syncMode,
       this._options?.isHandleWrappable,
