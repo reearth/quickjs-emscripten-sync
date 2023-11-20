@@ -46,7 +46,7 @@ describe("memory", () => {
     const memoryAfter = getMemory().memory_used_size as number;
 
     console.log("Allocation increased %d", memoryAfter - memoryBefore);
-    expect(memoryAfter - memoryBefore).toBe(0);
+    expect((memoryAfter - memoryBefore) / 1024).toBe(0);
 
     arena.dispose();
     ctx.dispose();
@@ -100,7 +100,7 @@ describe("memory", () => {
     const memoryAfter = getMemory().memory_used_size as number;
 
     console.log("Allocation increased %d", memoryAfter - memoryBefore);
-    expect(memoryAfter - memoryBefore).toBe(0);
+    expect((memoryAfter - memoryBefore) / 1024).toBe(0);
 
     arena.dispose();
     ctx.dispose();

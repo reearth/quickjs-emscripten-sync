@@ -12,10 +12,10 @@ export function wrap<T = any>(
   target: T,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
-  syncEnabled: boolean,
   marshal: (target: any) => [QuickJSHandle, boolean],
   syncMode?: (target: T) => SyncMode | undefined,
   wrappable?: (target: unknown) => boolean,
+  syncEnabled = true,
 ): Wrapped<T> | undefined {
   // promise and date cannot be wrapped
   if (
@@ -85,10 +85,10 @@ export function wrapHandle(
   handle: QuickJSHandle,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
-  syncEnabled: boolean,
   unmarshal: (handle: QuickJSHandle) => any,
   syncMode?: (target: QuickJSHandle) => SyncMode | undefined,
   wrappable?: (target: QuickJSHandle, ctx: QuickJSContext) => boolean,
+  syncEnabled = true,
 ): [Wrapped<QuickJSHandle> | undefined, boolean] {
   if (!isHandleObject(ctx, handle) || (wrappable && !wrappable(handle, ctx)))
     return [undefined, false];

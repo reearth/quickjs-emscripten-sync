@@ -334,10 +334,10 @@ export class Arena {
       target,
       this._symbol,
       this._symbolHandle,
-      this._options?.syncEnabled ?? true,
       this._marshal,
       this._syncMode,
       this._options?.isWrappable,
+      this._options?.syncEnabled ?? true,
     );
   }
 
@@ -356,10 +356,10 @@ export class Arena {
       handle,
       this._symbol,
       this._symbolHandle,
-      this._options?.syncEnabled ?? true,
       this._unmarshal,
       this._syncMode,
       this._options?.isHandleWrappable,
+      this._options?.syncEnabled ?? true,
     );
   }
 
