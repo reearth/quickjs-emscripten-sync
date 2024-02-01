@@ -51,7 +51,7 @@ export type Options = {
   compat?: boolean;
   /** Experimental: use QuickJSContextEx, which wraps existing QuickJSContext. */
   experimentalContextEx?: boolean;
-  /** Globally enable syncing mode, If returns false, If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used.  */
+  /** Globally enable syncing mode. Default is true. If returns false, note that the handle cannot be synchronized between the host and the QuickJS even if arena.sync is used.  */
   syncEnabled?: boolean;
 };
 
