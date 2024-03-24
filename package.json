@@ -20,7 +20,7 @@
     "src"
   ],
   "engines": {
-    "node": ">=12"
+    "node": ">=20.11.1"
   },
   "scripts": {
     "build": "tsc && vite build",
@@ -31,14 +31,14 @@
     "quickjs-emscripten": "*"
   },
   "devDependencies": {
-    "@vitest/coverage-c8": "^0.28.5",
-    "eslint": "^8.22.0",
-    "eslint-config-reearth": "^0.2.1",
-    "prettier": "^2.7.1",
-    "quickjs-emscripten": "^0.21.0",
-    "typescript": "^4.8.2",
-    "vite": "^4.1.2",
-    "vite-plugin-dts": "^2.0.0-beta.1",
-    "vitest": "^0.28.5"
+    "@vitest/coverage-c8": "^0.33.0",
+    "eslint": "^8.57.0",
+    "eslint-config-reearth": "^0.3.0",
+    "prettier": "^3.2.5",
+    "quickjs-emscripten": "^0.29.1",
+    "typescript": "^5.4.3",
+    "vite": "^5.2.6",
+    "vite-plugin-dts": "^3.7.3",
+    "vitest": "^1.4.0"
   }
 }
