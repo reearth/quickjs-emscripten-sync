@@ -7,8 +7,9 @@ export default function marshalPromise(
   preMarshal: (target: unknown, handle: QuickJSDeferredPromise) => QuickJSHandle | undefined,
 ) {
   if (!(target instanceof Promise)) return;
-
+  
   const promise = ctx.newPromise();
+  promise.settled.then(r.runtime.executePendingJobs);
 
   target.then(
     d => promise.resolve(marshal(d)),
