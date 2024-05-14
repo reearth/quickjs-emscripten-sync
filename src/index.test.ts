@@ -209,12 +209,11 @@ describe("evalCode", () => {
     });
     const res = vi.fn();
     arena.evalCode(`(p, r) => { p.then(d => { r(d + "!"); }); }`)(promise, res);
-
     deferred.resolve?.("hoge");
     await promise;
     expect(arena.executePendingJobs()).toBe(1);
     expect(res).toBeCalledWith("hoge!");
-
+    await new Promise(resolve => setTimeout(resolve, 100));
     arena.dispose();
     ctx.dispose();
   });
