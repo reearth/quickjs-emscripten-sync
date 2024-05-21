@@ -35,12 +35,46 @@ export function call(
   }
 }
 
+export function arrayBufferEq(ctx: QuickJSContext, a: QuickJSHandle, b: QuickJSHandle): boolean {
+  const val = ctx.dump(
+    call(
+      ctx,
+      `(buffer1, buffer2) => {
+                if (buffer1.byteLength !== buffer2.byteLength) {
+                  return false; // Buffers must have the same size
+                }
+
+                const view1 = new Uint8Array(buffer1);
+                const view2 = new Uint8Array(buffer2);
+
+                for (let i = 0; i < buffer1.byteLength; i++) {
+                  if (view1[i] !== view2[i]) {
+                    return false;
+                  }
+                }
+                return true;
+               }
+             `,
+      undefined,
+      a,
+      b,
+    ),
+  );
+  a.dispose();
+  b.dispose();
+  return val;
+}
+
 export function eq(ctx: QuickJSContext, a: QuickJSHandle, b: QuickJSHandle): boolean {
   return ctx.dump(call(ctx, "Object.is", undefined, a, b));
 }
 
 export function instanceOf(ctx: QuickJSContext, a: QuickJSHandle, b: QuickJSHandle): boolean {
   return ctx.dump(call(ctx, "(a, b) => a instanceof b", undefined, a, b));
+}
+
+export function isArrayBuffer(ctx: QuickJSContext, a: QuickJSHandle): boolean {
+  return ctx.dump(call(ctx, "(a, b) => a instanceof ArrayBuffer", undefined, a));
 }
 
 export function isHandleObject(ctx: QuickJSContext, h: QuickJSHandle): boolean {

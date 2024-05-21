@@ -6,6 +6,9 @@ export default function marshalPrimitive(
   ctx: QuickJSContext,
   target: unknown,
 ): QuickJSHandle | undefined {
+  if (target instanceof ArrayBuffer) {
+    return ctx.newArrayBuffer(target);
+  }
   switch (typeof target) {
     case "undefined":
       return ctx.undefined;
@@ -17,15 +20,9 @@ export default function marshalPrimitive(
       return target ? ctx.true : ctx.false;
     case "object":
       return target === null ? ctx.null : undefined;
-
-    // BigInt is not supported by quickjs-emscripten
-    // case "bigint":
-    //   return call(
-    //     ctx,
-    //     `s => BigInt(s)`,
-    //     undefined,
-    //     ctx.newString(target.toString())
-    //   );
+    // BigInt is now supported by quickjs-emscripten
+    case "bigint":
+      return ctx.newBigInt(target);
   }
 
   return undefined;
