@@ -1,11 +1,24 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
+import { isArrayBuffer } from "../vmutil";
+
 export default function unmarshalPrimitive(
   ctx: QuickJSContext,
   handle: QuickJSHandle,
 ): [any, boolean] {
+  if (isArrayBuffer(ctx, handle)) {
+    const value = ctx.getArrayBuffer(handle);
+    const buffer = value.value;
+    return [buffer.buffer, true];
+  }
   const ty = ctx.typeof(handle);
-  if (ty === "undefined" || ty === "number" || ty === "string" || ty === "boolean") {
+  if (
+    ty === "undefined" ||
+    ty === "number" ||
+    ty === "string" ||
+    ty === "boolean" ||
+    ty === "bigint"
+  ) {
     return [ctx.dump(handle), true];
   } else if (ty === "object") {
     const isNull = ctx
@@ -15,16 +28,6 @@ export default function unmarshalPrimitive(
       return [null, true];
     }
   }
-
-  // BigInt is not supported by quickjs-emscripten
-  // if (ty === "bigint") {
-  //   const str = ctx
-  //     .getProp(handle, "toString")
-  //     .consume(toString => vm.unwrapResult(vm.callFunction(toString, handle)))
-  //     .consume(str => ctx.getString(str));
-  //   const bi = BigInt(str);
-  //   return [bi, true];
-  // }
 
   return [undefined, false];
 }

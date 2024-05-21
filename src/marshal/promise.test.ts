@@ -69,9 +69,10 @@ const testPromise = (reject: boolean) => async () => {
   } else {
     await expect(deferred.promise).resolves.toBe("hoge");
   }
-  expect(ctx.runtime.hasPendingJob()).toBe(true);
-  const executed = ctx.unwrapResult(ctx.runtime.executePendingJobs());
-  expect(executed).toBe(1);
+  // no need call executePendingJobs, it is called by promise.settled
+  // expect(ctx.runtime.hasPendingJob()).toBe(true);
+  // const executed = ctx.unwrapResult(ctx.runtime.executePendingJobs());
+  // expect(executed).toBe(1);
   expect(mockNotify).toBeCalledTimes(1);
   expect(mockNotify).toBeCalledWith(reject ? "rejected" : "resolved", "hoge");
   expect(marshal).toBeCalledTimes(1);

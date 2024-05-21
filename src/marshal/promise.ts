@@ -10,6 +10,8 @@ export default function marshalPromise(
 
   const promise = ctx.newPromise();
 
+  promise.settled.then(ctx.runtime.executePendingJobs);
+
   target.then(
     d => promise.resolve(marshal(d)),
     d => promise.reject(marshal(d)),
