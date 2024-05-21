@@ -4,6 +4,7 @@ import type {
   QuickJSContext,
   SuccessOrFail,
   VmCallResult,
+  QuickJSAsyncContext,
 } from "quickjs-emscripten";
 
 import { wrapContext, QuickJSContextEx } from "./contextex";
@@ -359,5 +360,21 @@ export class Arena {
 
   _unwrapHandle(target: QuickJSHandle): [QuickJSHandle, boolean] {
     return unwrapHandle(this.context, target, this._symbolHandle);
+  }
+}
+
+export class AsyncArena extends Arena {
+  asyncContext: QuickJSAsyncContext;
+
+  constructor(ctx: QuickJSAsyncContext, options?: Options) {
+    super(ctx, options);
+    this.asyncContext = ctx;
+  }
+  /**
+   * Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
+   */
+  async evalCodeAsync<T = any>(code: string): Promise<T> {
+    const handle = await this.asyncContext.evalCodeAsync(code);
+    return this._unwrapResultAndUnmarshal(handle);
   }
 }

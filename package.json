@@ -1,7 +1,7 @@
 {
   "name": "@open-social-protocol/quickjs-emscripten-sync",
   "author": "rot1024",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "license": "MIT",
   "source": "./src/index.ts",
   "main": "./dist/quickjs-emscripten-sync.umd.js",
