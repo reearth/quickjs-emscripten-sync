@@ -11,6 +11,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/quickjs-emscripten-sync.mjs",
       "require": "./dist/quickjs-emscripten-sync.umd.js"
     }
