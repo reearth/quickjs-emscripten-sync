@@ -641,7 +641,7 @@ describe("evalModule", () => {
     const results: number[] = [];
     arena.expose({
       results,
-      push: (value: number) => results.push(value)
+      push: (value: number) => results.push(value),
     });
 
     arena.evalModule(`
@@ -689,10 +689,7 @@ describe("evalModule", () => {
     arena.expose({ state });
 
     // Test that custom filename doesn't break functionality
-    arena.evalModule(
-      `state.executed = true;`,
-      "custom-module.js"
-    );
+    arena.evalModule(`state.executed = true;`, "custom-module.js");
 
     expect(state.executed).toBe(true);
 

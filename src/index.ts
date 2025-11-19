@@ -119,7 +119,7 @@ export class Arena {
    * arena.evalModule('import { data } from "globals"; data.count = 42;'); // undefined, but data.count is now 42
    * ```
    */
-  evalModule(code: string, filename: string = "module.js"): void {
+  evalModule(code: string, filename = "module.js"): void {
     const handle = this.context.evalCode(code, filename, { type: "module" });
     this._unwrapResultAndUnmarshal(handle);
   }
