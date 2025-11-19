@@ -365,6 +365,39 @@
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.3.tgz#e45e384e4b8ec16bce2fd903af78450f6bf7ec98"
   integrity sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==
 
+"@jitl/quickjs-ffi-types@0.25.1":
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-ffi-types/-/quickjs-ffi-types-0.25.1.tgz#d1cea176dd818f8d2ea6b48a9f18e129921e4172"
+  integrity sha512-m3HqjAsG3DbCwqelRMQYyPU2uGF4f+CAmEn9VhhbK6YXmsUCf0mrULmr4wuYt75xx5NIDcBFvjLJ1303pwGoyg==
+
+"@jitl/quickjs-wasmfile-debug-asyncify@0.25.1":
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-asyncify/-/quickjs-wasmfile-debug-asyncify-0.25.1.tgz#240c927d5f37bede93f7944f560854d6de67e244"
+  integrity sha512-0+p3C8MxRrF9/B1saRe/QSxdPGPSORuNRqOIL1eYyDNllB3E32+StUjtO+ut3YwhktQEgqaacc/pmHYr548cjg==
+  dependencies:
+    "@jitl/quickjs-ffi-types" "0.25.1"
+
+"@jitl/quickjs-wasmfile-debug-sync@0.25.1":
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-sync/-/quickjs-wasmfile-debug-sync-0.25.1.tgz#3d1e4b1439abf2bfe682acc90c631f93c8c9fed5"
+  integrity sha512-Xi8m5V2rGikRAW08kX/9FQOHtfBIzLLuRVKFDSeJ30qqh8aY07wYvc2nqfhOOLnLYMzZkEv3iyIPN/HHJ6ADkw==
+  dependencies:
+    "@jitl/quickjs-ffi-types" "0.25.1"
+
+"@jitl/quickjs-wasmfile-release-asyncify@0.25.1":
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-asyncify/-/quickjs-wasmfile-release-asyncify-0.25.1.tgz#0c8e1547f1e3608de7483e60db680323084082a7"
+  integrity sha512-0jexwropCT11renRczAY/w+7ZMn+m3NEfXRjVeg6OMRk1volHG4zlhcxZQWhF5Ts0yphHpoTPM73JI9Q8/lohQ==
+  dependencies:
+    "@jitl/quickjs-ffi-types" "0.25.1"
+
+"@jitl/quickjs-wasmfile-release-sync@0.25.1":
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-sync/-/quickjs-wasmfile-release-sync-0.25.1.tgz#7e2159977988bccfce6c0ac9b788423ddaf1f3ef"
+  integrity sha512-dYn7iZWR9Z1awCy8GQiX0dfnBpbiRFU5UUlLAyDk4xyku7URAKb3fhQOESY4h6s0kRRz367KaDHr25nRFHmOtA==
+  dependencies:
+    "@jitl/quickjs-ffi-types" "0.25.1"
+
 "@jridgewell/gen-mapping@^0.3.5":
   version "0.3.13"
   resolved "https://registry.yarnpkg.com/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz#6342a19f44347518c93e43b1ac69deb3c4656a1f"
@@ -2689,10 +2722,23 @@ queue-microtask@^1.2.2:
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-quickjs-emscripten@^0.21.0:
-  version "0.21.1"
-  resolved "https://registry.yarnpkg.com/quickjs-emscripten/-/quickjs-emscripten-0.21.1.tgz#5ebf67e4cc7ff5b4b7c0384b1db373b98670920e"
-  integrity sha512-/WJDTXtyL+lZ4D8bPCMsYWRYcbVUy6VFaHd6XSmz2wxRs6/j3apAjYTeQ5Q4vnO3ydsQ4CGl2hlE2kZ8Frb/Dw==
+quickjs-emscripten-core@0.25.1:
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/quickjs-emscripten-core/-/quickjs-emscripten-core-0.25.1.tgz#caa22b3674f08618b885008f0b1fb213eb79c94d"
+  integrity sha512-kUY9gPdxrLA4c9Erc69RgXL7ZZ20zti2MYK0YL/ADIzRK88oidZhuzO0ybf4VPis7WCO7cVsMfR/FYVviI2iaA==
+  dependencies:
+    "@jitl/quickjs-ffi-types" "0.25.1"
+
+quickjs-emscripten@^0.25.0:
+  version "0.25.1"
+  resolved "https://registry.yarnpkg.com/quickjs-emscripten/-/quickjs-emscripten-0.25.1.tgz#7227bf7a2e0116224a75226373360be3d2aa1e52"
+  integrity sha512-9HsI5KkrzWyKSTiAs+tZ+l48ETqqblG/L+Mm+4qIUwySns0lR1Ik5CFU06pDmUZbk5JooDgakd0bVfDLOQNJRg==
+  dependencies:
+    "@jitl/quickjs-wasmfile-debug-asyncify" "0.25.1"
+    "@jitl/quickjs-wasmfile-debug-sync" "0.25.1"
+    "@jitl/quickjs-wasmfile-release-asyncify" "0.25.1"
+    "@jitl/quickjs-wasmfile-release-sync" "0.25.1"
+    quickjs-emscripten-core "0.25.1"
 
 react-is@^16.13.1:
   version "16.13.1"

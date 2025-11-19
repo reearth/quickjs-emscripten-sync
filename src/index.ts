@@ -104,6 +104,27 @@ export class Arena {
   }
 
   /**
+   * Evaluate ES module code in the VM. The module can import/export, but the return value
+   * depends on whether the module exports are accessible (implementation varies by quickjs-emscripten version).
+   * Use this for side effects or when you don't need access to exports.
+   *
+   * @param code - The ES module code to evaluate
+   * @param filename - Optional filename for debugging purposes (default: "module.js")
+   * @returns Undefined in most cases (module side effects are applied)
+   *
+   * @example
+   * ```js
+   * // Execute module code with side effects
+   * arena.expose({ data: { count: 0 } });
+   * arena.evalModule('import { data } from "globals"; data.count = 42;'); // undefined, but data.count is now 42
+   * ```
+   */
+  evalModule(code: string, filename: string = "module.js"): void {
+    const handle = this.context.evalCode(code, filename, { type: "module" });
+    this._unwrapResultAndUnmarshal(handle);
+  }
+
+  /**
    * Almost same as `vm.executePendingJobs()`, but it converts and re-throws error objects when an error is thrown during evaluation.
    */
   executePendingJobs(maxJobsToExecute?: number): number {
