@@ -136,6 +136,121 @@ export class Arena {
   }
 
   /**
+   * Set the max memory this runtime can allocate.
+   * To remove the limit, set to `-1`.
+   *
+   * This is useful for preventing runaway memory usage in untrusted code.
+   *
+   * @param limitBytes - Maximum memory in bytes, or -1 to remove limit
+   *
+   * @example
+   * ```js
+   * // Limit sandbox to 10MB
+   * arena.setMemoryLimit(10 * 1024 * 1024);
+   *
+   * try {
+   *   arena.evalCode(`const huge = new Array(1000000000);`);
+   * } catch (e) {
+   *   console.log("Memory limit exceeded");
+   * }
+   * ```
+   */
+  setMemoryLimit(limitBytes: number): void {
+    this.context.runtime.setMemoryLimit(limitBytes);
+  }
+
+  /**
+   * Set the max stack size for this runtime, in bytes.
+   * To remove the limit, set to `0`.
+   *
+   * This is useful for preventing stack overflow from deeply nested calls or recursion.
+   *
+   * @param stackSize - Maximum stack size in bytes, or 0 to remove limit
+   *
+   * @example
+   * ```js
+   * // Limit stack to 512KB
+   * arena.setMaxStackSize(512 * 1024);
+   *
+   * try {
+   *   arena.evalCode(`function recurse() { recurse(); } recurse();`);
+   * } catch (e) {
+   *   console.log("Stack overflow prevented");
+   * }
+   * ```
+   */
+  setMaxStackSize(stackSize: number): void {
+    this.context.runtime.setMaxStackSize(stackSize);
+  }
+
+  /**
+   * Get detailed memory usage statistics for this runtime.
+   *
+   * @returns An object containing detailed memory allocation information
+   *
+   * @example
+   * ```js
+   * const stats = arena.getMemoryUsage();
+   * console.log(`Memory used: ${stats.memory_used_size} bytes`);
+   * console.log(`Object count: ${stats.obj_count}`);
+   * console.log(`Memory limit: ${stats.malloc_limit}`);
+   * ```
+   */
+  getMemoryUsage(): {
+    malloc_limit: number;
+    memory_used_size: number;
+    malloc_count: number;
+    memory_used_count: number;
+    atom_count: number;
+    atom_size: number;
+    str_count: number;
+    str_size: number;
+    obj_count: number;
+    obj_size: number;
+    prop_count: number;
+    prop_size: number;
+    shape_count: number;
+    shape_size: number;
+    js_func_count: number;
+    js_func_size: number;
+    js_func_code_size: number;
+    js_func_pc2line_count: number;
+    js_func_pc2line_size: number;
+    c_func_count: number;
+    array_count: number;
+    fast_array_count: number;
+    fast_array_elements: number;
+    binary_object_count: number;
+    binary_object_size: number;
+  } {
+    const handle = this.context.runtime.computeMemoryUsage();
+    try {
+      return this.context.dump(handle);
+    } finally {
+      handle.dispose();
+    }
+  }
+
+  /**
+   * Get a human-readable description of memory usage in this runtime.
+   *
+   * @returns A formatted string showing memory statistics
+   *
+   * @example
+   * ```js
+   * console.log(arena.dumpMemoryUsage());
+   * // Output:
+   * // QuickJS memory usage:
+   * //   malloc_limit: 4294967295
+   * //   memory_used_size: 67078
+   * //   ...
+   * ```
+   */
+  dumpMemoryUsage(): string {
+    return this.context.runtime.dumpMemoryUsage();
+  }
+
+  /**
    * Expose objects as global objects in the VM.
    *
    * By default, exposed objects are not synchronized between the host and the VM.
