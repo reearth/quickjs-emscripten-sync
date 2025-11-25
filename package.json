@@ -31,7 +31,7 @@
     "quickjs-emscripten": "*"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/coverage-c8": "^0.28.5",
     "eslint": "^8.57.1",
     "eslint-config-reearth": "^0.2.1",
     "prettier": "^2.8.8",
