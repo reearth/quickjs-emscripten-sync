@@ -1012,3 +1012,119 @@ describe("memory management", () => {
     ctx.dispose();
   });
 });
+
+describe("intrinsics configuration", () => {
+  test("intrinsics can be configured when creating context", async () => {
+    const quickjs = await getQuickJS();
+    const runtime = quickjs.newRuntime();
+
+    // Example: disable eval for sandboxing
+    const ctx = runtime.newContext({ intrinsics: { Eval: false } });
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // This test demonstrates that intrinsics are configured at context creation
+    // The actual restrictions would be enforced by quickjs-emscripten
+    expect(arena).toBeDefined();
+    expect(arena.context).toBeDefined();
+
+    arena.dispose();
+    ctx.dispose();
+    runtime.dispose();
+  });
+});
+
+describe("promise state inspection", () => {
+  test("getPromiseState returns fulfilled for resolved promise", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const handle = arena.context.unwrapResult(arena.context.evalCode("Promise.resolve(42)"));
+
+    // Promise.resolve creates an already fulfilled promise
+    expect(arena.getPromiseState(handle)).toBe("fulfilled");
+
+    handle.dispose();
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("getPromiseState returns pending then fulfilled", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Create a promise that requires job execution to resolve
+    const handle = arena.context.unwrapResult(
+      arena.context.evalCode(`
+      new Promise((resolve) => {
+        globalThis.resolveIt = resolve;
+      })
+    `),
+    );
+
+    expect(arena.getPromiseState(handle)).toBe("pending");
+
+    // Now resolve it
+    arena.evalCode("globalThis.resolveIt(123)");
+    arena.executePendingJobs();
+
+    expect(arena.getPromiseState(handle)).toBe("fulfilled");
+
+    handle.dispose();
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("getPromiseState with chained promises", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Create a pending promise
+    const handle = arena.context.unwrapResult(
+      arena.context.evalCode(`
+      new Promise((resolve) => {
+        globalThis.doResolve = resolve;
+      }).then(x => x * 2)
+    `),
+    );
+
+    expect(arena.getPromiseState(handle)).toBe("pending");
+
+    // Resolve the original promise
+    arena.evalCode("globalThis.doResolve(10)");
+    arena.executePendingJobs();
+
+    expect(arena.getPromiseState(handle)).toBe("fulfilled");
+
+    handle.dispose();
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("getPromiseState detects state changes", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set up a promise that can be controlled
+    arena.evalCode(`
+      globalThis.promiseState = new Promise((resolve, reject) => {
+        globalThis.doResolve = resolve;
+        globalThis.doReject = reject;
+      });
+    `);
+
+    const handle = arena.context.getProp(arena.context.global, "promiseState");
+
+    // Initially pending
+    expect(arena.getPromiseState(handle)).toBe("pending");
+
+    // Resolve it
+    arena.evalCode("globalThis.doResolve(42)");
+    arena.executePendingJobs();
+
+    expect(arena.getPromiseState(handle)).toBe("fulfilled");
+
+    handle.dispose();
+    arena.dispose();
+    ctx.dispose();
+  });
+});
