@@ -612,3 +612,302 @@ describe("isMarshalable option", () => {
     ctx.dispose();
   });
 });
+
+describe("evalModule", () => {
+  test("module can modify exposed globals", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const data = arena.sync({ count: 0, message: "" });
+    arena.expose({ data });
+
+    // Module code can have side effects on exposed globals
+    arena.evalModule(`
+      data.count = 42;
+      data.message = "Hello from module";
+    `);
+
+    expect(data.count).toBe(42);
+    expect(data.message).toBe("Hello from module");
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with function side effects", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const results: number[] = [];
+    arena.expose({
+      results,
+      push: (value: number) => results.push(value),
+    });
+
+    arena.evalModule(`
+      push(1);
+      push(2);
+      push(3);
+    `);
+
+    expect(results).toEqual([1, 2, 3]);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module can define and use internal exports", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const output = arena.sync({ value: 0 });
+    arena.expose({ output });
+
+    // Module can export and use its own exports internally
+    arena.evalModule(`
+      export function double(x) {
+        return x * 2;
+      }
+
+      export const value = 21;
+
+      // Use the exports internally
+      output.value = double(value);
+    `);
+
+    expect(output.value).toBe(42);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with custom filename", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const state = arena.sync({ executed: false });
+    arena.expose({ state });
+
+    // Test that custom filename doesn't break functionality
+    arena.evalModule(`state.executed = true;`, "custom-module.js");
+
+    expect(state.executed).toBe(true);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with strict mode", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const result = arena.sync({ ok: false });
+    arena.expose({ result });
+
+    // Modules are strict by default
+    arena.evalModule(`
+      // This would fail in strict mode if we tried: undeclaredVariable = 1;
+      result.ok = true;
+    `);
+
+    expect(result.ok).toBe(true);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+});
+
+describe("memory management", () => {
+  test("getMemoryUsage returns statistics", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const stats = arena.getMemoryUsage();
+
+    // Check that key properties exist
+    expect(stats).toHaveProperty("memory_used_size");
+    expect(stats).toHaveProperty("malloc_limit");
+    expect(stats).toHaveProperty("obj_count");
+    expect(stats).toHaveProperty("malloc_count");
+
+    // Memory should be used
+    expect(stats.memory_used_size).toBeGreaterThan(0);
+    expect(stats.malloc_count).toBeGreaterThan(0);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("getMemoryUsage tracks allocations", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const before = arena.getMemoryUsage();
+
+    // Allocate some objects
+    arena.evalCode(`
+      const arr = [];
+      for (let i = 0; i < 100; i++) {
+        arr.push({ id: i, data: "test".repeat(10) });
+      }
+    `);
+
+    const after = arena.getMemoryUsage();
+
+    // Memory usage should increase
+    expect(after.memory_used_size).toBeGreaterThan(before.memory_used_size);
+    expect(after.obj_count).toBeGreaterThan(before.obj_count);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("dumpMemoryUsage returns formatted string", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const dump = arena.dumpMemoryUsage();
+
+    // Should be a non-empty string
+    expect(typeof dump).toBe("string");
+    expect(dump.length).toBeGreaterThan(0);
+
+    // Should contain key memory metrics (the format varies)
+    expect(dump).toMatch(/memory|malloc/i);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("setMemoryLimit enforces memory constraints", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set a low memory limit (100KB)
+    arena.setMemoryLimit(100 * 1024);
+
+    // Verify limit is set
+    const stats = arena.getMemoryUsage();
+    expect(stats.malloc_limit).toBe(100 * 1024);
+
+    // Try to allocate too much memory
+    expect(() => {
+      arena.evalCode(`
+        const huge = [];
+        for (let i = 0; i < 1000000; i++) {
+          huge.push({ data: "x".repeat(1000) });
+        }
+      `);
+    }).toThrow();
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("setMemoryLimit can be removed with -1", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set a limit
+    arena.setMemoryLimit(100 * 1024);
+    expect(arena.getMemoryUsage().malloc_limit).toBe(100 * 1024);
+
+    // Remove the limit
+    arena.setMemoryLimit(-1);
+    const stats = arena.getMemoryUsage();
+    expect(stats.malloc_limit).toBeGreaterThan(100 * 1024);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("setMaxStackSize prevents stack overflow", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set a small stack size (256KB)
+    arena.setMaxStackSize(256 * 1024);
+
+    // Try to cause stack overflow with deep recursion
+    expect(() => {
+      arena.evalCode(`
+        function recurse(n) {
+          if (n > 0) return recurse(n - 1);
+          return n;
+        }
+        recurse(100000);
+      `);
+    }).toThrow();
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("setMaxStackSize can be removed with 0", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set a very small stack
+    arena.setMaxStackSize(128 * 1024);
+
+    // This should fail with small stack
+    expect(() => {
+      arena.evalCode(`
+        function recurse(n) {
+          if (n > 0) return recurse(n - 1);
+          return n;
+        }
+        recurse(10000);
+      `);
+    }).toThrow();
+
+    // Remove the limit
+    arena.setMaxStackSize(0);
+
+    // Now it should work (or at least get further)
+    const result = arena.evalCode(`
+      function recurse(n) {
+        if (n > 0) return recurse(n - 1);
+        return n;
+      }
+      recurse(1000);
+    `);
+
+    expect(result).toBe(0);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("memory limits work with marshaling", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Set limit
+    arena.setMemoryLimit(200 * 1024);
+
+    const data = arena.sync({ items: [] as any[] });
+    arena.expose({ data });
+
+    // Should be able to add reasonable data
+    arena.evalCode(`
+      for (let i = 0; i < 10; i++) {
+        data.items.push({ id: i });
+      }
+    `);
+
+    expect(data.items.length).toBe(10);
+
+    // But not unlimited data
+    expect(() => {
+      arena.evalCode(`
+        for (let i = 0; i < 100000; i++) {
+          data.items.push({ id: i, data: "x".repeat(1000) });
+        }
+      `);
+    }).toThrow();
+
+    arena.dispose();
+    ctx.dispose();
+  });
+});

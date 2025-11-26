@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
+      custom_version:
+        description: 'Custom version (only used if version_type is custom, e.g., 1.2.3)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: yarn test run
+
+      - name: Run build
+        run: yarn build
+
+      - name: Get current version
+        id: current_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          if [ "${{ github.event.inputs.version_type }}" = "custom" ]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+            npm version $NEW_VERSION --no-git-tag-version
+          else
+            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          fi
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
+
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            LAST_TAG=$(git describe --tags --abbrev=0)
+            git log $LAST_TAG..HEAD --pretty=format:"- %s" --no-merges > /tmp/commits.txt
+          else
+            git log --pretty=format:"- %s" --no-merges > /tmp/commits.txt
+          fi
+
+          DATE=$(date +%Y-%m-%d)
+
+          cat > /tmp/changelog_entry.md << 'CHANGELOG_EOF'
+          ## [$NEW_VERSION] - $DATE
+
+          ### Changes
+          CHANGELOG_EOF
+
+          sed "s/\$NEW_VERSION/$NEW_VERSION/g; s/\$DATE/$DATE/g" /tmp/changelog_entry.md > /tmp/changelog_header.md
+          cat /tmp/commits.txt >> /tmp/changelog_header.md
+          echo "" >> /tmp/changelog_header.md
+
+          if [ -f CHANGELOG.md ]; then
+            cat /tmp/changelog_header.md CHANGELOG.md > /tmp/new_changelog.md
+            mv /tmp/new_changelog.md CHANGELOG.md
+          else
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            cat /tmp/changelog_header.md >> CHANGELOG.md
+          fi
+
+          echo "changelog<<CHANGELOG_OUTPUT_EOF" >> $GITHUB_OUTPUT
+          cat /tmp/changelog_header.md >> $GITHUB_OUTPUT
+          echo "CHANGELOG_OUTPUT_EOF" >> $GITHUB_OUTPUT
+
+      - name: Create release branch and commit
+        id: create_branch
+        run: |
+          BRANCH_NAME="release/v${{ steps.bump_version.outputs.new_version }}"
+          git checkout -b "$BRANCH_NAME"
+          git add package.json CHANGELOG.md
+          git commit -m "chore: release v${{ steps.bump_version.outputs.new_version }}"
+          git push origin "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+            const version = '${{ steps.bump_version.outputs.new_version }}';
+            const branchName = '${{ steps.create_branch.outputs.branch_name }}';
+
+            const prBody = `## Release v${version}
+
+            This PR was automatically created by the release workflow.
+
+            ### Changelog
+            ${changelog}
+
+            ### Pre-merge Checklist
+            - [ ] Review version bump is correct
+            - [ ] Review changelog entries
+            - [ ] All tests passing
+            - [ ] Build successful
+
+            ### Post-merge Steps
+            After merging this PR:
+            1. Create a GitHub release with tag \`v${version}\`
+            2. Manually publish to npm: \`npm publish\`
+            `;
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `chore: release v${version}`,
+              head: branchName,
+              base: 'main',
+              body: prBody
+            });
+
+            console.log('Pull request created:', pr.html_url);
+            core.summary.addHeading('Release PR Created');
+            core.summary.addLink('View Pull Request', pr.html_url);
+            await core.summary.write();
