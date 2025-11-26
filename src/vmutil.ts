@@ -10,10 +10,12 @@ export function fn(
   code: string,
 ): ((thisArg: QuickJSHandle | undefined, ...args: QuickJSHandle[]) => QuickJSHandle) & Disposable {
   const handle = ctx.unwrapResult(ctx.evalCode(code));
-  const f = (thisArg: QuickJSHandle | undefined, ...args: QuickJSHandle[]): any => {
+  const f: any = (thisArg: QuickJSHandle | undefined, ...args: QuickJSHandle[]): any => {
     return ctx.unwrapResult(ctx.callFunction(handle, thisArg ?? ctx.undefined, ...args));
   };
-  f.dispose = () => handle.dispose();
+  const disposeFn = () => handle.dispose();
+  f.dispose = disposeFn;
+  f[Symbol.dispose] = disposeFn;
   f.alive = true;
   Object.defineProperty(f, "alive", {
     get: () => handle.alive,

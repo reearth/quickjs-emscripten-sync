@@ -104,24 +104,40 @@ export class Arena {
   }
 
   /**
-   * Evaluate ES module code in the VM. The module can import/export, but the return value
-   * depends on whether the module exports are accessible (implementation varies by quickjs-emscripten version).
-   * Use this for side effects or when you don't need access to exports.
+   * Evaluate ES module code in the VM and get the module's exports.
+   *
+   * Requires quickjs-emscripten >= 0.29.0 for export access.
    *
    * @param code - The ES module code to evaluate
    * @param filename - Optional filename for debugging purposes (default: "module.js")
-   * @returns Undefined in most cases (module side effects are applied)
+   * @returns The module's exports object, or a Promise resolving to exports if using top-level await
    *
    * @example
    * ```js
-   * // Execute module code with side effects
-   * arena.expose({ data: { count: 0 } });
-   * arena.evalModule('import { data } from "globals"; data.count = 42;'); // undefined, but data.count is now 42
+   * // Simple module with exports
+   * const exports = arena.evalModule(`
+   *   export const value = 42;
+   *   export function greet(name) {
+   *     return "Hello, " + name;
+   *   }
+   * `);
+   * console.log(exports.value); // 42
+   * console.log(exports.greet("World")); // "Hello, World"
+   *
+   * // Module with default export
+   * const mod = arena.evalModule('export default function(x) { return x * 2; }');
+   * console.log(mod.default(21)); // 42
+   *
+   * // Module with top-level await
+   * const promise = arena.evalModule('export const data = await Promise.resolve(123);');
+   * arena.executePendingJobs();
+   * const exports = await promise;
+   * console.log(exports.data); // 123
    * ```
    */
-  evalModule(code: string, filename = "module.js"): void {
+  evalModule<T = any>(code: string, filename = "module.js"): T | Promise<T> {
     const handle = this.context.evalCode(code, filename, { type: "module" });
-    this._unwrapResultAndUnmarshal(handle);
+    return this._unwrapResultAndUnmarshal(handle);
   }
 
   /**
