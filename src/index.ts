@@ -5,8 +5,6 @@ import type {
   SuccessOrFail,
   VmCallResult,
   Intrinsics,
-  JSPromiseState,
-  JSPromiseStateEnum,
 } from "quickjs-emscripten";
 
 import { wrapContext, QuickJSContextEx } from "./contextex";
@@ -34,7 +32,7 @@ export {
   consumeAll,
 };
 
-export type { Intrinsics, JSPromiseState, JSPromiseStateEnum };
+export type { Intrinsics };
 
 export type Options = {
   /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
@@ -269,38 +267,6 @@ export class Arena {
    */
   dumpMemoryUsage(): string {
     return this.context.runtime.dumpMemoryUsage();
-  }
-
-  /**
-   * Get the state of a VM Promise synchronously.
-   *
-   * Note: This only works with promises that were created in the VM and accessed
-   * via their internal handle. For marshaled promises from evalCode/evalModule,
-   * the promise is already resolved on the host side.
-   *
-   * Requires quickjs-emscripten >= 0.29.1
-   *
-   * @param promiseHandle - The QuickJS handle to the promise
-   * @returns The state of the promise: "pending", "fulfilled", or "rejected"
-   *
-   * @example
-   * ```js
-   * const handle = arena.context.unwrapResult(
-   *   arena.context.evalCode('Promise.resolve(42)')
-   * );
-   *
-   * console.log(arena.getPromiseState(handle)); // "pending" (before job execution)
-   *
-   * arena.executePendingJobs();
-   *
-   * console.log(arena.getPromiseState(handle)); // "fulfilled"
-   *
-   * handle.dispose();
-   * ```
-   */
-  getPromiseState(promiseHandle: QuickJSHandle): "pending" | "fulfilled" | "rejected" {
-    const state = this.context.getPromiseState(promiseHandle);
-    return state.type;
   }
 
   /**
