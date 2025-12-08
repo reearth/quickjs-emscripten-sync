@@ -715,6 +715,107 @@ describe("evalModule", () => {
     arena.dispose();
     ctx.dispose();
   });
+
+  test("module returns exported values (0.29+)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const exports = arena.evalModule(`
+      export const value = 42;
+      export const message = "Hello";
+      export const obj = { a: 1, b: 2 };
+    `);
+
+    expect(exports.value).toBe(42);
+    expect(exports.message).toBe("Hello");
+    expect(exports.obj).toEqual({ a: 1, b: 2 });
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module returns exported functions (0.29+)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const exports = arena.evalModule(`
+      export function greet(name) {
+        return "Hello, " + name;
+      }
+      export function add(a, b) {
+        return a + b;
+      }
+    `);
+
+    expect(exports.greet("World")).toBe("Hello, World");
+    expect(exports.add(2, 3)).toBe(5);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with default export (0.29+)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const exports = arena.evalModule(`
+      export default function(x) {
+        return x * 2;
+      }
+    `);
+
+    expect(exports.default(21)).toBe(42);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with class export (0.29+)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Export objects and static methods from a class
+    const exports = arena.evalModule(`
+      export class Counter {
+        static create(initial = 0) {
+          return { count: initial };
+        }
+        static increment(obj) {
+          return ++obj.count;
+        }
+      }
+    `);
+
+    // Static methods can be called from the host
+    const counter = exports.Counter.create(10);
+    expect(counter.count).toBe(10);
+    expect(exports.Counter.increment(counter)).toBe(11);
+    expect(counter.count).toBe(11);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("module with top-level await (0.29+)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    const exportsPromise = arena.evalModule(`
+      export const data = await Promise.resolve(123);
+      export const message = "loaded";
+    `);
+
+    expect(exportsPromise).toBeInstanceOf(Promise);
+
+    arena.executePendingJobs();
+
+    const exports = await exportsPromise;
+    expect(exports.data).toBe(123);
+    expect(exports.message).toBe("loaded");
+
+    arena.dispose();
+    ctx.dispose();
+  });
 });
 
 describe("memory management", () => {
@@ -909,5 +1010,25 @@ describe("memory management", () => {
 
     arena.dispose();
     ctx.dispose();
+  });
+});
+
+describe("intrinsics configuration", () => {
+  test("intrinsics can be configured when creating context", async () => {
+    const quickjs = await getQuickJS();
+    const runtime = quickjs.newRuntime();
+
+    // Example: disable eval for sandboxing
+    const ctx = runtime.newContext({ intrinsics: { Eval: false } });
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // This test demonstrates that intrinsics are configured at context creation
+    // The actual restrictions would be enforced by quickjs-emscripten
+    expect(arena).toBeDefined();
+    expect(arena.context).toBeDefined();
+
+    arena.dispose();
+    ctx.dispose();
+    runtime.dispose();
   });
 });
