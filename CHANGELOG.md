@@ -1,3 +1,7 @@
+## [1.7.0] - 2025-12-08
+
+### Changes
+- feat: quickjs-emscripten upgrade to 0.29 (#58)
 # Changelog
 
 All notable changes to this project will be documented in this file.
