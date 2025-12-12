@@ -1,10 +1,11 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
 ## [1.8.0] - 2025-12-12
 
 ### Changes
 - feat: upgrade to quickjs-emscripten 0.31.0 (#60)
-# Changelog
-
-All notable changes to this project will be documented in this file.
 
 ## [1.7.0] - 2025-12-08
 
