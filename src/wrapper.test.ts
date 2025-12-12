@@ -1,7 +1,7 @@
 import { QuickJSHandle, getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
-import { call, eq, json } from "./vmutil";
+import { call, json } from "./vmutil";
 import {
   wrap,
   unwrap,
@@ -183,7 +183,7 @@ test("wrapHandle, unwrapHandle, isHandleWrapped", async () => {
   const [handle2, unwrapped2] = unwrapHandle(ctx, wrapped, proxyKeySymbolHandle);
   expect(unwrapped2).toBe(true);
   handle2.consume(h => {
-    expect(eq(ctx, handle, h)).toBe(true);
+    expect(ctx.sameValue(handle, h)).toBe(true);
   });
 
   const [wrapped2] = wrapHandle(
@@ -214,7 +214,7 @@ test("wrapHandle without sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((h: QuickJSHandle) =>
-    wrapped && eq(ctx, h, wrapped) ? target : ctx.dump(h),
+    wrapped && ctx.sameValue(h, wrapped) ? target : ctx.dump(h),
   );
   const syncMode = vi.fn();
 
@@ -253,7 +253,7 @@ test("wrapHandle with both sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((h: QuickJSHandle) => {
-    return wrapped && eq(ctx, h, wrapped) ? target : ctx.dump(h);
+    return wrapped && ctx.sameValue(h, wrapped) ? target : ctx.dump(h);
   });
   const syncMode = vi.fn((): SyncMode => "both");
 
@@ -303,7 +303,7 @@ test("wrapHandle with host sync", async () => {
   const proxyKeySymbol = Symbol();
   const proxyKeySymbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
   const unmarshal = vi.fn((handle: QuickJSHandle) =>
-    wrapped && eq(ctx, handle, wrapped) ? target : ctx.dump(handle),
+    wrapped && ctx.sameValue(handle, wrapped) ? target : ctx.dump(handle),
   );
   const syncMode = vi.fn((): SyncMode => "host");
 
@@ -352,7 +352,7 @@ test("wrap and wrapHandle", async () => {
     false,
   ]);
   const unmarshal = vi.fn((handle: QuickJSHandle) =>
-    wrappedHandle && eq(ctx, handle, wrappedHandle) ? wrapped : ctx.dump(handle),
+    wrappedHandle && ctx.sameValue(handle, wrappedHandle) ? wrapped : ctx.dump(handle),
   );
   const syncMode = vi.fn((): SyncMode => "both");
 

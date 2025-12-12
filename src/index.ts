@@ -13,7 +13,7 @@ import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
 import VMMap from "./vmmap";
-import { call, eq, isHandleObject, json, consumeAll, mayConsume, handleFrom } from "./vmutil";
+import { call, isHandleObject, json, consumeAll, mayConsume, handleFrom } from "./vmutil";
 import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
 
 export {
@@ -26,7 +26,6 @@ export {
   isObject,
   walkObject,
   call,
-  eq,
   isHandleObject,
   json,
   consumeAll,
@@ -309,7 +308,7 @@ export class Arena {
       typeof handleOrCode === "string"
         ? this._unwrapResult(this.context.evalCode(handleOrCode))
         : handleOrCode;
-    if (eq(this.context, handle, this.context.undefined)) return;
+    if (this.context.sameValue(handle, this.context.undefined)) return;
     if (typeof handleOrCode === "string") {
       this._registeredMapDispose.add(target);
     }

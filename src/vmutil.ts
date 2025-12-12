@@ -37,10 +37,6 @@ export function call(
   }
 }
 
-export function eq(ctx: QuickJSContext, a: QuickJSHandle, b: QuickJSHandle): boolean {
-  return ctx.sameValue(a, b);
-}
-
 export function instanceOf(ctx: QuickJSContext, a: QuickJSHandle, b: QuickJSHandle): boolean {
   return ctx.dump(call(ctx, "(a, b) => a instanceof b", undefined, a, b));
 }
