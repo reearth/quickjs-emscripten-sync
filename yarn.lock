@@ -340,38 +340,38 @@
   resolved "https://registry.yarnpkg.com/@istanbuljs/schema/-/schema-0.1.3.tgz#e45e384e4b8ec16bce2fd903af78450f6bf7ec98"
   integrity sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==
 
-"@jitl/quickjs-ffi-types@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@jitl/quickjs-ffi-types/-/quickjs-ffi-types-0.29.2.tgz#91aaa6be43471b5c8fc3a85f94582c86d345ba2e"
-  integrity sha512-069uQTiEla2PphXg6UpyyJ4QXHkTj3S9TeXgaMCd8NDYz3ODBw5U/rkg6fhuU8SMpoDrWjEzybmV5Mi2Pafb5w==
+"@jitl/quickjs-ffi-types@0.31.0":
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-ffi-types/-/quickjs-ffi-types-0.31.0.tgz#1f5cbec1c1ec03eba860842ea59914db3cf3c69a"
+  integrity sha512-1yrgvXlmXH2oNj3eFTrkwacGJbmM0crwipA3ohCrjv52gBeDaD7PsTvFYinlAnqU8iPME3LGP437yk05a2oejw==
 
-"@jitl/quickjs-wasmfile-debug-asyncify@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-asyncify/-/quickjs-wasmfile-debug-asyncify-0.29.2.tgz#ddf58d1ab90b94a70a73b93f95c4e17f16d0a2a9"
-  integrity sha512-YdRw2414pFkxzyyoJGv81Grbo9THp/5athDMKipaSBNNQvFE9FGRrgE9tt2DT2mhNnBx1kamtOGj0dX84Yy9bg==
+"@jitl/quickjs-wasmfile-debug-asyncify@0.31.0":
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-asyncify/-/quickjs-wasmfile-debug-asyncify-0.31.0.tgz#0a707fe7ed25e0d5986c8346ae02788a648c9c63"
+  integrity sha512-YkdzQdr1uaftFhgEnTRjTTZHk2SFZdpWO7XhOmRVbi6CEVsH9g5oNF8Ta1q3OuSJHRwwT8YsuR1YzEiEIJEk6w==
   dependencies:
-    "@jitl/quickjs-ffi-types" "0.29.2"
+    "@jitl/quickjs-ffi-types" "0.31.0"
 
-"@jitl/quickjs-wasmfile-debug-sync@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-sync/-/quickjs-wasmfile-debug-sync-0.29.2.tgz#b1a9c0f9371de2e8e67f8d025c0d9c9b7360f175"
-  integrity sha512-VgisubjyPMWEr44g+OU0QWGyIxu7VkApkLHMxdORX351cw22aLTJ+Z79DJ8IVrTWc7jh4CBPsaK71RBQDuVB7w==
+"@jitl/quickjs-wasmfile-debug-sync@0.31.0":
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-debug-sync/-/quickjs-wasmfile-debug-sync-0.31.0.tgz#aac7f901c4df7fdf3aea456c66dbf38f48b0564e"
+  integrity sha512-8XvloaaWBONqcHXYs5tWOjdhQVxzULilIfB2hvZfS6S+fI4m2+lFiwQy7xeP8ExHmiZ7D8gZGChNkdLgjGfknw==
   dependencies:
-    "@jitl/quickjs-ffi-types" "0.29.2"
+    "@jitl/quickjs-ffi-types" "0.31.0"
 
-"@jitl/quickjs-wasmfile-release-asyncify@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-asyncify/-/quickjs-wasmfile-release-asyncify-0.29.2.tgz#51c23bfd93d56d9eaab47ee937838c91376b093a"
-  integrity sha512-sf3luCPr8wBVmGV6UV8Set+ie8wcO6mz5wMvDVO0b90UVCKfgnx65A1JfeA+zaSGoaFyTZ3sEpXSGJU+6qJmLw==
+"@jitl/quickjs-wasmfile-release-asyncify@0.31.0":
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-asyncify/-/quickjs-wasmfile-release-asyncify-0.31.0.tgz#00b11f65b540e7c9472bd08fb499adac77f4a227"
+  integrity sha512-uz0BbQYTxNsFkvkurd7vk2dOg57ElTBLCuvNtRl4rgrtbC++NIndD5qv2+AXb6yXDD3Uy1O2PCwmoaH0eXgEOg==
   dependencies:
-    "@jitl/quickjs-ffi-types" "0.29.2"
+    "@jitl/quickjs-ffi-types" "0.31.0"
 
-"@jitl/quickjs-wasmfile-release-sync@0.29.2":
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-sync/-/quickjs-wasmfile-release-sync-0.29.2.tgz#7a9a055739bfc6261203701a46e2c627cfabe6f2"
-  integrity sha512-UFIcbY3LxBRUjEqCHq3Oa6bgX5znt51V5NQck8L2US4u989ErasiMLUjmhq6UPC837Sjqu37letEK/ZpqlJ7aA==
+"@jitl/quickjs-wasmfile-release-sync@0.31.0":
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/@jitl/quickjs-wasmfile-release-sync/-/quickjs-wasmfile-release-sync-0.31.0.tgz#66939a090f4a5132e25e15b76e76d09c25f92ea6"
+  integrity sha512-hYduecOByj9AsAfsJhZh5nA6exokmuFC8cls39+lYmTCGY51bgjJJJwReEu7Ff7vBWaQCL6TeDdVlnp2WYz0jw==
   dependencies:
-    "@jitl/quickjs-ffi-types" "0.29.2"
+    "@jitl/quickjs-ffi-types" "0.31.0"
 
 "@jridgewell/resolve-uri@^3.1.0":
   version "3.1.2"
@@ -2683,23 +2683,23 @@ queue-microtask@^1.2.2:
   resolved "https://registry.yarnpkg.com/queue-microtask/-/queue-microtask-1.2.3.tgz#4929228bbc724dfac43e0efb058caf7b6cfb6243"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-quickjs-emscripten-core@0.29.2:
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/quickjs-emscripten-core/-/quickjs-emscripten-core-0.29.2.tgz#ad9bef103fce7d8ba879510905824e33119a62f3"
-  integrity sha512-jEAiURW4jGqwO/fW01VwlWqa2G0AJxnN5FBy1xnVu8VIVhVhiaxUfCe+bHqS6zWzfjFm86HoO40lzpteusvyJA==
+quickjs-emscripten-core@0.31.0:
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/quickjs-emscripten-core/-/quickjs-emscripten-core-0.31.0.tgz#22cbccec207adb6ce486ec1e90730499815e3e15"
+  integrity sha512-oQz8p0SiKDBc1TC7ZBK2fr0GoSHZKA0jZIeXxsnCyCs4y32FStzCW4d1h6E1sE0uHDMbGITbk2zhNaytaoJwXQ==
   dependencies:
-    "@jitl/quickjs-ffi-types" "0.29.2"
+    "@jitl/quickjs-ffi-types" "0.31.0"
 
-quickjs-emscripten@^0.29.0:
-  version "0.29.2"
-  resolved "https://registry.yarnpkg.com/quickjs-emscripten/-/quickjs-emscripten-0.29.2.tgz#da6c7afb543cc5b4854eaca457778cfae5069f8b"
-  integrity sha512-SlvkvyZgarReu2nr4rkf+xz1vN0YDUz7sx4WHz8LFtK6RNg4/vzAGcFjE7nfHYBEbKrzfIWvKnMnxZkctQ898w==
+quickjs-emscripten@^0.31.0:
+  version "0.31.0"
+  resolved "https://registry.yarnpkg.com/quickjs-emscripten/-/quickjs-emscripten-0.31.0.tgz#6dbd7dbb5ddf84cf3eb28c3d1411a8300affe3a9"
+  integrity sha512-K7Yt78aRPLjPcqv3fIuLW1jW3pvwO21B9pmFOolsjM/57ZhdVXBr51GqJpalgBlkPu9foAvhEAuuQPnvIGvLvQ==
   dependencies:
-    "@jitl/quickjs-wasmfile-debug-asyncify" "0.29.2"
-    "@jitl/quickjs-wasmfile-debug-sync" "0.29.2"
-    "@jitl/quickjs-wasmfile-release-asyncify" "0.29.2"
-    "@jitl/quickjs-wasmfile-release-sync" "0.29.2"
-    quickjs-emscripten-core "0.29.2"
+    "@jitl/quickjs-wasmfile-debug-asyncify" "0.31.0"
+    "@jitl/quickjs-wasmfile-debug-sync" "0.31.0"
+    "@jitl/quickjs-wasmfile-release-asyncify" "0.31.0"
+    "@jitl/quickjs-wasmfile-release-sync" "0.31.0"
+    quickjs-emscripten-core "0.31.0"
 
 react-is@^16.13.1:
   version "16.13.1"

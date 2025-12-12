@@ -5,7 +5,6 @@ import {
   fn,
   call,
   consumeAll,
-  eq,
   instanceOf,
   isHandleObject,
   json,
@@ -57,8 +56,8 @@ test("eq", async () => {
   const math2 = ctx.unwrapResult(ctx.evalCode("Math"));
   const obj = ctx.newObject();
   expect(math1 === math2).toBe(false);
-  expect(eq(ctx, math1, math2)).toBe(true);
-  expect(eq(ctx, math1, obj)).toBe(false);
+  expect(ctx.sameValue(math1, math2)).toBe(true);
+  expect(ctx.sameValue(math1, obj)).toBe(false);
 
   math1.dispose();
   math2.dispose();

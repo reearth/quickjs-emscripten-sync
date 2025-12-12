@@ -1,7 +1,7 @@
 import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
-import { json, eq, call } from "../vmutil";
+import { json, call } from "../vmutil";
 
 import marshalFunction from "./function";
 
@@ -9,7 +9,7 @@ test("normal func", async () => {
   const ctx = (await getQuickJS()).newContext();
 
   const marshal = vi.fn(v => json(ctx, v));
-  const unmarshal = vi.fn(v => (eq(ctx, v, ctx.global) ? undefined : ctx.dump(v)));
+  const unmarshal = vi.fn(v => (ctx.sameValue(v, ctx.global) ? undefined : ctx.dump(v)));
   const preMarshal = vi.fn((_, a) => a);
   const innerfn = vi.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
