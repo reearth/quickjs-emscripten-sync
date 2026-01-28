@@ -17,7 +17,7 @@ export type Options = {
     handle: QuickJSHandle | QuickJSDeferredPromise,
     mode: true | "json" | undefined,
   ) => QuickJSHandle | undefined;
-  preApply?: (target: Function, thisArg: unknown, args: unknown[]) => any;
+  preApply?: (target: (...args: any[]) => any, thisArg: unknown, args: unknown[]) => any;
   custom?: Iterable<(obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
 };
 

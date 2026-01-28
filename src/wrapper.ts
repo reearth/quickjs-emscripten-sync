@@ -105,7 +105,7 @@ export function wrapHandle(
     const target = unmarshal(h);
     if (!target) return;
     const key = unmarshal(keyHandle);
-    delete unwrap(target, proxyKeySymbol)[key];
+    Reflect.deleteProperty(unwrap(target, proxyKeySymbol), key);
   };
 
   return ctx

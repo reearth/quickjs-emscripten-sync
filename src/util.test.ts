@@ -55,12 +55,12 @@ test("complexity", () => {
   expect(complexity({ a: {} }, 1)).toBe(1);
 });
 
-test("newDeferred", () => {
+test("newDeferred", async () => {
   const deferred = newDeferred();
   deferred.resolve("foo");
-  expect(deferred.promise).resolves.toBe("foo");
+  await expect(deferred.promise).resolves.toBe("foo");
 
   const deferred2 = newDeferred();
   deferred2.reject("bar");
-  expect(deferred2.promise).rejects.toBe("bar");
+  await expect(deferred2.promise).rejects.toBe("bar");
 });

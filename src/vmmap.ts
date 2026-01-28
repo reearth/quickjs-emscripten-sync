@@ -2,12 +2,12 @@ import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 export default class VMMap {
   ctx: QuickJSContext;
-  _map1: Map<any, number> = new Map();
-  _map2: Map<any, number> = new Map();
-  _map3: Map<number, QuickJSHandle> = new Map();
-  _map4: Map<number, QuickJSHandle> = new Map();
-  _counterMap: Map<number, any> = new Map();
-  _disposables: Set<QuickJSHandle> = new Set();
+  _map1 = new Map<any, number>();
+  _map2 = new Map<any, number>();
+  _map3 = new Map<number, QuickJSHandle>();
+  _map4 = new Map<number, QuickJSHandle>();
+  _counterMap = new Map<number, any>();
+  _disposables = new Set<QuickJSHandle>();
   _mapGet: QuickJSHandle;
   _mapSet: QuickJSHandle;
   _mapDelete: QuickJSHandle;
@@ -226,7 +226,7 @@ export default class VMMap {
     const keys = this._map1.keys();
     return {
       next: () => {
-        // eslint-disable-next-line no-constant-condition
+         
         while (true) {
           const k1 = keys.next();
           if (k1.done) return { value: undefined, done: true };

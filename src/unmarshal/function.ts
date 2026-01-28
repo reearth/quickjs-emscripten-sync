@@ -11,7 +11,7 @@ export default function unmarshalFunction(
   marshal: (value: unknown) => [QuickJSHandle, boolean],
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
   preUnmarshal: <T>(target: T, handle: QuickJSHandle) => T | undefined,
-): Function | undefined {
+): ((...args: any[]) => any) | undefined {
   if (ctx.typeof(handle) !== "function") return;
 
   const raw = function (this: any, ...args: any[]) {
