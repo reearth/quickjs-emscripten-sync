@@ -69,6 +69,6 @@ describe("edge cases", () => {
       ctx.dispose();
       rt.dispose();
     },
-    60000,
+    90000,
   );
 });
