@@ -14,9 +14,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
+          cache: 'yarn'
 
       - name: Install deps
-        uses: bahmutov/npm-install@v1
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: yarn run lint
@@ -31,7 +32,7 @@ jobs:
         run: yarn run build
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/**/*
