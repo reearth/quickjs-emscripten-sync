@@ -14,22 +14,22 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'yarn'
+          cache: 'npm'
 
       - name: Install deps
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Lint
-        run: yarn run lint
+        run: npm run lint
 
       - name: Test
-        run: yarn test --coverage
+        run: npm test -- --coverage
 
       - name: codecov
         uses: codecov/codecov-action@v5
 
       - name: Build
-        run: yarn run build
+        run: npm run build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
