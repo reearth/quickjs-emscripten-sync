@@ -1,3 +1,7 @@
+## [1.8.1] - 2026-02-03
+
+### Changes
+- chore: Upgrade Dev Dependencies (#63)
 # Changelog
 
 All notable changes to this project will be documented in this file.
