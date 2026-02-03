@@ -2,12 +2,13 @@ export function isES2015Class(cls: any): cls is new (...args: any[]) => any {
   return typeof cls === "function" && /^class\s/.test(Function.prototype.toString.call(cls));
 }
 
-export function isObject(value: any): value is object | Function {
+export function isObject(value: any): value is object | ((...args: any[]) => any) {
   return typeof value === "function" || (typeof value === "object" && value !== null);
 }
 
 export function walkObject(
   value: any,
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
   callback?: (target: any, set: Set<any>) => boolean | void,
 ): Set<any> {
   const set = new Set<any>();

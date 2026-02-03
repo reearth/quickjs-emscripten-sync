@@ -5,7 +5,7 @@ import { call } from "../vmutil";
 export default function unmarshalProperties(
   ctx: QuickJSContext,
   handle: QuickJSHandle,
-  target: object | Function,
+  target: object | ((...args: any[]) => any),
   unmarshal: (handle: QuickJSHandle) => [unknown, boolean],
 ) {
   ctx

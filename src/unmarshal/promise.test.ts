@@ -31,9 +31,9 @@ const testPromise = (reject: boolean) => async () => {
   expect(ctx.runtime.hasPendingJob()).toBe(true);
   expect(ctx.unwrapResult(ctx.runtime.executePendingJobs())).toBe(1);
   if (reject) {
-    expect(promise).rejects.toThrow("hoge");
+    await expect(promise).rejects.toThrow("hoge");
   } else {
-    expect(promise).resolves.toBe("hoge");
+    await expect(promise).resolves.toBe("hoge");
   }
 
   disposables.forEach(d => d.dispose());

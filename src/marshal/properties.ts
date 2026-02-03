@@ -4,7 +4,7 @@ import { call } from "../vmutil";
 
 export default function marshalProperties(
   ctx: QuickJSContext,
-  target: object | Function,
+  target: object | ((...args: any[]) => any),
   handle: QuickJSHandle,
   marshal: (target: unknown) => QuickJSHandle,
 ): void {

@@ -62,9 +62,9 @@ export class Arena {
   context: QuickJSContextEx;
   _map: VMMap;
   _registeredMap: VMMap;
-  _registeredMapDispose: Set<any> = new Set();
-  _sync: Set<any> = new Set();
-  _temporalSync: Set<any> = new Set();
+  _registeredMapDispose = new Set<any>();
+  _sync = new Set<any>();
+  _temporalSync = new Set<any>();
   _symbol = Symbol();
   _symbolHandle: QuickJSHandle;
   _options?: Options;
@@ -74,7 +74,7 @@ export class Arena {
     if (options?.compat && !("runtime" in ctx)) {
       (ctx as any).runtime = {
         hasPendingJob: () => (ctx as any).hasPendingJob(),
-        executePendingJobs: (maxJobsToExecute?: number | void) =>
+        executePendingJobs: (maxJobsToExecute?: number | undefined) =>
           (ctx as any).executePendingJobs(maxJobsToExecute),
       };
     }
@@ -274,7 +274,7 @@ export class Arena {
    * By default, exposed objects are not synchronized between the host and the VM.
    * If you want to sync an objects, first wrap the object with sync method, and then expose the wrapped object.
    */
-  expose(obj: { [k: string]: any }) {
+  expose(obj: Record<string, any>) {
     for (const [key, value] of Object.entries(obj)) {
       mayConsume(this._marshal(value), handle => {
         this.context.setProp(this.context.global, key, handle);
@@ -387,7 +387,7 @@ export class Arena {
     return this._register(t, handleFrom(h), this._map)?.[1];
   };
 
-  _marshalPreApply = (target: Function, that: unknown, args: unknown[]): void => {
+  _marshalPreApply = (target: (...args: any[]) => any, that: unknown, args: unknown[]): void => {
     const unwrapped = isObject(that) ? this._unwrap(that) : undefined;
     // override sync mode of this object while calling the function
     if (unwrapped) this._temporalSync.add(unwrapped);

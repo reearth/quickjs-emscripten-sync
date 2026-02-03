@@ -39,15 +39,16 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
+          cache: 'npm'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Run tests
-        run: yarn test run
+        run: npm test -- run
 
       - name: Run build
-        run: yarn build
+        run: npm run build
 
       - name: Get current version
         id: current_version

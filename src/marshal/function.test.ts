@@ -116,7 +116,7 @@ test("preApply", async () => {
     return ctx.null;
   };
   const unmarshal = (v: QuickJSHandle) => (ctx.typeof(v) === "object" ? that : ctx.dump(v));
-  const preApply = vi.fn((a: Function, b: any, c: any[]) => a.apply(b, c) + "!");
+  const preApply = vi.fn((a: (...args: any[]) => any, b: any, c: any[]) => a.apply(b, c) + "!");
   const that = {};
   const thatHandle = ctx.newObject();
 

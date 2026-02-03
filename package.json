@@ -3,6 +3,7 @@
   "author": "rot1024",
   "version": "1.8.0",
   "license": "MIT",
+  "type": "module",
   "source": "./src/index.ts",
   "main": "./dist/quickjs-emscripten-sync.umd.js",
   "module": "./dist/quickjs-emscripten-sync.mjs",
@@ -31,14 +32,14 @@
     "quickjs-emscripten": "*"
   },
   "devDependencies": {
-    "@vitest/coverage-c8": "^0.28.5",
-    "eslint": "^8.57.1",
-    "eslint-config-reearth": "^0.2.1",
-    "prettier": "^2.8.8",
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^9.39.2",
+    "eslint-config-reearth": "^0.3.8",
+    "prettier": "^3.8.1",
     "quickjs-emscripten": "^0.31.0",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
     "vite-plugin-dts": "^4.3.0",
-    "vitest": "^0.28.5"
+    "vitest": "^4.0.18"
   }
 }
