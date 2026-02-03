@@ -1,7 +1,7 @@
 {
   "name": "quickjs-emscripten-sync",
   "author": "rot1024",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "license": "MIT",
   "type": "module",
   "source": "./src/index.ts",
