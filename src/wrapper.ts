@@ -15,6 +15,7 @@ export function wrap<T = any>(
   marshal: (target: any) => [QuickJSHandle, boolean],
   syncMode?: (target: T) => SyncMode | undefined,
   wrappable?: (target: unknown) => boolean,
+  syncEnabled = true,
 ): Wrapped<T> | undefined {
   // promise and date cannot be wrapped
   if (
@@ -22,10 +23,17 @@ export function wrap<T = any>(
     target instanceof Promise ||
     target instanceof Date ||
     (wrappable && !wrappable(target))
-  )
+  ) {
     return undefined;
+  }
 
-  if (isWrapped(target, proxyKeySymbol)) return target;
+  if (isWrapped(target, proxyKeySymbol)) {
+    return target;
+  }
+
+  if (!syncEnabled) {
+    return target as Wrapped<T>;
+  }
 
   const rec = new Proxy(target as any, {
     get(obj, key) {
@@ -80,11 +88,18 @@ export function wrapHandle(
   unmarshal: (handle: QuickJSHandle) => any,
   syncMode?: (target: QuickJSHandle) => SyncMode | undefined,
   wrappable?: (target: QuickJSHandle, ctx: QuickJSContext) => boolean,
+  syncEnabled = true,
 ): [Wrapped<QuickJSHandle> | undefined, boolean] {
   if (!isHandleObject(ctx, handle) || (wrappable && !wrappable(handle, ctx)))
     return [undefined, false];
 
-  if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) return [handle, false];
+  if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) {
+    return [handle, false];
+  }
+
+  if (!syncEnabled) {
+    return [handle as Wrapped<QuickJSHandle>, false];
+  }
 
   const getSyncMode = (h: QuickJSHandle) => {
     const res = syncMode?.(unmarshal(h));

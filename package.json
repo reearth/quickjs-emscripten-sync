@@ -25,8 +25,10 @@
   },
   "scripts": {
     "build": "tsc && vite build",
+    "prepare": "vite build",
     "test": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
   },
   "peerDependencies": {
     "quickjs-emscripten": "*"
