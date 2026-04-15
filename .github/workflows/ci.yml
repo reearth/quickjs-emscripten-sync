@@ -26,7 +26,7 @@ jobs:
         run: npm test -- --coverage
 
       - name: codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
 
       - name: Build
         run: npm run build
