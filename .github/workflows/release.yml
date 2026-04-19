@@ -116,7 +116,7 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const changelog = `${{ steps.changelog.outputs.changelog }}`;
