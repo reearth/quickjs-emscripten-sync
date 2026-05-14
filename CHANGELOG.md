@@ -1,3 +1,7 @@
+## [1.8.2] - 2026-05-14
+
+### Changes
+- chore: bump dev deps, harden CI, add Trusted-Publishing release workflow (#70)
 ## [1.8.1] - 2026-02-03
 
 ### Changes
