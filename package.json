@@ -23,6 +23,7 @@
   "engines": {
     "node": ">=12"
   },
+  "packageManager": "npm@11.14.1",
   "scripts": {
     "build": "tsc && vite build",
     "test": "vitest",
@@ -32,14 +33,14 @@
     "quickjs-emscripten": "*"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^9.39.2",
+    "@vitest/coverage-v8": "^4.1.6",
+    "eslint": "^9.39.4",
     "eslint-config-reearth": "^0.3.8",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "quickjs-emscripten": "^0.31.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^7.3.3",
     "vite-plugin-dts": "^4.3.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.6"
   }
 }
