@@ -3,6 +3,12 @@
   "author": "rot1024",
   "version": "1.8.2",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reearth/quickjs-emscripten-sync.git"
+  },
+  "homepage": "https://github.com/reearth/quickjs-emscripten-sync#readme",
+  "bugs": "https://github.com/reearth/quickjs-emscripten-sync/issues",
   "type": "module",
   "source": "./src/index.ts",
   "main": "./dist/quickjs-emscripten-sync.umd.js",
