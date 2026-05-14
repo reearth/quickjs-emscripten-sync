@@ -23,7 +23,7 @@
   "engines": {
     "node": ">=12"
   },
-  "packageManager": "npm@11.5.1",
+  "packageManager": "npm@11.14.1",
   "scripts": {
     "build": "tsc && vite build",
     "test": "vitest",
