@@ -17,6 +17,9 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -36,7 +39,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Use Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: lts/*
           cache: 'npm'
@@ -116,7 +119,7 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
-        uses: actions/github-script@v8
+        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
         with:
           script: |
             const changelog = `${{ steps.changelog.outputs.changelog }}`;
@@ -138,8 +141,8 @@ jobs:
 
             ### Post-merge Steps
             After merging this PR:
-            1. Create a GitHub release with tag \`v${version}\`
-            2. Manually publish to npm: \`npm publish\`
+            1. Pull the merged main and push the tag: \`git tag v${version} && git push origin v${version}\`
+            2. Approve the \`npm-publish\` environment on the resulting Publish workflow run to publish to npm with provenance
             `;
 
             const { data: pr } = await github.rest.pulls.create({
