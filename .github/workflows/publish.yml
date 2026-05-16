@@ -50,7 +50,7 @@ jobs:
           # npm Trusted Publishing requires Node >=22.14 and npm >=11.5.1.
           # We activate the npm version pinned in package.json's
           # `packageManager` field via corepack below.
-          node-version: "22"
+          node-version: "24.15.0"
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
       - name: Activate npm version pinned in package.json (via corepack)
