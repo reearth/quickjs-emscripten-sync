@@ -1,3 +1,7 @@
+## [1.8.3] - 2026-05-28
+
+### Changes
+- fix: add types condition to exports field
 ## [1.8.2] - 2026-05-14
 
 ### Changes
