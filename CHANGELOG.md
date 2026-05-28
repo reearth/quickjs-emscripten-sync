@@ -1,3 +1,19 @@
+## [1.9.0] - 2026-05-28
+
+### Changes
+- ci: report coverage via vitest-coverage-report-action instead of codecov
+- docs: rewrite and expand README
+- feat: synchronize Object.defineProperty across the boundary
+- feat: add marshalByReference for opaque pass-by-reference (HostRef)
+- feat: marshal BigInt values
+- feat: add syncEnabled option to disable sync globally (closes #31)
+- docs: document new marshalling support, AsyncArena, and using
+- feat: add AsyncArena for QuickJSAsyncContext
+- feat: marshal ArrayBuffer/TypedArray/Map/Set and add Arena[Symbol.dispose]
+- refactor: use native VM APIs and clean up VMMap
+- perf: cache compiled functions per context in call()
+- fix: upgrade to quickjs-emscripten 0.32 and fix handle leaks it surfaces
+- ci: auto-push version tag when a release PR is merged
 ## [1.8.4] - 2026-05-28
 
 ### Changes
