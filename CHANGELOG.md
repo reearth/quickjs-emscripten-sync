@@ -1,3 +1,8 @@
+## [1.9.1] - 2026-05-28
+
+### Changes
+- fix: dispose handles of value-marshalled built-ins nested in another value
+- fix: dispose unowned marshal handles (json copies, BigInt) instead of leaking
 ## [1.9.0] - 2026-05-28
 
 ### Changes
