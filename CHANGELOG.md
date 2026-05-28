@@ -1,3 +1,7 @@
+## [1.8.4] - 2026-05-28
+
+### Changes
+- fix: align package.json entry points with Vite v7 output filenames
 ## [1.8.3] - 2026-05-28
 
 ### Changes
