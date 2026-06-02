@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: quickjs-emscripten-sync
+  namespace: reearth
+  description: Provides a way to sync objects between browser and QuickJS
+  annotations:
+    github.com/project-slug: reearth/quickjs-emscripten-sync
+  links:
+  - url: https://github.com/reearth/quickjs-emscripten-sync
+    title: GitHub
+    icon: github
+  tags:
+  - typescript
+spec:
+  type: service
+  lifecycle: production
+  owner: reearth/lib
