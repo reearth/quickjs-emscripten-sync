@@ -129,7 +129,9 @@ jobs:
         run: |
           BRANCH_NAME="release/v${{ steps.bump_version.outputs.new_version }}"
           git checkout -b "$BRANCH_NAME"
-          git add package.json CHANGELOG.md
+          # `npm version` above bumps package-lock.json too, so commit it as well
+          # to keep the lockfile in sync with package.json.
+          git add package.json package-lock.json CHANGELOG.md
           git commit -m "chore: release v${{ steps.bump_version.outputs.new_version }}"
           git push origin "$BRANCH_NAME"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
