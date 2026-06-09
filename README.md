@@ -6,6 +6,9 @@
 
 quickjs-emscripten-sync wraps [quickjs-emscripten](https://github.com/justjake/quickjs-emscripten) and keeps object state in sync between the host (browser or Node.js) and a sandboxed QuickJS VM, so you can exchange values across the boundary as if they were plain JavaScript objects.
 
+> [!TIP]
+> **Want a higher-level, batteries-included plugin system?** Check out [**@reearth/zushi**](https://github.com/reearth/zushi) — a framework-agnostic plugin runtime that runs untrusted plugin code in an isolated WASM backend (QuickJS built in), exposes a host-defined API, and renders plugin UI in sandboxed iframes. quickjs-emscripten-sync provides the low-level host↔VM sync primitives; zushi builds a full plugin runtime on top.
+
 ## Features
 
 - Exchange and synchronize values between the host and QuickJS seamlessly:
