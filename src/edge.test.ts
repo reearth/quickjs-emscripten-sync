@@ -36,12 +36,54 @@ describe("edge cases", () => {
     expect(cb.current?.()).toBe(0);
     expect(called).toEqual(["a", "b"]);
 
+    // The host getters are still traversed on every access, so `called` grows.
+    // But `obj` keeps its identity across marshals (sync is on), so the VM holds
+    // the value snapshot from the first marshal: a later host-side mutation is
+    // not re-marshalled. Use `arena.sync(obj)` to propagate host writes (see the
+    // "getter (synced)" test below).
     obj.c = 1;
-    expect(cb.current?.()).toBe(1); // this line causes an error when context is disposed
+    expect(cb.current?.()).toBe(0);
     expect(called).toEqual(["a", "b", "a", "b"]);
 
     arena.dispose();
-    // ctx.dispose(); // reports an error
+    // Re-marshalling `obj` used to leak a handle, which aborted ctx.dispose().
+    // Now that the stale-entry handle is disposed, the context disposes cleanly.
+    expect(() => ctx.dispose()).not.toThrow();
+  });
+
+  // this test takes more than about 20s
+  test("getter (synced)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // A synced object propagates host-side writes to the VM, so re-reads see the
+    // updated value while still keeping a stable identity.
+    const obj = arena.sync({ c: 0 });
+    const exposed = {
+      get a() {
+        return {
+          get b() {
+            return obj;
+          },
+        };
+      },
+    };
+    const cb: { current?: () => any } = {};
+    arena.expose({
+      exposed,
+      register: (fn: () => any) => {
+        cb.current = fn;
+      },
+    });
+
+    arena.evalCode(`register(() => exposed.a.b.c);`);
+    expect(cb.current?.()).toBe(0);
+
+    obj.c = 1;
+    expect(cb.current?.()).toBe(1);
+
+    arena.dispose();
+    expect(() => ctx.dispose()).not.toThrow();
   });
 
   test(

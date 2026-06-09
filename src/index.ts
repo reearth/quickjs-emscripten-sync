@@ -490,6 +490,7 @@ export class Arena {
       registerTransient: this._registerTransient,
       disposeTransient: this._disposeTransient,
       preApply: this._marshalPreApply,
+      prepareReturn: this._prepareMarshalReturn,
       custom: this._options?.customMarshaller,
     });
 
@@ -499,6 +500,17 @@ export class Arena {
 
     const syncEnabled = this._options?.syncEnabled ?? true;
     return [handle, !syncEnabled || !this._map.hasHandle(handle)];
+  };
+
+  _prepareMarshalReturn = (h: QuickJSHandle): QuickJSHandle => {
+    // A host function's return value is disposed by the VM once it is consumed.
+    // When sync is on, the VMMap retains object handles for identity, so the
+    // handle we hand back is the one the map owns: returning it directly would
+    // let the VM dispose the map's copy, leaving a stale entry that breaks
+    // `x === fn()` identity across calls. Hand the VM a dup instead and keep
+    // ours alive. With sync off, handles are not retained, so this is a no-op.
+    const syncEnabled = this._options?.syncEnabled ?? true;
+    return syncEnabled && h.alive && this._map.hasHandle(h) ? h.dup() : h;
   };
 
   _preUnmarshal = (t: any, h: QuickJSHandle): Wrapped<any> => {

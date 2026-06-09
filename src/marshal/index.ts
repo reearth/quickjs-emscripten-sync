@@ -28,6 +28,11 @@ export type Options = {
     mode: true | "json" | undefined,
   ) => QuickJSHandle | undefined;
   preApply?: (target: (...args: any[]) => any, thisArg: unknown, args: unknown[]) => any;
+  // Adjust ownership of a handle that is about to be handed to the VM as a host
+  // function's return value. The VM disposes whatever it receives, so a handle
+  // the VMMap retains (for identity, while sync is on) must be dup'd here or its
+  // map entry goes stale. Defaults to identity (no-op).
+  prepareReturn?: (handle: QuickJSHandle) => QuickJSHandle;
   custom?: Iterable<(obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
 };
 
@@ -73,7 +78,16 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
   return (
     marshalCustom(ctx, target, pre2, [...defaultCustom, ...(options.custom ?? [])]) ??
     marshalPromise(ctx, target, marshal2, pre2) ??
-    marshalFunction(ctx, target, marshal2, unmarshal, pre2, options.preApply, disposeTransient) ??
+    marshalFunction(
+      ctx,
+      target,
+      marshal2,
+      unmarshal,
+      pre2,
+      options.preApply,
+      disposeTransient,
+      options.prepareReturn,
+    ) ??
     marshalMapSet(ctx, target, marshal2, pre2, disposeTransient) ??
     marshalObject(ctx, target, marshal2, pre2, disposeTransient) ??
     ctx.undefined

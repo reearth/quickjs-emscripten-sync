@@ -13,6 +13,7 @@ export default function marshalFunction(
   preMarshal: (target: unknown, handle: QuickJSHandle) => QuickJSHandle | undefined,
   preApply?: (target: (...args: any[]) => any, thisArg: unknown, args: unknown[]) => any,
   disposeTransient: (handle: QuickJSHandle) => void = () => {},
+  prepareReturn: (handle: QuickJSHandle) => QuickJSHandle = h => h,
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
 
@@ -33,7 +34,16 @@ export default function marshalFunction(
         return this;
       }
 
-      return marshal(preApply ? preApply(target as (...args: any[]) => any, that, args) : (target as (...args: any[]) => any).apply(that, args));
+      // The VM disposes whatever we return here. `prepareReturn` dups the
+      // handle when the VMMap retains it, so the map keeps a live copy and
+      // identity (`x === fn()` across calls) survives instead of going stale.
+      return prepareReturn(
+        marshal(
+          preApply
+            ? preApply(target as (...args: any[]) => any, that, args)
+            : (target as (...args: any[]) => any).apply(that, args),
+        ),
+      );
     })
     .consume(handle2 =>
       // fucntions created by vm.newFunction are not callable as a class constrcutor
