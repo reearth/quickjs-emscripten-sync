@@ -18,7 +18,14 @@ export default function marshalFunction(
 
   const raw = ctx
     .newFunction(target.name, function (...argHandles) {
-      const that = unmarshal(this);
+      // A plain call (`fn()`) passes the VM global object as `this`. Unmarshalling
+      // it would eagerly deep-copy the entire global graph (hundreds of handles)
+      // on the first call, for a `this` host functions almost never use — and
+      // leaking globalThis to the host is undesirable. So global `this` is passed
+      // to the host function as `undefined`, which differs from plain JS where a
+      // non-strict function sees `this === globalThis` (see README Limitations).
+      // Real method calls still get their receiver unmarshalled.
+      const that = ctx.sameValue(this, ctx.global) ? undefined : unmarshal(this);
       const args = argHandles.map(a => unmarshal(a));
 
       if (isES2015Class(target) && isObject(that)) {

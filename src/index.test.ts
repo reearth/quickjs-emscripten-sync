@@ -550,6 +550,26 @@ test("register and unregister", async () => {
   ctx.dispose();
 });
 
+test("plain call passes `this` as undefined, method call passes the receiver", async () => {
+  const ctx = (await getQuickJS()).newContext();
+  const arena = new Arena(ctx, { isMarshalable: true });
+
+  arena.expose({
+    whoAmI() {
+      return this;
+    },
+  });
+
+  // A plain call would see `this === globalThis` in plain JS; the VM global is
+  // intentionally not marshalled to the host, so `this` is undefined here.
+  expect(arena.evalCode(`whoAmI()`)).toBe(undefined);
+  // A method call still receives its receiver.
+  expect(arena.evalCode(`const o = { v: 42, whoAmI }; o.whoAmI().v`)).toBe(42);
+
+  arena.dispose();
+  ctx.dispose();
+});
+
 test("registeredObjects option", async () => {
   const ctx = (await getQuickJS()).newContext();
   const arena = new Arena(ctx, {

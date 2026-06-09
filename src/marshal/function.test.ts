@@ -30,10 +30,12 @@ test("normal func", async () => {
   expect(ctx.dump(result)).toBe("hoge");
   expect(innerfn).toBeCalledWith(1, true);
   expect(marshal).toHaveBeenLastCalledWith("hoge");
-  expect(unmarshal).toBeCalledTimes(3);
-  expect(unmarshal.mock.results[0].value).toBe(undefined); // this
-  expect(unmarshal.mock.results[1].value).toBe(1);
-  expect(unmarshal.mock.results[2].value).toBe(true);
+  // `this` coerces to the VM global for a plain call, which marshalFunction
+  // treats as undefined without unmarshalling it, so only the two args are
+  // unmarshalled.
+  expect(unmarshal).toBeCalledTimes(2);
+  expect(unmarshal.mock.results[0].value).toBe(1);
+  expect(unmarshal.mock.results[1].value).toBe(true);
 
   handle.dispose();
   ctx.dispose();

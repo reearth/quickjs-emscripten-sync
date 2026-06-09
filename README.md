@@ -402,6 +402,15 @@ Only the `set`, `deleteProperty`, and `defineProperty` operations on objects are
 
 `Date`, `Map`, `Set`, `ArrayBuffer`, and typed arrays are marshalled by value (a snapshot copy is created on the other side). They are not proxied, so later mutations are not synchronized, and self-referential `Map`/`Set` are not supported.
 
+### `this` on plain calls
+
+When an exposed host function is called plainly from the VM (`fn()`, not `obj.fn()`), the host function receives `this === undefined`. This differs from plain JavaScript, where a non-strict function called this way would see `this === globalThis`. The VM global object is intentionally **not** marshalled to the host: doing so would eagerly deep-copy the entire global graph on the first call and would leak `globalThis` across the boundary. Method calls are unaffected — `obj.fn()` still receives `obj` as `this`.
+
+```js
+arena.expose({ whoAmI() { return this; } });
+arena.evalCode(`whoAmI()`); // undefined (not globalThis)
+```
+
 ## License
 
 [MIT License](LICENSE)
