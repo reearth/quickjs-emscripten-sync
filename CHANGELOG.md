@@ -1,3 +1,10 @@
+## [1.10.0] - 2026-06-09
+
+### Changes
+- perf: stop deep-copying the VM global when a host fn is called plainly (#85)
+- fix: preserve object identity across the host boundary (#4) (#84)
+- fix: dispose orphaned sibling handle when evicting a stale VMMap entry (#83)
+- chore: add Backstage catalog-info.yaml (#82)
 ## [1.9.1] - 2026-05-28
 
 ### Changes
