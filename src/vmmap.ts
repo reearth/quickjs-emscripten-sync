@@ -121,7 +121,11 @@ export default class VMMap {
 
     if (!handle) return;
     if (!handle.alive) {
-      this.delete(key);
+      // The primary handle was freed by the VM, so this entry is stale. Dispose
+      // its sibling handle while evicting it: otherwise the sibling (e.g. the
+      // unwrapped handle registered alongside a proxy) is orphaned and leaks
+      // when the same value is marshalled again.
+      this.delete(key, true);
       return;
     }
 
