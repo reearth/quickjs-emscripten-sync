@@ -1,5 +1,4 @@
-import variant from "@jitl/quickjs-wasmfile-debug-sync";
-import { newQuickJSWASMModuleFromVariant } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { describe, expect, it } from "vitest";
 
 import { Arena } from ".";
@@ -7,18 +6,18 @@ import { Arena } from ".";
 // A host function's return value is disposed by the VM once consumed. Marshalled
 // object handles are retained in the VMMap for identity while sync is on, so the
 // returned handle must be dup'd — otherwise the map entry goes stale and the same
-// value marshalled twice yields two distinct VM objects (and used to leak). These
-// tests pin the identity behaviour (issue #4).
+// value marshalled twice yields two distinct VM objects. These tests pin the
+// identity behaviour (issue #4); the no-leak side is covered by
+// remarshalleak.test.ts under the debug-sync runtime.
 async function withArena(
   options: ConstructorParameters<typeof Arena>[1],
   fn: (arena: Arena) => void,
 ) {
-  const mod = await newQuickJSWASMModuleFromVariant(variant as any);
-  const ctx = mod.newContext();
+  const ctx = (await getQuickJS()).newContext();
   const arena = new Arena(ctx, options);
   fn(arena);
   arena.dispose();
-  expect(() => ctx.dispose()).not.toThrow();
+  ctx.dispose();
 }
 
 describe("marshal identity", () => {

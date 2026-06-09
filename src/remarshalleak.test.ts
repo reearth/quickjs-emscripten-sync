@@ -21,19 +21,30 @@ async function withArena(fn: (arena: Arena) => void) {
 }
 
 describe("re-marshal handle leak", () => {
-  it("does not leak when a host function returns the same object twice", async () => {
-    await withArena(arena => {
-      const shared = { k: 1 };
-      arena.expose({ get: () => shared });
-      arena.evalCode(`get(); get();`);
-    });
-  });
+  // Calling an exposed function from inside the VM marshals the whole global
+  // graph on each call, which is slow under the debug-sync runtime + coverage,
+  // so these get a generous timeout (cf. the "many newFunction" edge test).
+  it(
+    "does not leak when a host function returns the same object twice",
+    async () => {
+      await withArena(arena => {
+        const shared = { k: 1 };
+        arena.expose({ get: () => shared });
+        arena.evalCode(`get(); get();`);
+      });
+    },
+    90000,
+  );
 
-  it("does not leak when the same object is compared across two calls", async () => {
-    await withArena(arena => {
-      const shared = { k: 1 };
-      arena.expose({ get: () => shared });
-      arena.evalCode(`get() === get();`);
-    });
-  });
+  it(
+    "does not leak when the same object is compared across two calls",
+    async () => {
+      await withArena(arena => {
+        const shared = { k: 1 };
+        arena.expose({ get: () => shared });
+        arena.evalCode(`get() === get();`);
+      });
+    },
+    90000,
+  );
 });
