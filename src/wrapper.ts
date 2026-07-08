@@ -1,7 +1,7 @@
 import type { QuickJSHandle, QuickJSContext } from "quickjs-emscripten";
 
 import { isObject } from "./util";
-import { call, consume, isHandleObject, mayConsumeAll } from "./vmutil";
+import { call, isHandleObject, mayConsumeAll } from "./vmutil";
 
 export type SyncMode = "both" | "vm" | "host";
 
@@ -113,23 +113,34 @@ export function wrap<T = any>(
   return rec;
 }
 
-export function wrapHandle(
+export type WrapHandle = {
+  /** Wrap a VM handle with the shared proxyFuncs, like the old `wrapHandle`. */
+  wrapHandle: (handle: QuickJSHandle) => [Wrapped<QuickJSHandle> | undefined, boolean];
+  /** Dispose the shared proxyFuncs handle. Call exactly once, at Arena dispose. */
+  dispose: () => void;
+};
+
+/**
+ * Build a `wrapHandle` function that shares ONE `proxyFuncs` handle across every
+ * handle it wraps, instead of allocating a fresh VM function per wrapped object.
+ *
+ * The callbacks inside proxyFuncs (getSyncMode/setter/deleter/definer) receive
+ * the target handle as an argument, so the closure only captures values stable
+ * for the whole Arena lifetime (`ctx`, `unmarshal`, `syncMode`, `proxyKeySymbol`).
+ * The proxyFuncs handle is created lazily on first use and must be disposed once
+ * via `dispose()`; the VM-side Proxy keeps its own reference to it, so it stays
+ * valid for every proxy created during the Arena's lifetime.
+ */
+export function createWrapHandle(
   ctx: QuickJSContext,
-  handle: QuickJSHandle,
   proxyKeySymbol: symbol,
   proxyKeySymbolHandle: QuickJSHandle,
   unmarshal: (handle: QuickJSHandle) => any,
   syncMode?: (target: QuickJSHandle) => SyncMode | undefined,
   wrappable?: (target: QuickJSHandle, ctx: QuickJSContext) => boolean,
   syncEnabled = true,
-): [Wrapped<QuickJSHandle> | undefined, boolean] {
-  if (!isHandleObject(ctx, handle) || (wrappable && !wrappable(handle, ctx)))
-    return [undefined, false];
-
-  if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) return [handle, false];
-
-  // Sync globally disabled: skip the VM-side proxy.
-  if (!syncEnabled) return [handle as Wrapped<QuickJSHandle>, false];
+): WrapHandle {
+  let proxyFuncs: QuickJSHandle | undefined;
 
   const getSyncMode = (h: QuickJSHandle) => {
     const res = syncMode?.(unmarshal(h));
@@ -162,26 +173,43 @@ export function wrapHandle(
     Object.defineProperty(unwrap(target, proxyKeySymbol), key, desc);
   };
 
-  const proxyFuncs = ctx.newFunction("proxyFuncs", (t, ...args) => {
-    const name = ctx.getNumber(t);
-    switch (name) {
-      case 1:
-        return getSyncMode(args[0]);
-      case 2:
-        return setter(args[0], args[1], args[2]);
-      case 3:
-        return deleter(args[0], args[1]);
-      case 4:
-        return definer(args[0], args[1], args[2]);
-    }
-    return ctx.undefined;
-  });
-  // Use the exception-safe consume so proxyFuncs is disposed even if compiling
-  // the proxy below throws (e.g. under memory pressure).
-  return consume(proxyFuncs, proxyFuncs => [
-    call(
-      ctx,
-      `(target, sym, proxyFuncs) => {
+  const ensureProxyFuncs = (): QuickJSHandle => {
+    if (proxyFuncs && proxyFuncs.alive) return proxyFuncs;
+    proxyFuncs = ctx.newFunction("proxyFuncs", (t, ...args) => {
+      const name = ctx.getNumber(t);
+      switch (name) {
+        case 1:
+          return getSyncMode(args[0]);
+        case 2:
+          return setter(args[0], args[1], args[2]);
+        case 3:
+          return deleter(args[0], args[1]);
+        case 4:
+          return definer(args[0], args[1], args[2]);
+      }
+      return ctx.undefined;
+    });
+    return proxyFuncs;
+  };
+
+  const wrapHandleFn = (
+    handle: QuickJSHandle,
+  ): [Wrapped<QuickJSHandle> | undefined, boolean] => {
+    if (!isHandleObject(ctx, handle) || (wrappable && !wrappable(handle, ctx)))
+      return [undefined, false];
+
+    if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) return [handle, false];
+
+    // Sync globally disabled: skip the VM-side proxy.
+    if (!syncEnabled) return [handle as Wrapped<QuickJSHandle>, false];
+
+    // The shared proxyFuncs is borrowed (not consumed) by `call`, and the
+    // VM-side Proxy keeps its own reference, so it stays alive for the whole
+    // Arena lifetime and is disposed once via `dispose()` even if `call` throws.
+    return [
+      call(
+        ctx,
+        `(target, sym, proxyFuncs) => {
           const rec =  new Proxy(target, {
             get(obj, key, receiver) {
               return key === sym ? obj : Reflect.get(obj, key, receiver)
@@ -219,13 +247,53 @@ export function wrapHandle(
           });
           return rec;
         }`,
-      undefined,
-      handle,
-      proxyKeySymbolHandle,
-      proxyFuncs,
-    ) as Wrapped<QuickJSHandle>,
-    true,
-  ]);
+        undefined,
+        handle,
+        proxyKeySymbolHandle,
+        ensureProxyFuncs(),
+      ) as Wrapped<QuickJSHandle>,
+      true,
+    ];
+  };
+
+  return {
+    wrapHandle: wrapHandleFn,
+    dispose: () => {
+      if (proxyFuncs && proxyFuncs.alive) proxyFuncs.dispose();
+      proxyFuncs = undefined;
+    },
+  };
+}
+
+/**
+ * Standalone wrap of a single handle. Builds a one-shot {@link createWrapHandle}
+ * and disposes its proxyFuncs right after; the VM-side Proxy keeps its own
+ * reference, so the wrapped handle stays valid.
+ */
+export function wrapHandle(
+  ctx: QuickJSContext,
+  handle: QuickJSHandle,
+  proxyKeySymbol: symbol,
+  proxyKeySymbolHandle: QuickJSHandle,
+  unmarshal: (handle: QuickJSHandle) => any,
+  syncMode?: (target: QuickJSHandle) => SyncMode | undefined,
+  wrappable?: (target: QuickJSHandle, ctx: QuickJSContext) => boolean,
+  syncEnabled = true,
+): [Wrapped<QuickJSHandle> | undefined, boolean] {
+  const w = createWrapHandle(
+    ctx,
+    proxyKeySymbol,
+    proxyKeySymbolHandle,
+    unmarshal,
+    syncMode,
+    wrappable,
+    syncEnabled,
+  );
+  try {
+    return w.wrapHandle(handle);
+  } finally {
+    w.dispose();
+  }
 }
 
 export function unwrap<T>(obj: T, key: string | symbol): T {

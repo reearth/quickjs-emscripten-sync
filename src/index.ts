@@ -27,7 +27,7 @@ import {
   enableFnCache,
   disposeFnCache,
 } from "./vmutil";
-import { wrap, wrapHandle, unwrap, unwrapHandle, Wrapped } from "./wrapper";
+import { wrap, createWrapHandle, unwrap, unwrapHandle, Wrapped, WrapHandle } from "./wrapper";
 
 export {
   VMMap,
@@ -92,6 +92,7 @@ export class Arena {
   _temporalSync = new Set<any>();
   _symbol = Symbol();
   _symbolHandle: QuickJSHandle;
+  _wrapHandleImpl: WrapHandle;
   _options?: Options;
 
   /** Constructs a new Arena instance. It requires a quickjs-emscripten context initialized with `quickjs.newContext()`. */
@@ -108,6 +109,17 @@ export class Arena {
     enableFnCache(this.context);
     this._options = options;
     this._symbolHandle = ctx.unwrapResult(ctx.evalCode(`Symbol()`));
+    // One proxyFuncs handle shared by every wrapped handle for the Arena's
+    // lifetime, instead of allocating a fresh VM function per wrap.
+    this._wrapHandleImpl = createWrapHandle(
+      this.context,
+      this._symbol,
+      this._symbolHandle,
+      this._unmarshal,
+      this._syncMode,
+      this._options?.isHandleWrappable,
+      this._options?.syncEnabled ?? true,
+    );
     this._map = new VMMap(ctx);
     this._registeredMap = new VMMap(ctx);
     this.registerAll(options?.registeredObjects ?? defaultRegisteredObjects);
@@ -123,6 +135,7 @@ export class Arena {
     this._transientHandles.clear();
     this._map.dispose();
     this._registeredMap.dispose();
+    this._wrapHandleImpl.dispose();
     this._symbolHandle.dispose();
     disposeFnCache(this.context);
     this.context.disposeEx?.();
@@ -622,16 +635,7 @@ export class Arena {
   };
 
   _wrapHandle(handle: QuickJSHandle): [Wrapped<QuickJSHandle> | undefined, boolean] {
-    return wrapHandle(
-      this.context,
-      handle,
-      this._symbol,
-      this._symbolHandle,
-      this._unmarshal,
-      this._syncMode,
-      this._options?.isHandleWrappable,
-      this._options?.syncEnabled ?? true,
-    );
+    return this._wrapHandleImpl.wrapHandle(handle);
   }
 
   _unwrapHandle(target: QuickJSHandle): [QuickJSHandle, boolean] {
