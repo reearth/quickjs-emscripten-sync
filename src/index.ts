@@ -6,6 +6,8 @@ import type {
   SuccessOrFail,
   VmCallResult,
   Intrinsics,
+  ContextEvalOptions,
+  InterruptHandler,
 } from "quickjs-emscripten";
 
 import { wrapContext, QuickJSContextEx } from "./contextex";
@@ -44,7 +46,7 @@ export {
   consumeAll,
 };
 
-export type { Intrinsics };
+export type { Intrinsics, ContextEvalOptions, InterruptHandler };
 
 export type Options = {
   /** A callback that returns a boolean value that determines whether an object is marshalled or not. If false, no marshaling will be done and undefined will be passed to the QuickJS VM, otherwise marshaling will be done. By default, all objects will be marshalled. */
@@ -148,9 +150,15 @@ export class Arena {
 
   /**
    * Evaluate JS code in the VM and get the result as an object on the host side. It also converts and re-throws error objects when an error is thrown during evaluation.
+   *
+   * @param code - The JS code to evaluate
+   * @param filename - Optional filename used in error stacks and for debugging
+   * @param options - Optional eval options forwarded to quickjs-emscripten's
+   *   `evalCode`, either an `EvalFlags` bitmask (`number`) or a
+   *   {@link ContextEvalOptions} object (e.g. `{ strict: true }`)
    */
-  evalCode<T = any>(code: string): T {
-    const handle = this.context.evalCode(code);
+  evalCode<T = any>(code: string, filename?: string, options?: number | ContextEvalOptions): T {
+    const handle = this.context.evalCode(code, filename, options);
     return this._unwrapResultAndUnmarshal(handle);
   }
 
@@ -161,6 +169,10 @@ export class Arena {
    *
    * @param code - The ES module code to evaluate
    * @param filename - Optional filename for debugging purposes (default: "module.js")
+   * @param options - Optional {@link ContextEvalOptions}. `type` is always forced
+   *   to `"module"`, so any `type` in `options` is overridden. A numeric
+   *   `EvalFlags` bitmask cannot be merged with the forced module type and is
+   *   therefore not supported here; if a number is passed it is ignored.
    * @returns The module's exports object, or a Promise resolving to exports if using top-level await
    *
    * @example
@@ -186,8 +198,15 @@ export class Arena {
    * console.log(exports.data); // 123
    * ```
    */
-  evalModule<T = any>(code: string, filename = "module.js"): T | Promise<T> {
-    const handle = this.context.evalCode(code, filename, { type: "module" });
+  evalModule<T = any>(
+    code: string,
+    filename = "module.js",
+    options?: number | ContextEvalOptions,
+  ): T | Promise<T> {
+    const handle = this.context.evalCode(code, filename, {
+      ...(typeof options === "number" ? {} : options),
+      type: "module",
+    });
     return this._unwrapResultAndUnmarshal(handle);
   }
 
@@ -248,6 +267,45 @@ export class Arena {
    */
   setMaxStackSize(stackSize: number): void {
     this.context.runtime.setMaxStackSize(stackSize);
+  }
+
+  /**
+   * Set a callback which is regularly called by the QuickJS engine when it is
+   * executing code. This callback can be used to implement an execution
+   * timeout: return `true` from the handler to interrupt the running code.
+   *
+   * This is useful for preventing runaway CPU usage (e.g. infinite loops) in
+   * untrusted code.
+   *
+   * @param cb - The interrupt handler. Return `true` to interrupt execution.
+   *
+   * @example
+   * ```js
+   * // Interrupt evaluation after 1 second
+   * const deadline = Date.now() + 1000;
+   * arena.setInterruptHandler(() => Date.now() > deadline);
+   *
+   * try {
+   *   arena.evalCode(`while (true) {}`);
+   * } catch (e) {
+   *   console.log("Execution interrupted");
+   * }
+   * ```
+   */
+  setInterruptHandler(cb: InterruptHandler): void {
+    this.context.runtime.setInterruptHandler(cb);
+  }
+
+  /**
+   * Remove the interrupt handler previously set with `setInterruptHandler`.
+   *
+   * @example
+   * ```js
+   * arena.removeInterruptHandler();
+   * ```
+   */
+  removeInterruptHandler(): void {
+    this.context.runtime.removeInterruptHandler();
   }
 
   /**
@@ -661,9 +719,19 @@ export class AsyncArena extends Arena {
    * Evaluate JS code asynchronously in the VM and get the result on the host
    * side. Like `evalCode`, it converts and re-throws errors thrown during
    * evaluation. Use this when the code awaits host-provided promises.
+   *
+   * @param code - The JS code to evaluate
+   * @param filename - Optional filename used in error stacks and for debugging
+   * @param options - Optional eval options forwarded to quickjs-emscripten's
+   *   `evalCodeAsync`, either an `EvalFlags` bitmask (`number`) or a
+   *   {@link ContextEvalOptions} object (e.g. `{ strict: true }`)
    */
-  async evalCodeAsync<T = any>(code: string, filename?: string): Promise<T> {
-    const result = await this.asyncContext.evalCodeAsync(code, filename);
+  async evalCodeAsync<T = any>(
+    code: string,
+    filename?: string,
+    options?: number | ContextEvalOptions,
+  ): Promise<T> {
+    const result = await this.asyncContext.evalCodeAsync(code, filename, options);
     return this._unwrapResultAndUnmarshal(result);
   }
 }

@@ -318,6 +318,36 @@ describe("evalCode", () => {
     arena.dispose();
     ctx.dispose();
   });
+
+  test("options are forwarded (strict mode)", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Assigning to an undeclared variable succeeds in sloppy mode...
+    expect(arena.evalCode("x = 1")).toBe(1);
+    // ...but throws a ReferenceError in strict mode.
+    expect(() => arena.evalCode("y = 1", undefined, { strict: true })).toThrow(ReferenceError);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("filename appears in error stacks", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    try {
+      arena.evalCode(`throw new Error("boom")`, "my-special-file.js");
+      throw new Error("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(Error);
+      expect((e as Error).message).toBe("boom");
+      expect((e as Error).stack).toContain("my-special-file.js");
+    }
+
+    arena.dispose();
+    ctx.dispose();
+  });
 });
 
 describe("expose without sync", () => {
@@ -900,6 +930,30 @@ describe("evalModule", () => {
     arena.dispose();
     ctx.dispose();
   });
+
+  test("user options are merged and type is forced to module", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // `strict` is passed through, and a user-supplied `type` is overridden with
+    // "module" so `export` still works and the exports are returned.
+    const exports = arena.evalModule(
+      `
+      export const value = 42;
+      export function greet(name) {
+        return "Hi, " + name;
+      }
+    `,
+      "with-options.js",
+      { strict: true, type: "global" },
+    );
+
+    expect(exports.value).toBe(42);
+    expect(exports.greet("World")).toBe("Hi, World");
+
+    arena.dispose();
+    ctx.dispose();
+  });
 });
 
 describe("memory management", () => {
@@ -1095,6 +1149,27 @@ describe("memory management", () => {
         }
       `);
     }).toThrow();
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("setInterruptHandler interrupts infinite loops", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    // Interrupt after the handler has been called a number of times.
+    let calls = 0;
+    arena.setInterruptHandler(() => ++calls > 1000);
+
+    expect(() => {
+      arena.evalCode(`while (true) {}`);
+    }).toThrow();
+    expect(calls).toBeGreaterThan(1000);
+
+    // After removing the handler, normal evaluation works again.
+    arena.removeInterruptHandler();
+    expect(arena.evalCode(`1 + 2`)).toBe(3);
 
     arena.dispose();
     ctx.dispose();
