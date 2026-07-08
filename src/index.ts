@@ -13,6 +13,7 @@ import { defaultRegisteredObjects } from "./default";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
 import unmarshalHostRef from "./unmarshal/hostref";
+import unmarshalPrimitive from "./unmarshal/primitive";
 import { complexity, isES2015Class, isObject, walkObject } from "./util";
 import VMMap from "./vmmap";
 import {
@@ -523,6 +524,14 @@ export class Arena {
   };
 
   _unmarshal = (handle: QuickJSHandle): any => {
+    // Primitives (undefined/number/string/boolean/bigint/null) are resolved by a
+    // cheap host-side `ctx.typeof`, skipping the `_registeredMap` VM lookup,
+    // HostRef resolution, and `_wrapHandle`. The VMMap only ever keys objects and
+    // symbols, so a primitive handle can never match `getByHandle`; symbols fall
+    // through `unmarshalPrimitive` and still reach the lookup below.
+    const [primitive, ok] = unmarshalPrimitive(this.context, handle);
+    if (ok) return primitive;
+
     const registered = this._registeredMap.getByHandle(handle);
     if (typeof registered !== "undefined") {
       return registered;
