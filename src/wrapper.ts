@@ -198,18 +198,32 @@ export function createWrapHandle(
     if (!isHandleObject(ctx, handle) || (wrappable && !wrappable(handle, ctx)))
       return [undefined, false];
 
-    if (isHandleWrapped(ctx, handle, proxyKeySymbolHandle)) return [handle, false];
-
-    // Sync globally disabled: skip the VM-side proxy.
+    // Sync globally disabled: skip the VM-side proxy. (When wrapped or built-in
+    // the old path also returned `[handle, false]`, so this order is equivalent
+    // and avoids the extra check entirely.)
     if (!syncEnabled) return [handle as Wrapped<QuickJSHandle>, false];
 
+    // The "already wrapped / must-not-wrap built-in" test is folded into the
+    // proxy-creating VM call: it returns `null` when it declines (built-in with
+    // internal slots, or `target[sym]` already set), so we pay ONE roundtrip
+    // instead of a separate `isHandleWrapped` call plus the wrap. A declined
+    // handle is treated as already-wrapped by returning the ORIGINAL handle.
+    //
     // The shared proxyFuncs is borrowed (not consumed) by `call`, and the
     // VM-side Proxy keeps its own reference, so it stays alive for the whole
     // Arena lifetime and is disposed once via `dispose()` even if `call` throws.
-    return [
-      call(
-        ctx,
-        `(target, sym, proxyFuncs) => {
+    const result = call(
+      ctx,
+      `(target, sym, proxyFuncs) => {
+          if (
+            (target instanceof Promise) ||
+            (target instanceof Date) ||
+            (target instanceof ArrayBuffer) ||
+            (ArrayBuffer.isView(target)) ||
+            (target instanceof Map) ||
+            (target instanceof Set) ||
+            target[sym]
+          ) return null;
           const rec =  new Proxy(target, {
             get(obj, key, receiver) {
               return key === sym ? obj : Reflect.get(obj, key, receiver)
@@ -247,13 +261,21 @@ export function createWrapHandle(
           });
           return rec;
         }`,
-        undefined,
-        handle,
-        proxyKeySymbolHandle,
-        ensureProxyFuncs(),
-      ) as Wrapped<QuickJSHandle>,
-      true,
-    ];
+      undefined,
+      handle,
+      proxyKeySymbolHandle,
+      ensureProxyFuncs(),
+    );
+
+    // Declined: the VM function returned null. Detect it with cheap host-side
+    // checks (no callFunction), dispose the null result, and treat the original
+    // handle as already-wrapped.
+    if (ctx.sameValue(result, ctx.null)) {
+      result.dispose();
+      return [handle as Wrapped<QuickJSHandle>, false];
+    }
+
+    return [result as Wrapped<QuickJSHandle>, true];
   };
 
   return {
@@ -305,8 +327,22 @@ export function unwrapHandle(
   handle: QuickJSHandle,
   key: QuickJSHandle,
 ): [QuickJSHandle, boolean] {
-  if (!isHandleWrapped(ctx, handle, key)) return [handle, false];
-  return [ctx.getProp(handle, key), true];
+  // Fold the `isHandleWrapped` test and the property read into ONE VM call:
+  // return the unwrapped target (`a[sym]`) or null. This pays a single roundtrip
+  // instead of `isHandleWrapped` + `getProp`. A null result means "not wrapped",
+  // so the original handle is used as-is.
+  const result = call(
+    ctx,
+    `(a, s) => (typeof a === "object" && a !== null || typeof a === "function") && a[s] || null`,
+    undefined,
+    handle,
+    key,
+  );
+  if (ctx.sameValue(result, ctx.null)) {
+    result.dispose();
+    return [handle, false];
+  }
+  return [result, true];
 }
 
 export function isWrapped<T>(obj: T, key: string | symbol): obj is Wrapped<T> {
