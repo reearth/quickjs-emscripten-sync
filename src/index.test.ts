@@ -1255,6 +1255,149 @@ describe("AsyncArena", () => {
   });
 });
 
+describe("asyncify (#32)", () => {
+  test("without the option an async fn yields a Promise in the guest", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true });
+
+    arena.expose({ f: async () => "result" });
+    expect(await arena.evalCodeAsync(`typeof f()`)).toBe("object");
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("asyncify: true resolves the value synchronously in the guest", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({
+      f: async () => {
+        await new Promise(r => setTimeout(r, 1));
+        return "result";
+      },
+      g: async () => ({ a: 1, b: [2, 3] }),
+    });
+
+    expect(await arena.evalCodeAsync(`typeof f()`)).toBe("string");
+    expect(await arena.evalCodeAsync(`f()`)).toBe("result");
+    expect(await arena.evalCodeAsync(`const o = g(); [typeof o, o.a, o.b[1]]`)).toEqual([
+      "object",
+      1,
+      3,
+    ]);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("asyncify: true passes arguments through", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({ add: async (a: number, b: number) => a + b });
+    expect(await arena.evalCodeAsync(`add(2, 3)`)).toBe(5);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("predicate form only asyncifies matching functions", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, {
+      isMarshalable: true,
+      asyncify: target => (target as any).asyncified === true,
+    });
+
+    const yes = async () => "sync-value";
+    (yes as any).asyncified = true;
+    const no = async () => "promise-value";
+
+    arena.expose({ yes, no });
+
+    expect(await arena.evalCodeAsync(`typeof yes()`)).toBe("string");
+    expect(await arena.evalCodeAsync(`yes()`)).toBe("sync-value");
+    expect(await arena.evalCodeAsync(`typeof no()`)).toBe("object");
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("a rejecting asyncified fn surfaces as a catchable VM error", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({
+      boom: async () => {
+        throw new Error("kaboom");
+      },
+    });
+
+    // Uncaught in the guest: the error propagates back to the host.
+    await expect(arena.evalCodeAsync(`boom()`)).rejects.toThrow("kaboom");
+
+    // Caught in the guest: the guest can handle it synchronously.
+    expect(
+      await arena.evalCodeAsync(`
+        try {
+          boom();
+          "no-throw";
+        } catch (e) {
+          "caught:" + e.message;
+        }
+      `),
+    ).toBe("caught:kaboom");
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("sequential asyncified calls in one evalCodeAsync work", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({
+      first: async () => 10,
+      second: async (n: number) => n + 5,
+    });
+
+    expect(await arena.evalCodeAsync(`const a = first(); const b = second(a); a + b`)).toBe(25);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("calling an asyncified fn during synchronous evalCode fails", async () => {
+    const ctx = await newAsyncContext();
+    const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({ f: async () => "result" });
+
+    // Asyncify can only suspend through an async entry point; a synchronous
+    // evalCode cannot unwind the stack, so it throws.
+    expect(() => arena.evalCode(`f()`)).toThrow("Function unexpectedly returned a Promise");
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("sync context fallback: asyncify does not break, async fn behaves as today", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true, asyncify: true });
+
+    arena.expose({ f: async () => "result" });
+    // No newAsyncifiedFunction on a plain context: falls back to Promise marshalling.
+    expect(arena.evalCode(`globalThis.__p = f(); typeof __p`)).toBe("object");
+    // Let the host promise settle into the VM promise before disposing, so the
+    // marshalled resolution does not touch a disposed context.
+    await new Promise(r => setTimeout(r));
+    arena.executePendingJobs();
+
+    arena.dispose();
+    ctx.dispose();
+  });
+});
+
 describe("Symbol.dispose", () => {
   test("using disposes the arena", async () => {
     const ctx = (await getQuickJS()).newContext();

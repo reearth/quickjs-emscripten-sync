@@ -72,6 +72,34 @@ export type Options = {
   syncEnabled?: boolean;
   /** A callback that returns whether an object should be passed to the VM by reference (as an opaque HostRef) instead of being marshalled by value/proxy. The guest cannot read such objects, but can hold them and pass them back to the host, where they resolve to the original object. */
   marshalByReference?: (target: any) => boolean;
+  /**
+   * Marshal selected host functions as *asyncified* functions. Normally an async
+   * host function is marshalled like any other function, so the guest receives a
+   * marshalled `Promise`. When a function is asyncified, the QuickJS VM instead
+   * suspends until the host promise settles and the guest receives the resolved
+   * value synchronously (as if the call were blocking).
+   *
+   * - `true`: asyncify every host function that is *declared* async, auto-detected
+   *   via `Object.prototype.toString.call(fn) === "[object AsyncFunction]"`. Note
+   *   that functions transpiled to ES5 (e.g. by Babel/TypeScript targeting older
+   *   runtimes) are plain functions returning a promise and are **not** detected —
+   *   use the predicate form for those.
+   * - predicate: asyncify exactly the functions for which it returns `true`. It is
+   *   called with the *unwrapped* target (the original function, not a sync proxy),
+   *   like `isMarshalable`.
+   * - absent/`false`: current behavior; async functions yield a `Promise` in the guest.
+   *
+   * Constraints (Emscripten Asyncify):
+   * - Asyncified functions only work when evaluation is entered through an async
+   *   entry point ({@link AsyncArena.evalCodeAsync}). Calling one during a
+   *   synchronous `evalCode` fails with `Error: Function unexpectedly returned a Promise`.
+   * - Only ONE suspended call is allowed at a time; concurrent suspension throws a
+   *   runtime error from quickjs-emscripten.
+   * - If the context does not support `newAsyncifiedFunction` (a plain sync context
+   *   from `getQuickJS().newContext()`), this option is silently ignored and async
+   *   functions behave as today (Promise).
+   */
+  asyncify?: boolean | ((target: (...args: any[]) => any) => boolean);
 };
 
 /**
@@ -479,6 +507,15 @@ export class Arena {
     return !!this._options?.marshalByReference?.(this._unwrap(t));
   };
 
+  _asyncify = (t: unknown): boolean => {
+    const a = this._options?.asyncify;
+    if (!a) return false;
+    const target = this._unwrap(t);
+    if (typeof a === "function") return typeof target === "function" && a(target as any);
+    // `a === true`: auto-detect functions declared with `async`.
+    return Object.prototype.toString.call(target) === "[object AsyncFunction]";
+  };
+
   // Register an opaque HostRef handle by its host value without wrapping it.
   _registerHostRef = (t: unknown, handle: QuickJSHandle): QuickJSHandle => {
     const u = this._unwrap(t);
@@ -564,6 +601,7 @@ export class Arena {
       preApply: this._marshalPreApply,
       prepareReturn: this._prepareMarshalReturn,
       unwrap: t => this._unwrap(t),
+      asyncify: this._options?.asyncify ? this._asyncify : undefined,
       custom: this._options?.customMarshaller,
     });
 
