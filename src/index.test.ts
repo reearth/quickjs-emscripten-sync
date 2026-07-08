@@ -73,6 +73,70 @@ describe("readme", () => {
   });
 });
 
+describe("class constructors (#92)", () => {
+  test("new on an exposed class inside the VM", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    class Cls {
+      hoge = "";
+
+      constructor() {
+        this.hoge = "foo";
+      }
+    }
+    arena.expose({ Cls });
+
+    const instance = arena.evalCode(`new Cls()`) as { hoge: string };
+    expect(instance.hoge).toBe("foo");
+    expect(arena.evalCode(`new Cls() instanceof Cls`)).toBe(true);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("constructor arguments reach the host", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    class Cls {
+      value: number;
+
+      constructor(a: number, b: number) {
+        this.value = a + b;
+      }
+    }
+    arena.expose({ Cls });
+
+    const instance = arena.evalCode(`new Cls(2, 3)`) as { value: number };
+    expect(instance.value).toBe(5);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+
+  test("new on a synced class inside the VM", async () => {
+    const ctx = (await getQuickJS()).newContext();
+    const arena = new Arena(ctx, { isMarshalable: true });
+
+    class Cls {
+      hoge = "";
+
+      constructor(v = "foo") {
+        this.hoge = v;
+      }
+    }
+    arena.expose({ Cls: arena.sync(Cls) });
+
+    const instance = arena.evalCode(`new Cls("bar")`) as { hoge: string };
+    expect(instance.hoge).toBe("bar");
+    expect(arena.evalCode(`new Cls() instanceof Cls`)).toBe(true);
+
+    arena.dispose();
+    ctx.dispose();
+  });
+});
+
 describe("evalCode", () => {
   test("simple object and function", async () => {
     const ctx = (await getQuickJS()).newContext();

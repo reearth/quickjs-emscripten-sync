@@ -491,6 +491,7 @@ export class Arena {
       disposeTransient: this._disposeTransient,
       preApply: this._marshalPreApply,
       prepareReturn: this._prepareMarshalReturn,
+      unwrap: t => this._unwrap(t),
       custom: this._options?.customMarshaller,
     });
 

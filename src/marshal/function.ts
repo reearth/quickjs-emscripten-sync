@@ -14,8 +14,15 @@ export default function marshalFunction(
   preApply?: (target: (...args: any[]) => any, thisArg: unknown, args: unknown[]) => any,
   disposeTransient: (handle: QuickJSHandle) => void = () => {},
   prepareReturn: (handle: QuickJSHandle) => QuickJSHandle = h => h,
+  unwrap: (target: unknown) => unknown = t => t,
 ): QuickJSHandle | undefined {
   if (typeof target !== "function") return;
+
+  // `target` may be a host-side proxy wrapper; unwrap it before the class check,
+  // because Function.prototype.toString on a callable proxy never matches /^class/.
+  // Computed once here rather than per call to avoid the toString + regex on every
+  // VM→host invocation.
+  const isClass = isES2015Class(unwrap(target));
 
   const raw = ctx
     .newFunction(target.name, function (...argHandles) {
@@ -29,9 +36,9 @@ export default function marshalFunction(
       const that = ctx.sameValue(this, ctx.global) ? undefined : unmarshal(this);
       const args = argHandles.map(a => unmarshal(a));
 
-      if (isES2015Class(target) && isObject(that)) {
+      if (isClass && isObject(that)) {
         // Class constructors cannot be invoked without new expression, and new.target is not changed
-        const result = new target(...args);
+        const result = new (target as new (...args: any[]) => any)(...args);
         Object.entries(result).forEach(([key, value]) => {
           const valueHandle = marshal(value);
           ctx.setProp(this, key, valueHandle);

@@ -33,6 +33,9 @@ export type Options = {
   // the VMMap retains (for identity, while sync is on) must be dup'd here or its
   // map entry goes stale. Defaults to identity (no-op).
   prepareReturn?: (handle: QuickJSHandle) => QuickJSHandle;
+  // Strip a host-side proxy wrapper from a target. Used to detect a wrapped class
+  // constructor, which would otherwise be hidden behind the proxy. Defaults to identity.
+  unwrap?: (target: unknown) => unknown;
   custom?: Iterable<(obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
 };
 
@@ -87,6 +90,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
       options.preApply,
       disposeTransient,
       options.prepareReturn,
+      options.unwrap,
     ) ??
     marshalMapSet(ctx, target, marshal2, pre2, disposeTransient) ??
     marshalObject(ctx, target, marshal2, pre2, disposeTransient) ??
