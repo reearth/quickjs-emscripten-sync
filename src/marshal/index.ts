@@ -36,6 +36,11 @@ export type Options = {
   // Strip a host-side proxy wrapper from a target. Used to detect a wrapped class
   // constructor, which would otherwise be hidden behind the proxy. Defaults to identity.
   unwrap?: (target: unknown) => unknown;
+  // Decide whether a host function should be marshalled as an Asyncified function
+  // (the VM suspends until the host promise settles, so the guest gets the
+  // resolved value synchronously). Called with the unwrapped target. Only takes
+  // effect when the context supports `newAsyncifiedFunction`.
+  asyncify?: (target: unknown) => boolean;
   custom?: Iterable<(obj: unknown, ctx: QuickJSContext) => QuickJSHandle | undefined>;
 };
 
@@ -91,6 +96,7 @@ export function marshal(target: unknown, options: Options): QuickJSHandle {
       disposeTransient,
       options.prepareReturn,
       options.unwrap,
+      options.asyncify,
     ) ??
     marshalMapSet(ctx, target, marshal2, pre2, disposeTransient) ??
     marshalObject(ctx, target, marshal2, pre2, disposeTransient) ??

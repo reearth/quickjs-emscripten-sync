@@ -229,6 +229,14 @@ type Options = {
    * "Passing objects by reference" below.
    */
   marshalByReference?: (target: any) => boolean;
+
+  /**
+   * Marshal selected async host functions as *asyncified* functions, so the VM
+   * suspends until the host promise settles and the guest receives the resolved
+   * value synchronously. Only effective with an `AsyncArena`. See "Asyncified
+   * host functions" below.
+   */
+  asyncify?: boolean | ((target: (...args: any[]) => any) => boolean);
 };
 ```
 
@@ -371,6 +379,40 @@ ctx.dispose();
 #### `evalCodeAsync<T = any>(code: string, filename?: string): Promise<T>`
 
 Evaluate JS code asynchronously and return the result on the host. Like `evalCode`, it converts and re-throws errors thrown during evaluation.
+
+#### Asyncified host functions
+
+Normally an async host function is marshalled like any other function, so the guest receives a marshalled `Promise`:
+
+```js
+const ctx = await newAsyncContext();
+const arena = new AsyncArena(ctx, { isMarshalable: true });
+
+arena.expose({ fetchSync: async () => "result" });
+await arena.evalCodeAsync(`typeof fetchSync()`); // "object" (a Promise)
+```
+
+With the `asyncify` option, selected async functions are marshalled through QuickJS's [Asyncify](https://emscripten.org/docs/porting/asyncify.html) support instead. When the guest calls one, the VM suspends until the host promise settles and the guest receives the **resolved value synchronously**, as if the call were blocking:
+
+```js
+const arena = new AsyncArena(ctx, { isMarshalable: true, asyncify: true });
+
+arena.expose({ fetchSync: async () => "result" });
+await arena.evalCodeAsync(`const v = fetchSync(); typeof v`); // "string"
+await arena.evalCodeAsync(`fetchSync()`); // "result"
+```
+
+`asyncify` accepts:
+
+- `true` — asyncify every host function that is *declared* async, auto-detected via `Object.prototype.toString.call(fn) === "[object AsyncFunction]"`. Functions transpiled to ES5 (e.g. Babel/TypeScript targeting older runtimes) are plain functions that return a promise and are **not** detected — use the predicate form for those.
+- `(target) => boolean` — asyncify exactly the functions for which it returns `true`. Called with the unwrapped target, like `isMarshalable`.
+- absent / `false` — current behavior; async functions yield a `Promise` in the guest.
+
+Constraints (imposed by Emscripten Asyncify):
+
+- Asyncified functions only work when evaluation is entered through an async entry point (`evalCodeAsync`). Calling one during a synchronous `evalCode` throws `Error: Function unexpectedly returned a Promise`.
+- Only **one** suspended call is allowed at a time. Concurrent suspension (e.g. two asyncified calls awaiting simultaneously) throws a runtime error from quickjs-emscripten. Sequential calls are fine.
+- The option requires a `QuickJSAsyncContext` (from `newAsyncContext()`). On a plain synchronous context it is silently ignored and async functions behave as before (Promise).
 
 ### `defaultRegisteredObjects: [any, string][]`
 
