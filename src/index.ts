@@ -501,7 +501,11 @@ export class Arena {
     this._transientHandles.delete(handle);
 
     const syncEnabled = this._options?.syncEnabled ?? true;
-    return [handle, !syncEnabled || !this._map.hasHandle(handle)];
+    // A non-object (primitive) handle is never retained in `_map` (registered
+    // primitives already returned above via `_registeredMap`), so skip the
+    // `hasHandle` VM roundtrip and mark it disposable directly.
+    if (!syncEnabled || !isObject(target)) return [handle, true];
+    return [handle, !this._map.hasHandle(handle)];
   };
 
   _prepareMarshalReturn = (h: QuickJSHandle): QuickJSHandle => {
@@ -512,7 +516,12 @@ export class Arena {
     // `x === fn()` identity across calls. Hand the VM a dup instead and keep
     // ours alive. With sync off, handles are not retained, so this is a no-op.
     const syncEnabled = this._options?.syncEnabled ?? true;
-    return syncEnabled && h.alive && this._map.hasHandle(h) ? h.dup() : h;
+    // Only object handles are retained in `_map`; a primitive return can never
+    // be in the map, so `isHandleObject` (a cheap typeof) skips the `hasHandle`
+    // VM roundtrip for primitive returns from host functions.
+    return syncEnabled && h.alive && isHandleObject(this.context, h) && this._map.hasHandle(h)
+      ? h.dup()
+      : h;
   };
 
   _preUnmarshal = (t: any, h: QuickJSHandle): Wrapped<any> => {
