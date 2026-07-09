@@ -1,7 +1,7 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 import { newDeferred } from "../util";
-import { call, instanceOf } from "../vmutil";
+import { call, consume, instanceOf } from "../vmutil";
 
 export default function unmarshalPromise<T = unknown>(
   ctx: QuickJSContext,
@@ -24,7 +24,11 @@ export default function unmarshalPromise<T = unknown>(
 
 function isPromiseHandle(ctx: QuickJSContext, handle: QuickJSHandle): boolean {
   if (!handle.owner) return false;
-  return ctx.unwrapResult(ctx.evalCode("Promise")).consume(promise => {
+  // `consume` disposes the Promise constructor handle even if `instanceOf`
+  // throws mid-flight (e.g. an interrupt or OOM lands in the `a instanceof b`
+  // VM call); the raw `Lifetime.consume` would skip disposal on throw, orphaning
+  // the constructor handle.
+  return consume(ctx.unwrapResult(ctx.evalCode("Promise")), promise => {
     if (!handle.owner) return false;
     return instanceOf(ctx, handle, promise);
   });

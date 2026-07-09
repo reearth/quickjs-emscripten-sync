@@ -1,6 +1,6 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
-import { call, consumeAll } from "../vmutil";
+import { call, consume, consumeAll } from "../vmutil";
 
 export default function marshalCustom(
   ctx: QuickJSContext,
@@ -13,24 +13,33 @@ export default function marshalCustom(
     handle = c(target, ctx);
     if (handle) break;
   }
-  return handle ? preMarshal(target, handle) ?? handle : undefined;
+  if (!handle) return undefined;
+  // Own the custom-marshalled handle until `preMarshal` registers it; dispose it
+  // if `preMarshal` throws mid-flight so it is not orphaned.
+  let owned = true;
+  try {
+    const result = preMarshal(target, handle) ?? handle;
+    owned = false;
+    return result;
+  } finally {
+    if (owned && handle.alive) handle.dispose();
+  }
 }
 
 export function symbol(target: unknown, ctx: QuickJSContext): QuickJSHandle | undefined {
   if (typeof target !== "symbol") return;
-  const handle = call(
-    ctx,
-    "d => Symbol(d)",
-    undefined,
-    target.description ? ctx.newString(target.description) : ctx.undefined,
-  );
-  return handle;
+  // `call` does not dispose its arguments, so the description string handle must
+  // be consumed here or it leaks on every symbol marshal.
+  return target.description
+    ? consume(ctx.newString(target.description), d => call(ctx, "d => Symbol(d)", undefined, d))
+    : call(ctx, "d => Symbol(d)", undefined, ctx.undefined);
 }
 
 export function date(target: unknown, ctx: QuickJSContext): QuickJSHandle | undefined {
   if (!(target instanceof Date)) return;
-  const handle = call(ctx, "d => new Date(d)", undefined, ctx.newNumber(target.getTime()));
-  return handle;
+  // `call` does not dispose its arguments, so the time number handle is consumed
+  // here rather than leaked.
+  return consume(ctx.newNumber(target.getTime()), d => call(ctx, "d => new Date(d)", undefined, d));
 }
 
 export function arrayBuffer(target: unknown, ctx: QuickJSContext): QuickJSHandle | undefined {

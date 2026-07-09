@@ -1,7 +1,7 @@
 import type { QuickJSAsyncContext, QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
 import { isES2015Class, isObject } from "../util";
-import { call } from "../vmutil";
+import { call, consume } from "../vmutil";
 
 import marshalProperties from "./properties";
 
@@ -33,7 +33,7 @@ export default function marshalFunction(
   const useAsyncify =
     !!asyncify && asyncify(unwrapped) && "newAsyncifiedFunction" in ctx;
 
-  const raw = (
+  const inner = (
     useAsyncify
       ? // Asyncify: the VM stack is suspended until the host promise settles, so
         // the guest receives the resolved value synchronously. Async functions
@@ -90,24 +90,34 @@ export default function marshalFunction(
             ),
           );
         })
-  )
-    .consume(handle2 =>
-      // fucntions created by vm.newFunction are not callable as a class constrcutor
-      call(
-        ctx,
-        `Cls => {
-          const fn = function(...args) { return Cls.apply(this, args); };
-          fn.name = Cls.name;
-          fn.length = Cls.length;
-          return fn;
-        }`,
-        undefined,
-        handle2,
-      ),
-    );
+  );
 
-  const handle = preMarshal(target, raw) ?? raw;
-  marshalProperties(ctx, target, raw, marshal, disposeTransient);
+  // `consume` disposes the raw newFunction handle even if `call` throws (the raw
+  // `Lifetime.consume` would skip disposal on throw, leaking the function handle).
+  const raw = consume(inner, handle2 =>
+    // functions created by vm.newFunction are not callable as a class constructor
+    call(
+      ctx,
+      `Cls => {
+        const fn = function(...args) { return Cls.apply(this, args); };
+        fn.name = Cls.name;
+        fn.length = Cls.length;
+        return fn;
+      }`,
+      undefined,
+      handle2,
+    ),
+  );
 
-  return handle;
+  // Own `raw` until `preMarshal` registers it; dispose it if `preMarshal` throws
+  // mid-flight so the wrapped function handle is not orphaned.
+  let ownRaw = true;
+  try {
+    const handle = preMarshal(target, raw) ?? raw;
+    ownRaw = false;
+    marshalProperties(ctx, target, raw, marshal, disposeTransient);
+    return handle;
+  } finally {
+    if (ownRaw && raw.alive) raw.dispose();
+  }
 }

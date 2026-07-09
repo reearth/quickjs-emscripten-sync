@@ -9,11 +9,19 @@ export default function marshalPromise(
   if (!(target instanceof Promise)) return;
 
   const promise = ctx.newPromise();
+  // Own the deferred promise until `preMarshal` registers it; dispose it (handle
+  // plus resolve/reject callbacks) if `preMarshal` throws mid-flight.
+  let owned = true;
+  try {
+    target.then(
+      d => promise.resolve(marshal(d)),
+      d => promise.reject(marshal(d)),
+    );
 
-  target.then(
-    d => promise.resolve(marshal(d)),
-    d => promise.reject(marshal(d)),
-  );
-
-  return preMarshal(target, promise) ?? promise.handle;
+    const result = preMarshal(target, promise) ?? promise.handle;
+    owned = false;
+    return result;
+  } finally {
+    if (owned && promise.alive) promise.dispose();
+  }
 }

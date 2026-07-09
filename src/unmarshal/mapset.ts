@@ -21,18 +21,33 @@ export default function unmarshalMapSet(
     for (const elResult of iterator) {
       const el = ctx.unwrapResult(elResult);
       if (isMap) {
+        // `disposeKey`/`disposeValue` start true so a mid-flight throw (e.g. OOM
+        // inside `unmarshal`) disposes the property handles instead of orphaning
+        // them; on success they are disposed only when redundant (already owned).
         const keyHandle = ctx.getProp(el, 0);
         const valueHandle = ctx.getProp(el, 1);
-        const [key, disposeKey] = unmarshal(keyHandle);
-        const [value, disposeValue] = unmarshal(valueHandle);
-        if (disposeKey) keyHandle.dispose();
-        if (disposeValue) valueHandle.dispose();
-        (result as Map<any, any>).set(key, value);
-        el.dispose();
+        let disposeKey = true;
+        let disposeValue = true;
+        try {
+          const [key, dk] = unmarshal(keyHandle);
+          disposeKey = dk;
+          const [value, dv] = unmarshal(valueHandle);
+          disposeValue = dv;
+          (result as Map<any, any>).set(key, value);
+        } finally {
+          if (disposeKey && keyHandle.alive) keyHandle.dispose();
+          if (disposeValue && valueHandle.alive) valueHandle.dispose();
+          if (el.alive) el.dispose();
+        }
       } else {
-        const [value, disposeValue] = unmarshal(el);
-        if (disposeValue) el.dispose();
-        (result as Set<any>).add(value);
+        let disposeValue = true;
+        try {
+          const [value, dv] = unmarshal(el);
+          disposeValue = dv;
+          (result as Set<any>).add(value);
+        } finally {
+          if (disposeValue && el.alive) el.dispose();
+        }
       }
     }
   } finally {

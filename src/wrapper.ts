@@ -1,7 +1,7 @@
 import type { QuickJSHandle, QuickJSContext } from "quickjs-emscripten";
 
 import { isObject } from "./util";
-import { call, isHandleObject, mayConsumeAll } from "./vmutil";
+import { call, consume, isHandleObject, mayConsumeAll } from "./vmutil";
 
 export type SyncMode = "both" | "vm" | "host";
 
@@ -54,7 +54,8 @@ export function wrap<T = any>(
         (receiverHandle, keyHandle, valueHandle) => {
           const [handle2, unwrapped] = unwrapHandle(ctx, receiverHandle, proxyKeySymbolHandle);
           if (unwrapped) {
-            handle2.consume(h => ctx.setProp(h, keyHandle, valueHandle));
+            // `consume` disposes the unwrapped handle even if `setProp` throws.
+            consume(handle2, h => ctx.setProp(h, keyHandle, valueHandle));
           } else {
             ctx.setProp(handle2, keyHandle, valueHandle);
           }
@@ -72,7 +73,8 @@ export function wrap<T = any>(
           if (sync === "host" || !ctx.alive) return true;
 
           if (unwrapped) {
-            handle2.consume(h => call(ctx, `(a, b) => delete a[b]`, undefined, h, keyHandle));
+            // `consume` disposes the unwrapped handle even if the call throws.
+            consume(handle2, h => call(ctx, `(a, b) => delete a[b]`, undefined, h, keyHandle));
           } else {
             call(ctx, `(a, b) => delete a[b]`, undefined, handle2, keyHandle);
           }
@@ -103,7 +105,8 @@ export function wrap<T = any>(
               keyHandle,
               descHandle,
             ).dispose();
-          if (unwrapped) handle2.consume(define);
+          // `consume` disposes the unwrapped handle even if `define` throws.
+          if (unwrapped) consume(handle2, define);
           else define(handle2);
         },
       );

@@ -1,6 +1,6 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
-import { call } from "../vmutil";
+import { call, consume } from "../vmutil";
 
 export default function marshalProperties(
   ctx: QuickJSContext,
@@ -67,7 +67,9 @@ export default function marshalProperties(
     if (setHandle) transient.push(setHandle);
 
     const descsHandle = (descs ??= ctx.newObject());
-    ctx.newObject().consume(descObj => {
+    // `consume` disposes the descriptor object even if a `setProp` throws
+    // mid-flight, so the intermediate handle is not orphaned.
+    consume(ctx.newObject(), descObj => {
       Object.entries(desc).forEach(([k, v]) => {
         const v2 =
           k === "value"

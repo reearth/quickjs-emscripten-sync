@@ -1,5 +1,7 @@
 import { QuickJSContext, QuickJSHandle, VmFunctionImplementation } from "quickjs-emscripten";
 
+import { consumeAll } from "./vmutil";
+
 export type QuickJSContextEx = QuickJSContext & {
   disposeEx?: () => void;
 };
@@ -51,15 +53,25 @@ export class ContextEx {
     this.fnCounter++;
     const id = this.fnCounter;
     this.fnMap.set(id, fn);
-    return this.context.unwrapResult(
-      this.context.callFunction(
-        this.fnGenerator,
-        this.context.undefined,
+    // `callFunction` does not dispose its arguments, so the name/length/id handles
+    // are consumed here (even on throw) instead of leaking on every newFunction.
+    return consumeAll(
+      [
         this.context.newString(name),
         this.context.newNumber(fn.length),
         this.context.newNumber(id),
-        this.fn,
-      ),
+      ],
+      ([nameHandle, lengthHandle, idHandle]) =>
+        this.context.unwrapResult(
+          this.context.callFunction(
+            this.fnGenerator,
+            this.context.undefined,
+            nameHandle,
+            lengthHandle,
+            idHandle,
+            this.fn,
+          ),
+        ),
     );
   };
 }

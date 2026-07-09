@@ -661,15 +661,29 @@ export class Arena {
       if (ref) return ref.value;
     }
 
-    const [wrappedHandle] = this._wrapHandle(handle);
-    return unmarshal(wrappedHandle ?? handle, {
-      ctx: this.context,
-      marshal: this._marshal,
-      find: this._unmarshalFind,
-      pre: this._preUnmarshal,
-      custom: this._options?.customUnmarshaller,
-      hostRef: !!this._options?.marshalByReference,
-    });
+    const [wrappedHandle, wrapped] = this._wrapHandle(handle);
+    let done = false;
+    try {
+      const result = unmarshal(wrappedHandle ?? handle, {
+        ctx: this.context,
+        marshal: this._marshal,
+        find: this._unmarshalFind,
+        pre: this._preUnmarshal,
+        custom: this._options?.customUnmarshaller,
+        hostRef: !!this._options?.marshalByReference,
+      });
+      done = true;
+      return result;
+    } finally {
+      // A mid-flight abort (e.g. an OOM inside the unmarshal chain) can throw
+      // before the freshly created proxy handle was registered in the map,
+      // orphaning it. Dispose it here; if it was already registered the map
+      // skips it (alive check) at dispose. Disposing a handle never allocates,
+      // so this is safe even under an active memory limit.
+      if (!done && wrapped && wrappedHandle?.alive && wrappedHandle !== handle) {
+        wrappedHandle.dispose();
+      }
+    }
   };
 
   _register(
@@ -683,24 +697,41 @@ export class Arena {
     }
 
     let wrappedT = this._wrap(t);
-    const [wrappedH] = this._wrapHandle(h);
+    // `wrappedHNew` is true when `_wrapHandle` allocated a fresh VM proxy (which
+    // we own) rather than returning the original handle. If registration fails
+    // or throws mid-flight (e.g. an OOM in `map.set`), that proxy would be
+    // orphaned, so the finally below disposes it.
+    const [wrappedH, wrappedHNew] = this._wrapHandle(h);
     const isPromise = t instanceof Promise;
     if (!wrappedH || (!wrappedT && !isPromise)) return; // t or h is not an object
     if (isPromise) wrappedT = t;
 
     const unwrappedT = this._unwrap(t);
-    const [unwrappedH, unwrapped] = this._unwrapHandle(h);
+    let unwrappedH: QuickJSHandle | undefined;
+    let unwrapped = false;
+    let done = false;
+    try {
+      [unwrappedH, unwrapped] = this._unwrapHandle(h);
 
-    const res = map.set(wrappedT, wrappedH, unwrappedT, unwrappedH);
-    if (!res) {
-      // already registered
-      if (unwrapped) unwrappedH.dispose();
-      throw new Error("already registered");
-    } else if (sync) {
-      this._sync.add(unwrappedT);
+      const res = map.set(wrappedT, wrappedH, unwrappedT, unwrappedH);
+      if (!res) {
+        // already registered
+        throw new Error("already registered");
+      } else if (sync) {
+        this._sync.add(unwrappedT);
+      }
+
+      done = true;
+      return [wrappedT, wrappedH];
+    } finally {
+      if (!done) {
+        // `map.set` did not take ownership (it threw or returned false): dispose
+        // the handles we created so they are not orphaned. A non-new `wrappedH`
+        // and a non-wrapped `unwrappedH` are the caller's handle `h`, left alone.
+        if (wrappedHNew && wrappedH.alive) wrappedH.dispose();
+        if (unwrapped && unwrappedH?.alive) unwrappedH.dispose();
+      }
     }
-
-    return [wrappedT, wrappedH];
   }
 
   _syncMode = (obj: any): "both" | undefined => {

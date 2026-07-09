@@ -65,9 +65,18 @@ export default function unmarshalProperties(
       // otherwise ownership was transferred to the map and we must keep it.
       const readHandle = (fieldKey: string): unknown => {
         const h = ctx.getProp(descHandle, fieldKey);
-        const [v, alreadyExists] = unmarshal(h);
-        if (alreadyExists) h.dispose();
-        return v;
+        let retained = false;
+        try {
+          const [v, alreadyExists] = unmarshal(h);
+          // When the value already existed, ownership stays with the map and the
+          // fresh handle is redundant; otherwise `unmarshal` transferred it to the
+          // map and we must keep it. A mid-flight throw in `unmarshal` also lands
+          // here with `retained` false, so the orphaned handle is disposed.
+          retained = !alreadyExists;
+          return v;
+        } finally {
+          if (!retained && h.alive) h.dispose();
+        }
       };
 
       if (flags & 1) desc.value = readHandle("value");

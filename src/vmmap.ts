@@ -1,6 +1,6 @@
 import type { QuickJSContext, QuickJSHandle } from "quickjs-emscripten";
 
-import { unwrapResult } from "./vmutil";
+import { consume, unwrapResult } from "./vmutil";
 
 /**
  * Bidirectional map between host values and QuickJS handles.
@@ -79,7 +79,19 @@ export default class VMMap {
       return v === handle || v === handle2;
     }
 
-    const id = this._nextId++;
+    const id = this._nextId;
+
+    // Register on the VM side FIRST, before mutating any host-side bookkeeping.
+    // If this throws (e.g. an OOM lands inside `_mapSet`), no host map has been
+    // touched and `handle`/`handle2` are NOT retained here, so the caller still
+    // owns them and can dispose them: `set` stays atomic (all-or-nothing).
+    // `consume` disposes the id number handle even when the call throws (the raw
+    // `Lifetime.consume` skips disposal on throw, leaking it).
+    consume(this.ctx.newNumber(id), c => {
+      this._call(this._mapSet, undefined, handle, c, handle2 ?? this.ctx.undefined);
+    });
+
+    this._nextId++;
     this._keyToId.set(key, id);
     this._idToHandle.set(id, handle);
     this._idToKey.set(id, key);
@@ -90,10 +102,6 @@ export default class VMMap {
         this._idToHandle2.set(id, handle2);
       }
     }
-
-    this.ctx.newNumber(id).consume(c => {
-      this._call(this._mapSet, undefined, handle, c, handle2 ?? this.ctx.undefined);
-    });
 
     return true;
   }
