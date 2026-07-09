@@ -1,3 +1,14 @@
+## [1.11.0] - 2026-07-09
+
+### Changes
+- chore: update dev dependencies (eslint 10, vitest 4.1.10) (#100)
+- fix: dispose orphaned handles when an abort interrupts marshalling mid-flight (#99)
+- feat: asyncify host functions so the guest can call them synchronously (#32) (#98)
+- perf: per-property fast paths in marshal/unmarshal properties (#96)
+- feat: accept filename and eval options in evalCode/evalModule (#95)
+- perf: cut VM roundtrips on hot marshal/unmarshal paths (#94)
+- fix: detect class constructors behind the host proxy wrapper (#92) (#93)
+- docs: add @reearth/zushi callout at the top of the README (#89)
 ## [1.10.0] - 2026-06-09
 
 ### Changes
