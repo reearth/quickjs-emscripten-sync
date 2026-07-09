@@ -1,4 +1,5 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import { json, call } from "../vmutil";
@@ -8,8 +9,10 @@ import marshalFunction from "./function";
 test("normal func", async () => {
   const ctx = (await getQuickJS()).newContext();
 
-  const marshal = vi.fn(v => json(ctx, v));
-  const unmarshal = vi.fn(v => (ctx.sameValue(v, ctx.global) ? undefined : ctx.dump(v)));
+  const marshal = vi.fn((v) => json(ctx, v));
+  const unmarshal = vi.fn((v) =>
+    ctx.sameValue(v, ctx.global) ? undefined : ctx.dump(v),
+  );
   const preMarshal = vi.fn((_, a) => a);
   const innerfn = vi.fn((..._args: any[]) => "hoge");
   const fn = (...args: any[]) => innerfn(...args);
@@ -43,7 +46,7 @@ test("normal func", async () => {
 
 test("func which has properties", async () => {
   const ctx = (await getQuickJS()).newContext();
-  const marshal = vi.fn(v => json(ctx, v));
+  const marshal = vi.fn((v) => json(ctx, v));
 
   const fn = () => {};
   fn.hoge = "foo";
@@ -52,7 +55,7 @@ test("func which has properties", async () => {
     ctx,
     fn,
     marshal,
-    v => ctx.dump(v),
+    (v) => ctx.dump(v),
     (_, a) => a,
   );
   if (!handle) throw new Error("handle is undefined");
@@ -93,16 +96,20 @@ test("class", async () => {
   if (!handle) throw new Error("handle is undefined");
 
   const newA = ctx.unwrapResult(ctx.evalCode(`A => new A(100)`));
-  const instance = ctx.unwrapResult(ctx.callFunction(newA, ctx.undefined, handle));
+  const instance = ctx.unwrapResult(
+    ctx.callFunction(newA, ctx.undefined, handle),
+  );
 
   expect(ctx.dump(ctx.getProp(handle, "name"))).toBe("A");
   expect(ctx.dump(ctx.getProp(handle, "length"))).toBe(1);
-  expect(ctx.dump(call(ctx, "(cls, i) => i instanceof cls", undefined, handle, instance))).toBe(
-    true,
-  );
+  expect(
+    ctx.dump(
+      call(ctx, "(cls, i) => i instanceof cls", undefined, handle, instance),
+    ),
+  ).toBe(true);
   expect(ctx.dump(ctx.getProp(instance, "a"))).toBe(100);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   instance.dispose();
   newA.dispose();
   handle.dispose();
@@ -117,19 +124,34 @@ test("preApply", async () => {
     if (typeof v === "number") return ctx.newNumber(v);
     return ctx.null;
   };
-  const unmarshal = (v: QuickJSHandle) => (ctx.typeof(v) === "object" ? that : ctx.dump(v));
-  const preApply = vi.fn((a: (...args: any[]) => any, b: any, c: any[]) => a.apply(b, c) + "!");
+  const unmarshal = (v: QuickJSHandle) =>
+    ctx.typeof(v) === "object" ? that : ctx.dump(v);
+  const preApply = vi.fn(
+    (a: (...args: any[]) => any, b: any, c: any[]) => a.apply(b, c) + "!",
+  );
   const that = {};
   const thatHandle = ctx.newObject();
 
   const fn = () => "foo";
-  const handle = marshalFunction(ctx, fn, marshal, unmarshal, (_, a) => a, preApply);
+  const handle = marshalFunction(
+    ctx,
+    fn,
+    marshal,
+    unmarshal,
+    (_, a) => a,
+    preApply,
+  );
   if (!handle) throw new Error("handle is undefined");
 
   expect(preApply).toBeCalledTimes(0);
 
   const res = ctx.unwrapResult(
-    ctx.callFunction(handle, thatHandle, ctx.newNumber(100), ctx.newString("hoge")),
+    ctx.callFunction(
+      handle,
+      thatHandle,
+      ctx.newNumber(100),
+      ctx.newString("hoge"),
+    ),
   );
 
   expect(preApply).toBeCalledTimes(1);

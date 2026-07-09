@@ -13,7 +13,8 @@
 // at dispose; some hot paths still leak handles across many iterations, which
 // would abort the whole run. The process exits right after benchmarking, so
 // skipping dispose keeps the numbers comparable without that noise.
-import { getQuickJS, type QuickJSContext } from "quickjs-emscripten";
+import { getQuickJS  } from "quickjs-emscripten";
+import type {QuickJSContext} from "quickjs-emscripten";
 import { bench, describe, beforeAll } from "vitest";
 
 import { Arena } from "../src/index";

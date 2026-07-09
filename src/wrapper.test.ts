@@ -1,15 +1,17 @@
-import { QuickJSHandle, getQuickJS } from "quickjs-emscripten";
+import type { QuickJSHandle} from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import { call, json } from "./vmutil";
+import type {
+  SyncMode} from "./wrapper";
 import {
   wrap,
   unwrap,
   isWrapped,
   wrapHandle,
   unwrapHandle,
-  isHandleWrapped,
-  SyncMode,
+  isHandleWrapped
 } from "./wrapper";
 
 test("wrap, unwrap, isWrapped", async () => {

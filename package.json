@@ -44,8 +44,8 @@
   "devDependencies": {
     "@jitl/quickjs-wasmfile-debug-sync": "^0.32.0",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^9.39.4",
-    "eslint-config-reearth": "^0.3.8",
+    "eslint": "^10.6.0",
+    "eslint-config-reearth": "^0.4.0",
     "prettier": "^3.9.4",
     "quickjs-emscripten": "^0.32.0",
     "typescript": "^5.9.3",

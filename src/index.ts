@@ -10,7 +10,8 @@ import type {
   InterruptHandler,
 } from "quickjs-emscripten";
 
-import { wrapContext, QuickJSContextEx } from "./contextex";
+import type { QuickJSContextEx } from "./contextex";
+import { wrapContext } from "./contextex";
 import { defaultRegisteredObjects } from "./default";
 import marshal from "./marshal";
 import unmarshal from "./unmarshal";
@@ -29,7 +30,8 @@ import {
   enableFnCache,
   disposeFnCache,
 } from "./vmutil";
-import { wrap, createWrapHandle, unwrap, unwrapHandle, Wrapped, WrapHandle } from "./wrapper";
+import type { Wrapped, WrapHandle } from "./wrapper";
+import { wrap, createWrapHandle, unwrap, unwrapHandle } from "./wrapper";
 
 export {
   VMMap,

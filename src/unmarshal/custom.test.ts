@@ -1,4 +1,5 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import unmarshalCustom, { defaultCustom } from "./custom";
@@ -9,7 +10,8 @@ test("symbol", async () => {
   const obj = ctx.newObject();
   const handle = ctx.unwrapResult(ctx.evalCode(`Symbol("foobar")`));
 
-  const unmarshal = (h: QuickJSHandle): any => unmarshalCustom(ctx, h, pre, defaultCustom);
+  const unmarshal = (h: QuickJSHandle): any =>
+    unmarshalCustom(ctx, h, pre, defaultCustom);
 
   expect(unmarshal(obj)).toBe(undefined);
   expect(pre).toBeCalledTimes(0);
@@ -32,7 +34,8 @@ test("date", async () => {
   const obj = ctx.newObject();
   const handle = ctx.unwrapResult(ctx.evalCode(`new Date(2022, 7, 26)`));
 
-  const unmarshal = (h: QuickJSHandle): any => unmarshalCustom(ctx, h, pre, defaultCustom);
+  const unmarshal = (h: QuickJSHandle): any =>
+    unmarshalCustom(ctx, h, pre, defaultCustom);
 
   expect(unmarshal(obj)).toBe(undefined);
   expect(pre).toBeCalledTimes(0);

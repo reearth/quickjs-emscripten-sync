@@ -1,4 +1,5 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import { json } from "../vmutil";
@@ -8,8 +9,11 @@ import unmarshalFunction from "./function";
 test("arrow function", async () => {
   const ctx = (await getQuickJS()).newContext();
   const marshal = vi.fn((v): [QuickJSHandle, boolean] => [json(ctx, v), false]);
-  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [ctx.dump(v), false]);
-  const preUnmarshal = vi.fn(a => a);
+  const unmarshal = vi.fn((v: QuickJSHandle): [unknown, boolean] => [
+    ctx.dump(v),
+    false,
+  ]);
+  const preUnmarshal = vi.fn((a) => a);
 
   const handle = ctx.unwrapResult(ctx.evalCode(`(a, b) => a + b`));
   const func = unmarshalFunction(ctx, handle, marshal, unmarshal, preUnmarshal);
@@ -49,9 +53,11 @@ test("function", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [ctx.dump(v), false];
   });
-  const preUnmarshal = vi.fn(a => a);
+  const preUnmarshal = vi.fn((a) => a);
 
-  const handle = ctx.unwrapResult(ctx.evalCode(`(function (a) { return this.a + a; })`));
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`(function (a) { return this.a + a; })`),
+  );
 
   const func = unmarshalFunction(ctx, handle, marshal, unmarshal, preUnmarshal);
   if (!func) throw new Error("func is undefined");
@@ -71,7 +77,7 @@ test("function", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(func, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   thatHandle.dispose();
   handle.dispose();
   ctx.dispose();
@@ -89,11 +95,19 @@ test("constructor", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [ctx.dump(v), false];
   });
-  const preUnmarshal = vi.fn(a => a);
+  const preUnmarshal = vi.fn((a) => a);
 
-  const handle = ctx.unwrapResult(ctx.evalCode(`(function (b) { this.a = b + 2; })`));
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`(function (b) { this.a = b + 2; })`),
+  );
 
-  const Cls = unmarshalFunction(ctx, handle, marshal, unmarshal, preUnmarshal) as any;
+  const Cls = unmarshalFunction(
+    ctx,
+    handle,
+    marshal,
+    unmarshal,
+    preUnmarshal,
+  ) as any;
   if (!Cls) throw new Error("Cls is undefined");
 
   const instance = new Cls(100);
@@ -113,7 +127,7 @@ test("constructor", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   ctx.dispose();
 });
@@ -130,11 +144,19 @@ test("class", async () => {
     if (ty === "object" || ty === "function") disposables.push(v);
     return [ctx.dump(v), false];
   });
-  const preUnmarshal = vi.fn(a => a);
+  const preUnmarshal = vi.fn((a) => a);
 
-  const handle = ctx.unwrapResult(ctx.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`));
+  const handle = ctx.unwrapResult(
+    ctx.evalCode(`(class A { constructor(a) { this.a = a + 1; } })`),
+  );
 
-  const Cls = unmarshalFunction(ctx, handle, marshal, unmarshal, preUnmarshal) as any;
+  const Cls = unmarshalFunction(
+    ctx,
+    handle,
+    marshal,
+    unmarshal,
+    preUnmarshal,
+  ) as any;
   if (!Cls) throw new Error("Cls is undefined");
 
   const instance = new Cls(2);
@@ -154,7 +176,7 @@ test("class", async () => {
   expect(preUnmarshal).toBeCalledTimes(1);
   expect(preUnmarshal).toBeCalledWith(Cls, handle);
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   ctx.dispose();
 });
@@ -167,8 +189,12 @@ test("undefined", async () => {
   expect(unmarshalFunction(ctx, ctx.true, f, f, f)).toEqual(undefined);
   expect(unmarshalFunction(ctx, ctx.false, f, f, f)).toEqual(undefined);
   expect(unmarshalFunction(ctx, ctx.null, f, f, f)).toEqual(undefined);
-  expect(unmarshalFunction(ctx, ctx.newString("hoge"), f, f, f)).toEqual(undefined);
-  expect(unmarshalFunction(ctx, ctx.newNumber(-10), f, f, f)).toEqual(undefined);
+  expect(unmarshalFunction(ctx, ctx.newString("hoge"), f, f, f)).toEqual(
+    undefined,
+  );
+  expect(unmarshalFunction(ctx, ctx.newNumber(-10), f, f, f)).toEqual(
+    undefined,
+  );
 
   const obj = ctx.newObject();
   expect(unmarshalFunction(ctx, obj, f, f, f)).toEqual(undefined);

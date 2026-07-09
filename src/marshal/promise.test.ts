@@ -1,8 +1,8 @@
-import {
-  getQuickJS,
-  type Disposable,
-  type QuickJSDeferredPromise,
-  type QuickJSHandle,
+import { getQuickJS } from "quickjs-emscripten";
+import type {
+  Disposable,
+  QuickJSDeferredPromise,
+  QuickJSHandle,
 } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
@@ -15,15 +15,17 @@ const testPromise = (reject: boolean) => async () => {
   const ctx = (await getQuickJS()).newContext();
 
   const disposables: Disposable[] = [];
-  const marshal = vi.fn(v => {
+  const marshal = vi.fn((v) => {
     const handle = json(ctx, v);
     disposables.push(handle);
     return handle;
   });
-  const preMarshal = vi.fn((_: any, a: QuickJSDeferredPromise): QuickJSHandle => {
-    disposables.push(a);
-    return a.handle;
-  });
+  const preMarshal = vi.fn(
+    (_: any, a: QuickJSDeferredPromise): QuickJSHandle => {
+      disposables.push(a);
+      return a.handle;
+    },
+  );
 
   const mockNotify = vi.fn();
   const notify = ctx.newFunction("notify", (handle1, handle2) => {
@@ -77,7 +79,7 @@ const testPromise = (reject: boolean) => async () => {
   expect(marshal).toBeCalledTimes(1);
   expect(marshal.mock.calls).toEqual([["hoge"]]);
 
-  disposables.forEach(h => h.dispose());
+  disposables.forEach((h) => h.dispose());
   ctx.dispose();
 };
 

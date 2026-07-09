@@ -1,4 +1,5 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import unmarshalProperties from "./properties";
@@ -47,7 +48,7 @@ test("works", async () => {
   expect(unmarshal).toReturnWith(["c", false]);
   expect(unmarshal).toReturnWith([expect.any(Function), false]); // get, set
 
-  disposables.forEach(d => d.dispose());
+  disposables.forEach((d) => d.dispose());
   handle.dispose();
   ctx.dispose();
 });

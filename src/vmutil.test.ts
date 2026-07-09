@@ -1,4 +1,5 @@
-import { getQuickJS, QuickJSHandle } from "quickjs-emscripten";
+import type { QuickJSHandle } from "quickjs-emscripten";
+import { getQuickJS } from "quickjs-emscripten";
 import { expect, test, vi } from "vitest";
 
 import {
