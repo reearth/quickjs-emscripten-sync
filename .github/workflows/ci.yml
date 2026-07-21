@@ -33,7 +33,7 @@ jobs:
 
       - name: Report coverage
         if: always()
-        uses: davelosert/vitest-coverage-report-action@02f3c2e641286b7fa308cd3e430783103ce6103b # v2.12.0
+        uses: davelosert/vitest-coverage-report-action@8b157684c6a6b259b97d45e72b44242865c0f6a5 # v2.12.2
 
       - name: Build
         run: npm run build
