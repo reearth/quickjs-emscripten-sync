@@ -28,6 +28,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2
+        with:
+          egress-policy: audit
       # Mint an installation token for our GitHub App. Pushing the release
       # branch and opening the PR with this token (instead of the default
       # GITHUB_TOKEN) is what lets CI run on the release PR: events triggered
